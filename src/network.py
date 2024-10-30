@@ -1,6 +1,7 @@
 # Imports section
 import numpy as np
 import netsquid as ns
+import pydynaa
 
 from collections import deque
 from netsquid.nodes import Node
@@ -58,6 +59,7 @@ class BSMDetector(QuantumDetector):
             and the post-processed measurement outcomes as values
 
         """
+        print(f"Detector out: {port_outcomes.items()}")
         for port_name, outcomes in port_outcomes.items():
             if len(outcomes) == 0:
                 outcomes = ['TIMEOUT']
@@ -74,6 +76,73 @@ class BSMDetector(QuantumDetector):
         super().finish()
         self._sender_ids.clear()
 
+class QPUEntity(ns.pydynaa.Entity):
+    """Represents a quantum processing unit (QPU) with program queue and callback functionality."""
+
+    def __init__(self, name, correction, qbit_count=2, depolar_rate=0):
+        super().__init__()
+        self.name = name
+        self.correction = correction
+        self.processor = self._create_processor(name, qbit_count, depolar_rate)
+        self.program_queue = deque()
+        self._setup_callbacks()
+
+    def _create_processor(self, name, qbit_count, depolar_rate):
+        """Initialize the quantum processor for this QPU."""
+        physical_instructions = [
+            ns.components.qprocessor.PhysicalInstruction(ns.components.instructions.INSTR_INIT, duration=3, parallel=True),
+            ns.components.qprocessor.PhysicalInstruction(ns.components.instructions.INSTR_H, duration=1, parallel=True),
+            ns.components.qprocessor.PhysicalInstruction(ns.components.instructions.INSTR_X, duration=1, parallel=True),
+            ns.components.qprocessor.PhysicalInstruction(ns.components.instructions.INSTR_Z, duration=1, parallel=True),
+            ns.components.qprocessor.PhysicalInstruction(ns.components.instructions.INSTR_CNOT, duration=4, parallel=True, topology=[(0, 1)]),
+            ns.components.qprocessor.PhysicalInstruction(ns.components.instructions.INSTR_EMIT, duration=1, parallel=True),
+            ns.components.qprocessor.PhysicalInstruction(ns.components.instructions.INSTR_MEASURE, duration=7, parallel=False)
+        ]
+        memory_noise_model = ns.components.models.DepolarNoiseModel(depolar_rate=depolar_rate)
+        processor = QuantumProcessor(name, num_positions=qbit_count,
+                                     memory_noise_models=[memory_noise_model] * qbit_count,
+                                     phys_instructions=physical_instructions)
+        processor.add_ports(['correction'])
+        return processor
+
+    def _setup_callbacks(self):
+        """Set up callback handling for when programs complete."""
+        self.processor.set_program_done_callback(lambda: self.on_program_done(self.name, self.processor, self.program_queue))
+        self.processor.set_program_fail_callback(lambda: self.on_program_done(self.name, self.processor, self.program_queue))
+        self.processor.ports['correction'].bind_input_handler(lambda msg: self.correction_callback(msg, self.name, self.processor, self.correction))
+
+    def add_program(self, program):
+        """Add a program to the queue and execute if the processor is available."""
+        if not self.processor.busy:
+            self.processor.execute_program(program)
+        else:
+            self.program_queue.append(program)
+
+    # Fucks sake, this might not work since it's not a static method
+    @staticmethod
+    def correction_callback(msg, name, qpu, correction):
+        print(f"{name} received: {msg}")
+        status = msg.items[0]
+        if status == 1 and correction == 'X':
+            # TODO
+            print(f"{name} : Performing X correction")
+            pass
+        elif status == 2 and correction == 'Z':
+            # TODO perform Z correction
+            print(f"{name} : Performing Z correction")
+            pass
+        else:
+            print(f"No correction needed for {name}")
+
+    @staticmethod
+    def on_program_done(name, qpu, queue):
+        """Handle completion of a program, and process the next one if queued."""
+        print(f"{name} program complete")
+        if len(queue) > 0:
+            next_program = queue.popleft()
+            print(f"{name} queuing next program:", next_program)
+            qpu.execute_program(next_program)
+
 class EmitProgram(QuantumProgram):
     """Program to create a qubit and emit an entangled photon to the 'qout' port.
     """
@@ -81,6 +150,7 @@ class EmitProgram(QuantumProgram):
         super().__init__(num_qubits=2)
 
     def program(self):
+        print("Fucking EMIT man")
         # Emit from q2 using q1
         q1, q2 = self.get_qubit_indices(self.num_qubits)
         self.apply(instr.INSTR_INIT, q1)
@@ -94,6 +164,7 @@ class CorrectZProgram(QuantumProgram):
         super().__init__(num_qubits=1)
 
     def program(self):
+        print("Fucking Z man")
         # Emit from q2 using q1
         q1 = self.get_qubit_indices(self.num_qubits)
         self.apply(instr.INSTR_Z, q1)
@@ -106,6 +177,7 @@ class CorrectXProgram(QuantumProgram):
         super().__init__(num_qubits=1)
 
     def program(self):
+        print("Fucking X man")
         # Emit from q2 using q1
         q1 = self.get_qubit_indices(self.num_qubits)
         self.apply(instr.INSTR_X, q1)
@@ -161,78 +233,50 @@ def create_simple_processor(qpu_name, qbit_count=2, depolar_rate=0):
     processor.add_ports(['correction'])
     return processor
 
-# ---- CALLBACKS ----
-# Callback for scheduling corrections
-def handle_corrections(message, port, qpu_x, qpu_z, qpu_x_queue, qpu_z_queue):
-    status = message.items[0]
-    if status == 1:
-        print(f"Recv: {status} on port: {port}, performing X correction")
-        execute_program_with_queue(qpu_x, CorrectXProgram(), qpu_x_queue)
-    elif status == 2:
-        print(f"Recv: {status} on port: {port}, performing Z correction")
-        execute_program_with_queue(qpu_z, CorrectZProgram(), qpu_z_queue)
-    else:
-        print(f"Recv: {status} on port: {port}, bad state, no corrections performed")
-
-# ---- QUEUE IMPLEMENTATION ----
-# Helper to manage program queue execution
-def execute_program_with_queue(qpu, program, queue):
-    if not qpu.busy:
-        qpu.execute_program(program)
-    else:
-        queue.append(program)
-
-def on_program_done(msg, target_qpu, second_qpu, queue=[]):
-    # Execute the next program in the queue if available
-    if len(queue) > 0:
-        next_program = queue.popleft()
-        print(f"Queuing next program {next_program}")
-        execute_program_with_queue(target_qpu, next_program, queue)
+# Calculate the fidelity between two qubits in Alice and Bob's QPUs
+def calculate_fidelity(alice_qpu, bob_qpu):
+    """Calculate the fidelity between qubits at position 0 in Alice's and Bob's QPUs."""
     try:
-        print(msg, end=' | ')
-        q0 = target_qpu.peek(positions=0)[0]
-        q1 = second_qpu.peek(positions=0)[0]
-        f0 = qapi.fidelity([q0, q1], ks.b00, squared=True)
-        f1 = qapi.fidelity([q0, q1], ks.b01, squared=True)
-        f2 = qapi.fidelity([q0, q1], ks.b10, squared=True)
-        f3 = qapi.fidelity([q0, q1], ks.b11, squared=True)
-        print(f"B00: {f0}, B01: {f1}, B10: {f2}, B11: {f3}")
+        # Peek at the qubits in position 0 for both Alice and Bob
+        q_alice = alice_qpu.processor.peek(positions=[0])[0]
+        q_bob = bob_qpu.processor.peek(positions=[0])[0]
+        
+        # Calculate fidelities with respect to the Bell states
+        fidelities = {
+            'B00': qapi.fidelity([q_alice, q_bob], ks.b00, squared=True),
+            'B01': qapi.fidelity([q_alice, q_bob], ks.b01, squared=True),
+            'B10': qapi.fidelity([q_alice, q_bob], ks.b10, squared=True),
+            'B11': qapi.fidelity([q_alice, q_bob], ks.b11, squared=True)
+        }
+        print(f"Fidelities between Alice and Bob qubits:", fidelities)
+        return fidelities
     except Exception as e:
-        print(f"Error accessing qubits: {e}")
+        print(f"Error calculating fidelity between Alice and Bob: {e}")
+        return None
 
 def run():
-    # Initialize program queues
-    qpu_a_queue = deque()
-    qpu_b_queue = deque()
-
-    # Run simulation
+    # Reset simulation
     ns.sim_reset()
+    
+    # Integration with the BSMDetector
+    alice = QPUEntity("AliceQPU", "X")
+    bob = QPUEntity("BobQPU", "Z")
 
-    # Setup BSM detector
+    # TODO add quantum fibre channel between QPU and detector
+    # Connect QPU output ports to the detector input
     detector = BSMDetector("bsm_detector")
-    
-    # Instantiate the QPU units for Alice and Bob
-    qpu_a = create_simple_processor("qpu_a", 2, 0) 
-    qpu_b = create_simple_processor("qpu_b", 2, 0) 
-    qpu_a.ports['qout'].connect(detector.ports['qin0'])
-    qpu_b.ports['qout'].connect(detector.ports['qin1'])
-    
-    # Setup event handlers
-    qpu_a.set_program_done_callback(on_program_done, "Callback hit on A", qpu_a, qpu_b, qpu_a_queue)
-    qpu_b.set_program_done_callback(on_program_done, "Callback hit on B", qpu_b, qpu_a, qpu_b_queue)
-    qpu_a.set_program_fail_callback(on_program_done, "Callback (FAIL) hit on A", qpu_a, qpu_b, qpu_a_queue)
-    qpu_b.set_program_fail_callback(on_program_done, "Callback (FAIL) hit on B", qpu_b, qpu_a, qpu_b_queue)
+    alice.processor.ports['qout'].connect(detector.ports['qin0'])
+    bob.processor.ports['qout'].connect(detector.ports['qin1'])
 
-    # Bind the output ports to the QPU so we can do qubit corrections
-    detector.ports['cout0'].connect(qpu_a.ports['correction'])
-    detector.ports['cout1'].connect(qpu_b.ports['correction'])
-    qpu_a.ports['correction'].bind_input_handler(lambda msg: handle_corrections(msg, 'cout0', qpu_a, qpu_b, qpu_a_queue, qpu_b_queue))
-    qpu_b.ports['correction'].bind_input_handler(lambda msg: handle_corrections(msg, 'cout1', qpu_a, qpu_b, qpu_a_queue, qpu_b_queue))
-    
-    # Setup & run program
-    prog = EmitProgram()
-    execute_program_with_queue(qpu_a, EmitProgram(), qpu_a_queue)
-    execute_program_with_queue(qpu_b, EmitProgram(), qpu_b_queue)
+    # Connect detector correction outputs to QPU correction inputs
+    detector.ports['cout0'].connect(alice.processor.ports['correction'])
+    detector.ports['cout1'].connect(bob.processor.ports['correction'])
+
+    # Start program
+    alice.add_program(EmitProgram())
+    bob.add_program(EmitProgram())
+        
+    # Run simulation
     stats = ns.sim_run()
     #print(stats)
 
