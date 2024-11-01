@@ -1,23 +1,9 @@
 # Imports section
-import numpy as np
-import netsquid as ns
-import pydynaa
 import logging
+import netsquid as ns
 
-from collections import deque
-from netsquid.nodes import Node
-from netsquid.qubits import Operator
-from netsquid.components import Component
-from netsquid.components import QuantumChannel, ClassicalChannel, Message
-from netsquid.components.qprogram import QuantumProgram
-from netsquid.components.qdetector import QuantumDetector
-from netsquid.components.qprocessor import QuantumProcessor, PhysicalInstruction
-from netsquid.examples.repeater_chain import FibreDepolarizeModel
-from netsquid.components.models import FibreDelayModel, FibreLossModel, DepolarNoiseModel
-
-import netsquid.components.instructions as instr
-import netsquid.qubits.ketstates as ks
-from netsquid.qubits import qubitapi as qapi
+# from netsquid.examples.repeater_chain import FibreDepolarizeModel
+# from netsquid.components.models import FibreDelayModel, FibreLossModel
 
 # Import from own code
 from detector import BSMDetector

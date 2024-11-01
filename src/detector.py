@@ -1,20 +1,10 @@
 # Imports section
-import numpy as np
-import netsquid as ns
-import pydynaa
 import logging
+import numpy as np
 
-from collections import deque
 from netsquid.qubits import Operator
-from netsquid.components import Component
-from netsquid.components import QuantumChannel, ClassicalChannel, Message
-from netsquid.components.qprogram import QuantumProgram
+from netsquid.components.component import Message
 from netsquid.components.qdetector import QuantumDetector
-from netsquid.components.qprocessor import QuantumProcessor, PhysicalInstruction
-
-import netsquid.components.instructions as instr
-import netsquid.qubits.ketstates as ks
-from netsquid.qubits import qubitapi as qapi
 
 # ---- CLASSES ----
 class BSMDetector(QuantumDetector):

@@ -1,19 +1,9 @@
 # Imports section
-import numpy as np
-import netsquid as ns
-import pydynaa
 import logging
 
-from collections import deque
-from netsquid.qubits import Operator
-from netsquid.components import Component
-from netsquid.components import QuantumChannel, ClassicalChannel, Message
-from netsquid.components.qprogram import QuantumProgram
-from netsquid.components.qdetector import QuantumDetector
-from netsquid.components.qprocessor import QuantumProcessor, PhysicalInstruction
-
-import netsquid.qubits.ketstates as ks
+from netsquid.components.component import Component
 from netsquid.qubits import qubitapi as qapi
+import netsquid.qubits.ketstates as ks
 
 # ---- CLASSES ----
 class FidelityCalculator(Component):
@@ -65,5 +55,3 @@ class FidelityCalculator(Component):
             print("Fidelities:", fidelities)
         except Exception as e:
             print("Error calculating fidelity:", e)
-
-
