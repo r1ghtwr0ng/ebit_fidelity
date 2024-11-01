@@ -1,16 +1,10 @@
 # Imports section
-import numpy as np
-import netsquid as ns
-import pydynaa
 import logging
+import netsquid as ns
 
 from collections import deque
-from netsquid.qubits import Operator
-from netsquid.components import Component
-from netsquid.components import QuantumChannel, ClassicalChannel, Message
 from netsquid.components.qprogram import QuantumProgram
-from netsquid.components.qdetector import QuantumDetector
-from netsquid.components.qprocessor import QuantumProcessor, PhysicalInstruction
+from netsquid.components.qprocessor import QuantumProcessor
 
 import netsquid.components.instructions as instr
 import netsquid.qubits.ketstates as ks
@@ -121,7 +115,7 @@ class EmitProgram(QuantumProgram):
     def __init__(self):
         super().__init__(num_qubits=2)
 
-    def program(self):
+    def program(self, **_):
         logging.info("Entry point for the Emit program")
         # Emit from q2 using q1
         q1, q2 = self.get_qubit_indices(self.num_qubits)
@@ -135,7 +129,7 @@ class CorrectZProgram(QuantumProgram):
     def __init__(self):
         super().__init__(num_qubits=1)
 
-    def program(self):
+    def program(self, **_):
         logging.info("Entry point for the Correct Z program")
         # Emit from q2 using q1
         q1 = self.get_qubit_indices(self.num_qubits)
@@ -148,7 +142,7 @@ class CorrectXProgram(QuantumProgram):
     def __init__(self):
         super().__init__(num_qubits=1)
 
-    def program(self):
+    def program(self, **_):
         logging.info("Entry point for the Correct X program")
         # Emit from q2 using q1
         q1 = self.get_qubit_indices(self.num_qubits)
