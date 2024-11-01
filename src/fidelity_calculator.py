@@ -8,7 +8,7 @@ import netsquid.qubits.ketstates as ks
 # ---- CLASSES ----
 class FidelityCalculator(Component):
     def __init__(self, name):
-        logging.debug("(FidelityCalc) Logging check in __init__")
+        logging.debug(f"(FidelityCalc | {self.name}) Logging check in __init__")
         super().__init__(name, port_names=["qin0", "qin1", "qout0", "qout1"])
         self.qubit_slot = None
         self._setup_handlers()
@@ -19,12 +19,16 @@ class FidelityCalculator(Component):
         self.ports["qin1"].bind_input_handler(lambda msg: self.measure_or_store(msg, "qin1"))
 
     def measure_or_store(self, msg, port):
-        logging.debug(f"(FidelityCalc) Received qubit on port {port}")
+        logging.debug(f"(FidelityCalc | {self.name}) Received qubit on port {port}")
+        inbound_qubit = msg.items[0] 
         if self.qubit_slot is None:
-            self.qubit_slot = msg.items[0] # Move the qubit in the qubit slot
+            self.qubit_slot = inbound_qubit # Move the qubit in the qubit slot
         else:
             # TODO fidelity measurement and return qubits to Alice and Bob
-            logging.debug("(FidelityCalc) Starting fidelity measurement")
+            logging.debug(f"(FidelityCalc | {self.name}) Starting fidelity measurement")
+            fidelity = self.calculate_fidelity(self.qubit_slot, inbound_qubit)
+            logging.debug(f"(FidelityCalc | {self.name}) Fidelity output: {fidelity}")
+            # TODO send this over back to the channels
             pass
 
     def return_qubits(self):
@@ -35,7 +39,7 @@ class FidelityCalculator(Component):
         # Here we would implement logic to return the qubits to Alice and Bob.
         # This may involve reconnecting to their respective processors or queues.
         # Placeholder print statement as example:
-        logging.debug("(FidelityCalc) Returning qubits to Alice and Bob")
+        logging.debug(f"(FidelityCalc.return_qubits | {self.name}) Returning qubits to Alice and Bob")
         # Clear the stored qubits after returning them
         self.alice_qubit = None
         self.bob_qubit = None
@@ -52,6 +56,7 @@ class FidelityCalculator(Component):
                 'B10': qapi.fidelity([qubit0, qubit1], ks.b10, squared=True),
                 'B11': qapi.fidelity([qubit0, qubit1], ks.b11, squared=True)
             }
-            print("Fidelities:", fidelities)
+            logging.info(f"(FidelityCalculator.calculate_fidelity) Fidelities output: {fidelities}")
         except Exception as e:
-            print("Error calculating fidelity:", e)
+            logging.error(f"(FidelityCalculator.calculate_fidelity) Error calculating fidelity: {e}")
+
