@@ -36,13 +36,17 @@ def run():
     bob.processor.ports['qout0'].connect(calculator.ports['qin1'])
 
     # Connect detector correction outputs to QPU correction inputs
-    logging.debug("Binding fidelity calculator to Alice and Bob's ports")
+    logging.debug("Binding detector output to Alice and Bob's correction ports")
     detector.ports['cout0'].connect(alice.processor.ports['correction'])
     detector.ports['cout1'].connect(bob.processor.ports['correction'])
 
-    # TODO bind the calculator output ports back to the QPUEntity inputs
+    logging.debug("Binding fidelity calculator return to the QPU ports")
+    calculator.ports['qout0'].connect(alice.processor.ports['qin0'])
+    calculator.ports['qout1'].connect(bob.processor.ports['qin0'])
+
     # TODO handle inbound returning qubits from the fidelity calculation code
     # TODO add quantum fibre channel between QPU and detector
+    # TODO refactor public methods to private where applicable
 
     # Start emit programs for both QPUEntities
     alice.emit()

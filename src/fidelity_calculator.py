@@ -1,49 +1,59 @@
 # Imports section
 import logging
 
+from netsquid.components.component import Message
 from netsquid.components.component import Component
 from netsquid.qubits import qubitapi as qapi
 import netsquid.qubits.ketstates as ks
 
-# ---- CLASSES ----
 class FidelityCalculator(Component):
     def __init__(self, name):
         logging.debug(f"(FidelityCalc | {self.name}) Logging check in __init__")
         super().__init__(name, port_names=["qin0", "qin1", "qout0", "qout1"])
-        self.qubit_slot = None
-        self._setup_handlers()
+        self.qubit_slots = {"qin0": None, "qin1": None}
+        self.__setup_handlers()
 
-    def _setup_handlers(self):
+    def __setup_handlers(self):
         """Set port handlers."""
         self.ports["qin0"].bind_input_handler(lambda msg: self.measure_or_store(msg, "qin0"))
         self.ports["qin1"].bind_input_handler(lambda msg: self.measure_or_store(msg, "qin1"))
 
+    # Upon receival of a new qubit, store in the appropriate slot and determine what to do
     def measure_or_store(self, msg, port):
         logging.debug(f"(FidelityCalc | {self.name}) Received qubit on port {port}")
         inbound_qubit = msg.items[0] 
-        if self.qubit_slot is None:
-            self.qubit_slot = inbound_qubit # Move the qubit in the qubit slot
-        else:
-            # TODO fidelity measurement and return qubits to Alice and Bob
-            logging.debug(f"(FidelityCalc | {self.name}) Starting fidelity measurement")
-            fidelity = self.calculate_fidelity(self.qubit_slot, inbound_qubit)
-            logging.debug(f"(FidelityCalc | {self.name}) Fidelity output: {fidelity}")
-            # TODO send this over back to the channels
-            pass
+        if port not in self.qubit_slots:
+            logging.error(f"(FidelityCalculator | {self.name}) Received qubit from unexpected port: {port}")
+            return
+        elif self.qubit_slots[port]:
+            logging.info(f"(FidelityCalculator | {self.name}) Inbound qubit on port {port} replaces existing qubit")
 
+        self.qubit_slots[port] = inbound_qubit
+        if self.qubit_slots['qin0'] is None or self.qubit_slots['qin1'] is None:
+            logging.info(f"(FidelityCalc | {self.name}) one qubit is loaded into the slots {self.qubit_slots}")
+        else:
+            fidelity = self.calculate_fidelity(self.qubit_slots['qin0'], self.qubit_slots['qin1'])
+            logging.debug(f"(FidelityCalc | {self.name}) Fidelity output: {fidelity}")
+            self.return_qubits()
+
+    # Return the qubits to their respective nodes and remove them from the slots
     def return_qubits(self):
         """
         Returns the qubits to their original owners (Alice and Bob).
         """
-        # TODO implement qubit return mechanism
-        # Here we would implement logic to return the qubits to Alice and Bob.
-        # This may involve reconnecting to their respective processors or queues.
-        # Placeholder print statement as example:
         logging.debug(f"(FidelityCalc.return_qubits | {self.name}) Returning qubits to Alice and Bob")
-        # Clear the stored qubits after returning them
-        self.alice_qubit = None
-        self.bob_qubit = None
-        
+
+        # Pop the qubits off the slots
+        q0 = self.qubit_slots.pop('qin0')
+        q1 = self.qubit_slots.pop('qin1')
+
+        # Create messages and send them off via the output ports
+        header = 'fidelity'
+        msg0 = Message(q0, header=header)
+        msg1 = Message(q1, header=header)
+        self.ports['qout0'].tx_output(msg0)
+        self.ports['qout0'].tx_output(msg1)
+
     @staticmethod
     def calculate_fidelity(qubit0, qubit1):
         """
@@ -57,6 +67,7 @@ class FidelityCalculator(Component):
                 'B11': qapi.fidelity([qubit0, qubit1], ks.b11, squared=True)
             }
             logging.info(f"(FidelityCalculator.calculate_fidelity) Fidelities output: {fidelities}")
+            return fidelities['B00']
         except Exception as e:
             logging.error(f"(FidelityCalculator.calculate_fidelity) Error calculating fidelity: {e}")
 

@@ -6,7 +6,6 @@ from netsquid.qubits import Operator
 from netsquid.components.component import Message
 from netsquid.components.qdetector import QuantumDetector
 
-# ---- CLASSES ----
 class BSMDetector(QuantumDetector):
     """A component that performs Bell basis measurements.
 
@@ -22,7 +21,7 @@ class BSMDetector(QuantumDetector):
                          system_delay=system_delay, dead_time=dead_time,
                          models=models, output_meta=output_meta,
                          error_on_fail=error_on_fail, properties=properties)
-        self._sender_ids = []
+        self.__sender_ids = []
 
     def preprocess_inputs(self):
         """Preprocess and capture the qubit metadata
@@ -30,7 +29,7 @@ class BSMDetector(QuantumDetector):
         super().preprocess_inputs()
         for port_name, qubit_list in self._qubits_per_port.items():
             if len(qubit_list) > 0:
-                self._sender_ids.append(port_name[3:])
+                self.__sender_ids.append(port_name[3:])
 
     def inform(self, port_outcomes):
         """Inform the MHP of the measurement result.
@@ -52,7 +51,7 @@ class BSMDetector(QuantumDetector):
             else:
                 header = 'photonoutcome'
             # Extract the ids from the port names (cout...)
-            if port_name[4:] in self._sender_ids:
+            if port_name[4:] in self.__sender_ids:
                 msg = Message(outcomes, header=header, **self._meta)
                 self.ports[port_name].tx_output(msg)
 
