@@ -6,9 +6,9 @@ import netsquid as ns
 # from netsquid.components.models import FibreDelayModel, FibreLossModel
 
 # Import from own code
+from qpu_entity import QPUEntity
 from detector import BSMDetector
 from fidelity_calculator import FidelityCalculator
-from qpu_entity import QPUEntity, EmitProgram
 
 # ---- CLASSES ----
 def run():
@@ -24,7 +24,6 @@ def run():
     alice = QPUEntity("AliceQPU", "X")
     bob = QPUEntity("BobQPU", "Z")
 
-    # TODO add quantum fibre channel between QPU and detector
     # Connect QPU output ports to the detector input
     logging.debug("Initializing detector and binding ports")
     detector = BSMDetector("bsm_detector")
@@ -41,10 +40,13 @@ def run():
     detector.ports['cout0'].connect(alice.processor.ports['correction'])
     detector.ports['cout1'].connect(bob.processor.ports['correction'])
 
-    # Start program
-    # TODO refactor EmitProgram into the QPUEntity class
-    alice.add_program(EmitProgram())
-    bob.add_program(EmitProgram())
+    # TODO bind the calculator output ports back to the QPUEntity inputs
+    # TODO handle inbound returning qubits from the fidelity calculation code
+    # TODO add quantum fibre channel between QPU and detector
+
+    # Start emit programs for both QPUEntities
+    alice.emit()
+    bob.emit()
         
     # Run simulation
     logging.debug("Starting simulation")

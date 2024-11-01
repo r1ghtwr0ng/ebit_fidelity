@@ -7,15 +7,13 @@ from netsquid.components.qprogram import QuantumProgram
 from netsquid.components.qprocessor import QuantumProcessor
 
 import netsquid.components.instructions as instr
-import netsquid.qubits.ketstates as ks
-from netsquid.qubits import qubitapi as qapi
 
 # ---- CLASSES ----
 class QPUEntity(ns.pydynaa.Entity):
     """Represents a quantum processing unit (QPU) with program queue and callback functionality."""
 
     def __init__(self, name, correction, qbit_count=2, depolar_rate=0):
-        logging.debug("(QPUEntity) Logging check in __init__")
+        logging.debug(f"(QPUEntity | {name}) Logging check in __init__")
         super().__init__()
         self.name = name
         self.correction = correction
@@ -49,6 +47,10 @@ class QPUEntity(ns.pydynaa.Entity):
         self.processor.set_program_done_callback(self.on_program_done)
         self.processor.set_program_fail_callback(self.on_program_fail)
         self.processor.ports['correction'].bind_input_handler(self.correction_callback)
+
+    # Utility function to call when we want to emit a qubit (no need to import EmitProgram outside)
+    def emit(self):
+        self.add_program(EmitProgram())
 
     # Use this function to append programs to the object queue
     def add_program(self, program):
@@ -131,7 +133,6 @@ class CorrectZProgram(QuantumProgram):
 
     def program(self, **_):
         logging.info("Entry point for the Correct Z program")
-        # Emit from q2 using q1
         q1 = self.get_qubit_indices(self.num_qubits)
         self.apply(instr.INSTR_Z, q1)
         yield self.run()
@@ -144,7 +145,6 @@ class CorrectXProgram(QuantumProgram):
 
     def program(self, **_):
         logging.info("Entry point for the Correct X program")
-        # Emit from q2 using q1
         q1 = self.get_qubit_indices(self.num_qubits)
         self.apply(instr.INSTR_X, q1)
         yield self.run()

@@ -13,12 +13,10 @@ class BSMDetector(QuantumDetector):
     Measure two incoming qubits in the Bell basis if they
     arrive within the specified measurement delay.
     Only informs the connections that send a qubit of the measurement result.
-
     """
-
     def __init__(self, name, system_delay=0., dead_time=0., models=None,
                  output_meta=None, error_on_fail=False, properties=None):
-        logging.debug("(BSMDetector) Logging check in __init__")
+        logging.debug(f"(BSMDetector | {self.name}) Logging check in __init__")
         super().__init__(name, num_input_ports=2, num_output_ports=2,
                          meas_operators=create_meas_ops(),
                          system_delay=system_delay, dead_time=dead_time,
@@ -28,7 +26,6 @@ class BSMDetector(QuantumDetector):
 
     def preprocess_inputs(self):
         """Preprocess and capture the qubit metadata
-
         """
         super().preprocess_inputs()
         for port_name, qubit_list in self._qubits_per_port.items():
@@ -46,9 +43,8 @@ class BSMDetector(QuantumDetector):
         port_outcomes : dict
             A dictionary with the port names as keys
             and the post-processed measurement outcomes as values
-
         """
-        print(f"Detector out: {port_outcomes.items()}")
+        logging.debug(f"(BSMDetector | {self.name}) Output: {port_outcomes.items()}")
         for port_name, outcomes in port_outcomes.items():
             if len(outcomes) == 0:
                 outcomes = ['TIMEOUT']
@@ -60,11 +56,6 @@ class BSMDetector(QuantumDetector):
                 msg = Message(outcomes, header=header, **self._meta)
                 self.ports[port_name].tx_output(msg)
 
-    def finish(self):
-        """Clear sender ids after the measurement has finished."""
-        super().finish()
-        self._sender_ids.clear()
-
 # Measurement operators for the beamsplitter
 def create_meas_ops(visibility=1):
     """Sets the photon beamsplitter POVM measurements.
@@ -75,7 +66,6 @@ def create_meas_ops(visibility=1):
     ----------
     visibility : float, optional
         The visibility of the qubits in the detector.
-
     """
     mu = np.sqrt(visibility)
     s_plus = (np.sqrt(1 + mu) + np.sqrt(1 - mu)) / (2. * np.sqrt(2))
