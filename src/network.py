@@ -21,8 +21,8 @@ def run():
 
     # Integration with the BSMDetector
     logging.debug("Initializing Alice and Bob entities")
-    alice = QPUEntity("AliceQPU", "")
-    bob = QPUEntity("BobQPU", "Y")
+    alice = QPUEntity("AliceQPU", correction=False)
+    bob = QPUEntity("BobQPU", correction=True)
 
     # Connect QPU output ports to the detector input
     logging.debug("Initializing detector and binding ports")
@@ -66,4 +66,4 @@ if __name__ == "__main__":
         ret = run()
         result += ret
 
-    logging.debug(result)
+    logging.info(result)

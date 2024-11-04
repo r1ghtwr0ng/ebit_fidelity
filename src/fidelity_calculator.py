@@ -28,6 +28,7 @@ class FidelityCalculator(Component):
     def measure_or_store(self, msg, port):
         logging.debug(f"(FidelityCalc | {self.name}) Received qubit on port {port}")
         inbound_qubit = msg.items[0] 
+ 
         if port not in self.__qubit_slots:
             logging.error(f"(FidelityCalculator | {self.name}) Received qubit from unexpected port: {port}")
             return
@@ -39,9 +40,8 @@ class FidelityCalculator(Component):
             logging.debug(f"(FidelityCalc | {self.name}) one qubit is loaded into the slots {self.__qubit_slots}")
         else:
             fidelity = self.calculate_fidelity(self.__qubit_slots['qin0'], self.__qubit_slots['qin1'])
-            # TODO send of fidelity result to main box listener
             logging.debug(f"(FidelityCalc | {self.name}) Fidelity output: {fidelity}")
-            self.__fidelity_arr.append(fidelity)
+            self.__fidelity_arr.append(fidelity) # Keep track of fidelities
             self.return_qubits()
 
     # Return the qubits to their respective nodes and remove them from the slots
@@ -70,8 +70,8 @@ class FidelityCalculator(Component):
         # TODO fix the issue where 11 is interpreted as state 2
         try:
             fidelities = {
-                '00': qapi.fidelity([qubit0, qubit1], np.array([1, 0, 0, 0]), squared=True),
-                '11': qapi.fidelity([qubit0, qubit1], np.array([0, 0, 0, 1]), squared=True),
+                '|00>': qapi.fidelity([qubit0, qubit1], np.array([1, 0, 0, 0]), squared=True),
+                '|11>': qapi.fidelity([qubit0, qubit1], np.array([0, 0, 0, 1]), squared=True),
                 'B00': qapi.fidelity([qubit0, qubit1], ks.b00, squared=True),
                 'B01': qapi.fidelity([qubit0, qubit1], ks.b01, squared=True),
                 'B10': qapi.fidelity([qubit0, qubit1], ks.b10, squared=True),

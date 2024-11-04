@@ -11,7 +11,7 @@ import netsquid.components.instructions as instr
 class QPUEntity(ns.pydynaa.Entity):
     """Represents a quantum processing unit (QPU) with program queue and callback functionality."""
 
-    def __init__(self, name, correction, qbit_count=2, depolar_rate=0):
+    def __init__(self, name, correction=False, qbit_count=2, depolar_rate=0):
         logging.debug(f"(QPUEntity | {name}) Logging check in __init__")
         super().__init__()
         self.name = name
@@ -85,11 +85,13 @@ class QPUEntity(ns.pydynaa.Entity):
         logging.debug(f"(QPUEntity | {self.name}) received: {msg}")
         bell_idx = msg.items[0].bell_index
 
-        if self.__correction == 'Y': logging.debug(f"(QPUEntity | {self.name}) Fidelities output: Bell Index: {bell_idx}")
-        if bell_idx == 1 and self.__correction == 'Y':
+        #if self.__correction: logging.debug(f"(QPUEntity | {self.name}) Fidelities output: Bell Index: {bell_idx}")
+        if bell_idx == 1 and self.__correction:
+            # This means the state is in state |01> + |10> and needs X correction to become |00> + |11>
             logging.debug(f"(QPUEntity | {self.name}) Performing X correction")
             self.add_program(CorrectXProgram())
-        elif bell_idx == 2 and self.__correction == 'Y':
+        elif bell_idx == 2 and self.__correction:
+            # This means the state is in state |01> - |10> and needs X correction to become |00> + |11>
             logging.debug(f"(QPUEntity | {self.name}) Performing Y correction")
             self.add_program(CorrectYProgram())
         else:
