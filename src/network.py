@@ -7,7 +7,7 @@ import netsquid as ns
 
 # Import from own code
 from qpu_entity import QPUEntity
-from detector import BSMDetector
+from detectors import BSMDetector
 from fidelity_calculator import FidelityCalculator
 
 # ---- CLASSES ----
@@ -21,8 +21,8 @@ def run():
 
     # Integration with the BSMDetector
     logging.debug("Initializing Alice and Bob entities")
-    alice = QPUEntity("AliceQPU", "X")
-    bob = QPUEntity("BobQPU", "Z")
+    alice = QPUEntity("AliceQPU", "")
+    bob = QPUEntity("BobQPU", "Y")
 
     # Connect QPU output ports to the detector input
     logging.debug("Initializing detector and binding ports")
@@ -44,21 +44,26 @@ def run():
     calculator.ports['qout0'].connect(alice.processor.ports['qin0'])
     calculator.ports['qout1'].connect(bob.processor.ports['qin0'])
 
-    # TODO handle inbound returning qubits from the fidelity calculation code
     # TODO add quantum fibre channel between QPU and detector
     # TODO refactor public methods to private where applicable
 
     # Start emit programs for both QPUEntities
     alice.emit()
     bob.emit()
-        
+
     # Run simulation
     logging.debug("Starting simulation")
     stats = ns.sim_run()
     logging.debug(stats)
 
+    return calculator.get_fidelities()
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    for i in range(1):
+    result = []
+    for i in range(10):
         logging.debug(f"Starting Run {i}")
-        run()
+        ret = run()
+        result += ret
+
+    logging.info(result)
