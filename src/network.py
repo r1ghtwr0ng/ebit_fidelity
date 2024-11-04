@@ -66,4 +66,4 @@ if __name__ == "__main__":
         ret = run()
         result += ret
 
-    logging.info(result)
+    logging.debug(result)
