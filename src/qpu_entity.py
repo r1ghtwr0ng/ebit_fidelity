@@ -75,7 +75,7 @@ class QPUEntity(ns.pydynaa.Entity):
 
     # On qubit receival (back from fidelity check) return it to QPU and unset busy flag
     def __recv_qubit(self, msg):
-        logging.info(f"(QPUEntity | {self.name}) Received qubit back, returning to QPU position 0")
+        logging.debug(f"(QPUEntity | {self.name}) Received qubit back, returning to QPU position 0")
         qubit = msg.items[0]
         self.processor.put(qubit, 0)
         self.__measuring = False # Unset the flag which blocks QPU ops
@@ -83,10 +83,9 @@ class QPUEntity(ns.pydynaa.Entity):
     # Callback function for applying qubit corrections based on BSMDetector output
     def __correction_callback(self, msg):
         logging.debug(f"(QPUEntity | {self.name}) received: {msg}")
-        status = msg.items[0].success
         bell_idx = msg.items[0].bell_index
 
-        if self.__correction == 'Y': logging.info(f"(QPUEntity | {self.name}) Fidelities output: Bell Index: {bell_idx}")
+        if self.__correction == 'Y': logging.debug(f"(QPUEntity | {self.name}) Fidelities output: Bell Index: {bell_idx}")
         if bell_idx == 1 and self.__correction == 'Y':
             logging.debug(f"(QPUEntity | {self.name}) Performing X correction")
             self.add_program(CorrectXProgram())
@@ -100,16 +99,16 @@ class QPUEntity(ns.pydynaa.Entity):
     # Use this function to append programs to the object queue
     def add_program(self, program):
         """Add a program to the queue and execute if the processor is available."""
-        logging.info(f"(QPUEntity | {self.name}) Call to add_program with {program}")
+        logging.debug(f"(QPUEntity | {self.name}) Call to add_program with {program}")
         if not self.processor.busy:
             if not self.__measuring:
-                logging.info(f"(QPUEntity | {self.name}) executing program {program}")
+                logging.debug(f"(QPUEntity | {self.name}) executing program {program}")
                 self.processor.execute_program(program)
             else:
-                logging.info(f"(QPUEntity | {self.name}) appending program to queue (measuring qubit fidelity)")
+                logging.debug(f"(QPUEntity | {self.name}) appending program to queue (measuring qubit fidelity)")
                 self.__queue.append(program)
         else:
-            logging.info(f"(QPUEntity | {self.name}) appending program to queue (QPU busy)")
+            logging.debug(f"(QPUEntity | {self.name}) appending program to queue (QPU busy)")
             self.__queue.append(program)
 
     # Emit qubit out the relevant port for fidelity calculation
@@ -129,7 +128,7 @@ class EmitProgram(QuantumProgram):
         super().__init__(num_qubits=2)
 
     def program(self, **_):
-        logging.info("Entry point for the Emit program")
+        logging.debug("Entry point for the Emit program")
         # Emit from q2 using q1
         q1, q2 = self.get_qubit_indices(self.num_qubits)
         self.apply(instr.INSTR_INIT, q1)
@@ -143,7 +142,7 @@ class CorrectYProgram(QuantumProgram):
         super().__init__(num_qubits=1)
 
     def program(self, **_):
-        logging.info("Entry point for the Correct Z program")
+        logging.debug("Entry point for the Correct Z program")
         q1 = self.get_qubit_indices(self.num_qubits)
         self.apply(instr.INSTR_Y, q1)
         yield self.run()
@@ -155,7 +154,7 @@ class CorrectXProgram(QuantumProgram):
         super().__init__(num_qubits=1)
 
     def program(self, **_):
-        logging.info("Entry point for the Correct X program")
+        logging.debug("Entry point for the Correct X program")
         q1 = self.get_qubit_indices(self.num_qubits)
         self.apply(instr.INSTR_X, q1)
         yield self.run()

@@ -32,11 +32,11 @@ class FidelityCalculator(Component):
             logging.error(f"(FidelityCalculator | {self.name}) Received qubit from unexpected port: {port}")
             return
         elif self.__qubit_slots[port]:
-            logging.info(f"(FidelityCalculator | {self.name}) Inbound qubit on port {port} replaces existing qubit")
+            logging.debug(f"(FidelityCalculator | {self.name}) Inbound qubit on port {port} replaces existing qubit")
 
         self.__qubit_slots[port] = inbound_qubit
         if self.__qubit_slots['qin0'] is None or self.__qubit_slots['qin1'] is None:
-            logging.info(f"(FidelityCalc | {self.name}) one qubit is loaded into the slots {self.__qubit_slots}")
+            logging.debug(f"(FidelityCalc | {self.name}) one qubit is loaded into the slots {self.__qubit_slots}")
         else:
             fidelity = self.calculate_fidelity(self.__qubit_slots['qin0'], self.__qubit_slots['qin1'])
             # TODO send of fidelity result to main box listener
@@ -77,7 +77,7 @@ class FidelityCalculator(Component):
                 'B10': qapi.fidelity([qubit0, qubit1], ks.b10, squared=True),
                 'B11': qapi.fidelity([qubit0, qubit1], ks.b11, squared=True)
             }
-            logging.info(f"(FidelityCalc) Fidelities output: {fidelities}")
+            logging.debug(f"(FidelityCalc) Fidelities output: {fidelities}")
             return fidelities['B00']
         except Exception as e:
             logging.error(f"(FidelityCalculator.calculate_fidelity) Error calculating fidelity: {e}")
