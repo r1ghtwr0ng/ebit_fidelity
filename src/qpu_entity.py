@@ -29,6 +29,7 @@ class QPUEntity(ns.pydynaa.Entity):
             ns.components.qprocessor.PhysicalInstruction(ns.components.instructions.INSTR_INIT, duration=3, parallel=True),
             ns.components.qprocessor.PhysicalInstruction(ns.components.instructions.INSTR_H, duration=1, parallel=True),
             ns.components.qprocessor.PhysicalInstruction(ns.components.instructions.INSTR_X, duration=1, parallel=True),
+            ns.components.qprocessor.PhysicalInstruction(ns.components.instructions.INSTR_Y, duration=1, parallel=True),
             ns.components.qprocessor.PhysicalInstruction(ns.components.instructions.INSTR_Z, duration=1, parallel=True),
             ns.components.qprocessor.PhysicalInstruction(ns.components.instructions.INSTR_CNOT, duration=4, parallel=True, topology=[(0, 1)]),
             ns.components.qprocessor.PhysicalInstruction(ns.components.instructions.INSTR_EMIT, duration=1, parallel=True),
@@ -82,13 +83,16 @@ class QPUEntity(ns.pydynaa.Entity):
     # Callback function for applying qubit corrections based on BSMDetector output
     def __correction_callback(self, msg):
         logging.debug(f"(QPUEntity | {self.name}) received: {msg}")
-        status = msg.items[0]
-        if status == 1 and self.__correction == 'X':
+        status = msg.items[0].success
+        bell_idx = msg.items[0].bell_index
+
+        if self.__correction == 'Y': logging.info(f"(QPUEntity | {self.name}) Fidelities output: Bell Index: {bell_idx}")
+        if bell_idx == 1 and self.__correction == 'Y':
             logging.debug(f"(QPUEntity | {self.name}) Performing X correction")
-            self.add_program(CorrectXProgram())
-        elif status == 2 and self.__correction == 'Z':
-            logging.debug(f"(QPUEntity | {self.name}) Performing Z correction")
-            self.add_program(CorrectZProgram())
+            #self.add_program(CorrectXProgram())
+        elif bell_idx == 2 and self.__correction == 'Y':
+            logging.debug(f"(QPUEntity | {self.name}) Performing Y correction")
+            self.add_program(CorrectYProgram())
         else:
             logging.debug(f"(QPUEntity | {self.name}) No correction needed")
 
@@ -132,7 +136,7 @@ class EmitProgram(QuantumProgram):
         self.apply(instr.INSTR_EMIT, [q1, q2])
         yield self.run()
 
-class CorrectZProgram(QuantumProgram):
+class CorrectYProgram(QuantumProgram):
     """Program to apply a Pauli Z correction to a shared Bell state
     """
     def __init__(self):
@@ -141,7 +145,7 @@ class CorrectZProgram(QuantumProgram):
     def program(self, **_):
         logging.info("Entry point for the Correct Z program")
         q1 = self.get_qubit_indices(self.num_qubits)
-        self.apply(instr.INSTR_Z, q1)
+        self.apply(instr.INSTR_Y, q1)
         yield self.run()
 
 class CorrectXProgram(QuantumProgram):
