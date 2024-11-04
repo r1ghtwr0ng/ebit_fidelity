@@ -45,8 +45,8 @@ class QPUEntity(ns.pydynaa.Entity):
     # Helper for setting up the callbacks and handlers
     def __setup_callbacks(self):
         """Set up callback handling for when programs complete."""
-        self.processor.set_program_done_callback(self.__on_program_done)
-        self.processor.set_program_fail_callback(self.__on_program_fail)
+        self.processor.set_program_done_callback(self.__on_program_done, once=False)
+        self.processor.set_program_fail_callback(self.__on_program_fail, once=False)
         self.processor.ports['qin0'].bind_input_handler(self.__recv_qubit)
         self.processor.ports['correction'].bind_input_handler(self.__correction_callback)
 
@@ -89,7 +89,7 @@ class QPUEntity(ns.pydynaa.Entity):
         if self.__correction == 'Y': logging.info(f"(QPUEntity | {self.name}) Fidelities output: Bell Index: {bell_idx}")
         if bell_idx == 1 and self.__correction == 'Y':
             logging.debug(f"(QPUEntity | {self.name}) Performing X correction")
-            #self.add_program(CorrectXProgram())
+            self.add_program(CorrectXProgram())
         elif bell_idx == 2 and self.__correction == 'Y':
             logging.debug(f"(QPUEntity | {self.name}) Performing Y correction")
             self.add_program(CorrectYProgram())
@@ -100,10 +100,10 @@ class QPUEntity(ns.pydynaa.Entity):
     # Use this function to append programs to the object queue
     def add_program(self, program):
         """Add a program to the queue and execute if the processor is available."""
-        logging.info(f"(QPUEntity | {self.name}) Call to add_program")
+        logging.info(f"(QPUEntity | {self.name}) Call to add_program with {program}")
         if not self.processor.busy:
             if not self.__measuring:
-                logging.info(f"(QPUEntity | {self.name}) executing program")
+                logging.info(f"(QPUEntity | {self.name}) executing program {program}")
                 self.processor.execute_program(program)
             else:
                 logging.info(f"(QPUEntity | {self.name}) appending program to queue (measuring qubit fidelity)")

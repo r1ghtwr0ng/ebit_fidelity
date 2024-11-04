@@ -61,7 +61,7 @@ def run():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     result = []
-    for i in range(10):
+    for i in range(1000):
         logging.debug(f"Starting Run {i}")
         ret = run()
         result += ret
