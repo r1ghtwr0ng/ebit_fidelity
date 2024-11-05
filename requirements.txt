@@ -4,3 +4,5 @@ scipy
 matplotlib
 pytest
 pytest-cov
+sphinx
+furo
