@@ -1,0 +1,1375 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" />
+
+    <!-- Generated with Sphinx 8.1.3 and Furo 2024.08.06 -->
+        <title>detectors - FSO Switch Sim documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">FSO Switch Sim  documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  
+  <span class="sidebar-brand-text">FSO Switch Sim  documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../modules.html">src</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of src</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../detectors.html">detectors module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../fidelity_calculator.html">fidelity_calculator module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../network.html">network module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../qpu_entity.html">qpu_entity module</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <h1>Source code for detectors</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.linalg</span> <span class="kn">import</span> <span class="n">sqrtm</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">from</span> <span class="nn">netsquid.components.qdetector</span> <span class="kn">import</span> <span class="n">QuantumDetector</span><span class="p">,</span> <span class="n">QuantumDetectorError</span>
+<span class="kn">from</span> <span class="nn">netsquid.qubits</span> <span class="kn">import</span> <span class="n">operators</span> <span class="k">as</span> <span class="n">ops</span>
+<span class="kn">from</span> <span class="nn">netsquid.qubits</span> <span class="kn">import</span> <span class="n">qubitapi</span> <span class="k">as</span> <span class="n">qapi</span>
+<span class="kn">from</span> <span class="nn">netsquid.qubits.ketstates</span> <span class="kn">import</span> <span class="n">BellIndex</span>
+<span class="kn">from</span> <span class="nn">netsquid.qubits.qubit</span> <span class="kn">import</span> <span class="n">Qubit</span>
+<span class="kn">from</span> <span class="nn">netsquid.util.simtools</span> <span class="kn">import</span> <span class="n">sim_time</span>
+<span class="kn">from</span> <span class="nn">netsquid.util.simlog</span> <span class="kn">import</span> <span class="n">logger</span>
+
+
+<div class="viewcode-block" id="BSMOutcome">
+<a class="viewcode-back" href="../detectors.html#detectors.BSMOutcome">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">BSMOutcome</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Possible outcomes of a photon-based Bell state measurement (BSM), caused by either</span>
+<span class="sd">    a successful single-photon measurement, or</span>
+<span class="sd">    a combination of photon losses and dark counts (see `BSMDetector._set_meas_operators()`).</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    success : bool</span>
+<span class="sd">        Denotes whether the measurement was a success. It has value True if exactly one photon was detected in one</span>
+<span class="sd">        of the detectors, while zero photons were detected at the other one. In case of dual-rail encoding, this must</span>
+<span class="sd">        occur twice in each mode. In all other cases, the BSM is not successful.</span>
+<span class="sd">    bell_index : BellIndex</span>
+<span class="sd">        Denotes the Bell index of the state, which is only relevant in case the BSM is successful. Must be either</span>
+<span class="sd">        `BellIndex.PSI_PLUS` or `BellIndex.PSI_MINUS`.</span>
+<span class="sd">        Default value set to -1 to force a user to set the correct BellIndex.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">success</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">bell_index</span><span class="p">:</span> <span class="n">BellIndex</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span></div>
+
+
+
+<div class="viewcode-block" id="QKDOutcome">
+<a class="viewcode-back" href="../detectors.html#detectors.QKDOutcome">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">QKDOutcome</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Possible outcomes of a photon measurement that can be used for quantum-key distribution (QKD).</span>
+<span class="sd">    A measurement can be performed in three bases (X, Y or Z), and</span>
+<span class="sd">    the measurement outcome can be either 0 or 1.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    success : bool</span>
+<span class="sd">        Denotes whether the measurement was a success. It has value True if exactly one photon was detected in one</span>
+<span class="sd">        of the detectors, while zero photons were detected at the other one.</span>
+<span class="sd">    outcome : int in [0, 1]</span>
+<span class="sd">        Denotes the measurement outcome, which is only relevant in case the measurement is successful. Must be either</span>
+<span class="sd">        0 or 1. Note that these values are in principle interchangable and completely rely on convention.</span>
+<span class="sd">    measurement_basis : str in [&#39;X&#39;, &#39;Y&#39;, &#39;Z&#39;]</span>
+<span class="sd">        Measurement basis that is used during the measurement. In the Z basis two photons are measured independently,</span>
+<span class="sd">        while for the X and Y basis the two incoming photons are interfered using a beam splitter, where</span>
+<span class="sd">        for the Y basis an additional phase shift is applied to one of the two photons.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">success</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">measurement_basis</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">outcome</span><span class="p">:</span> <span class="nb">int</span></div>
+
+
+
+<div class="viewcode-block" id="TwinDetector">
+<a class="viewcode-back" href="../detectors.html#detectors.TwinDetector">[docs]</a>
+<span class="k">class</span> <span class="nc">TwinDetector</span><span class="p">(</span><span class="n">QuantumDetector</span><span class="p">):</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Component that contains two detectors which serves as a base class for the BSM and QKD detectors.</span>
+<span class="sd">    Contains the POVMs for setups with and without a beam splitter that interferes the incoming qubits.</span>
+
+<span class="sd">    Schematic of setup:</span>
+
+<span class="sd">    .. code-block :: text</span>
+
+<span class="sd">              Without beam splitter                  With beam splitter (BS)</span>
+<span class="sd">                ----------------                      --------------------</span>
+<span class="sd">                |   /|         |                      |   /|             |</span>
+<span class="sd">        cout0 : &gt; A( |=========&lt; : qin0       cout0 : &gt; A( |===     =====&lt; : qin0</span>
+<span class="sd">                |   \|         |                      |   \|   \\ //     |</span>
+<span class="sd">                |              |                      |       ------ BS  |</span>
+<span class="sd">                |   /|         |                      |   /|   // \\     |</span>
+<span class="sd">        cout1 : &gt; B( |=========&lt; : qin1       cout1 : &gt; B( |===     =====&lt; : qin1</span>
+<span class="sd">                |   \|         |                      |   \|             |</span>
+<span class="sd">                ----------------                      --------------------</span>
+
+<span class="sd">    The two detectors are labeled A and B and for the input and output ports the default names</span>
+<span class="sd">    `qin0`, `qin1`, `cout0` and `cout1` are used.</span>
+<span class="sd">    Can represent a setup with or without a single beam splitter, based on which measurement operators are set.</span>
+<span class="sd">    The Hong-Ou-Mandel interference visibility of the beam splitter can be tuned to represent</span>
+<span class="sd">    for example a delay between the arrival times of two incoming photons.</span>
+<span class="sd">    The detectors can perform noisy measurements based on the values of the dark count probability and</span>
+<span class="sd">    (quantum) detection efficiency parameters.</span>
+<span class="sd">    The two input ports `qin0` and `qin1` handle register incoming qubits,</span>
+<span class="sd">    after which a (possibly noisy) measurement is done.</span>
+<span class="sd">    The measurement outcome and any additional information are transmitted using output ports `cout0` and `cout1`.</span>
+<span class="sd">    Measurements are only possible for single-qubit states in either presence-absence or dual-rail encoding, and</span>
+<span class="sd">    only performed when the two messages arrive simultaneously.</span>
+<span class="sd">    The `is_number_state` property of the received qubits is used to determine whether single-rail encoding</span>
+<span class="sd">    or dual-rail encoding is used.</span>
+<span class="sd">    The number of multiplexing modes is automatically identified by the number of qubits in the received messages.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    name : str</span>
+<span class="sd">        Name of detector.</span>
+<span class="sd">    p_dark : float, optional</span>
+<span class="sd">        Dark-count probability, i.e. probability of measuring a photon while no photon was present, per detector.</span>
+<span class="sd">    det_eff : float, optional</span>
+<span class="sd">        Efficiency per detector, i.e. the probability of detecting an incoming photon.</span>
+<span class="sd">    visibility : float, optional</span>
+<span class="sd">        Visibility of the Hong-Ou-Mandel dip, also referred to as the photon indistinguishability.</span>
+<span class="sd">        A visibility of 1 implies perfectly indistinguishable photons arrive at the beam splitter, while</span>
+<span class="sd">        a visibility of 0 represents completely (classical) distinguishable photons, such that there</span>
+<span class="sd">        will be no interference.</span>
+<span class="sd">    num_resolving : bool, optional</span>
+<span class="sd">        If set to True, photon-number-resolving detectors will be used, otherwise threshold detectors.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">p_dark</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">det_eff</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">visibility</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">num_resolving</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">num_input_ports</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">num_output_ports</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">meas_operators</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+        <span class="n">output_meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="c1"># Initialize the parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_p_dark</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_det_eff</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_visibility</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_resolving</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="kc">None</span><span class="p">,</span>
+            <span class="kc">None</span><span class="p">,</span>
+            <span class="kc">None</span><span class="p">,</span>
+            <span class="kc">None</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">p_dark</span> <span class="o">=</span> <span class="n">p_dark</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">det_eff</span> <span class="o">=</span> <span class="n">det_eff</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">visibility</span> <span class="o">=</span> <span class="n">visibility</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_resolving</span> <span class="o">=</span> <span class="n">num_resolving</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">name</span><span class="p">,</span>
+            <span class="n">num_input_ports</span><span class="o">=</span><span class="n">num_input_ports</span><span class="p">,</span>
+            <span class="n">num_output_ports</span><span class="o">=</span><span class="n">num_output_ports</span><span class="p">,</span>
+            <span class="n">meas_operators</span><span class="o">=</span><span class="n">meas_operators</span><span class="p">,</span>
+            <span class="n">output_meta</span><span class="o">=</span><span class="n">output_meta</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="c1"># TODO: remove when netsquid is patched</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_triggered</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_dead_time</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">p_dark</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;float : dark-count probability.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_p_dark</span>
+
+    <span class="nd">@p_dark</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">p_dark</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Setter for dark count probability. Measurement operators must be recomputed if this value is changed.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        value : float</span>
+<span class="sd">            New value of the dark count probability.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="mi">1</span> <span class="o">&gt;=</span> <span class="n">value</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Value of dark-count probability p_dark must be in the interval [0,1], not </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_p_dark</span> <span class="o">!=</span> <span class="n">value</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_parameter_changed</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_p_dark</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">det_eff</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;float : detection efficiency.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_det_eff</span>
+
+    <span class="nd">@det_eff</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">det_eff</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Setter for detection efficiency. Measurement operators must be recomputed if this value is changed.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        value : float</span>
+<span class="sd">            New value of the detection efficiency.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="mi">1</span> <span class="o">&gt;=</span> <span class="n">value</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Value of detection efficiency det_eff must be in the interval [0,1], not </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_det_eff</span> <span class="o">!=</span> <span class="n">value</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_parameter_changed</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_det_eff</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">visibility</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;float : Hong-Ou-Mandel interference visibility, which is a measure of the photon indistinguishability.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_visibility</span>
+
+    <span class="nd">@visibility</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">visibility</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Setter for the visibility. Measurement operators must be recomputed if this value is changed.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        value : float</span>
+<span class="sd">            New value of the Hong-Ou-Mandel interference visibility.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="mi">1</span> <span class="o">&gt;=</span> <span class="n">value</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Value of Hong-Ou-Mandel interference visibility must be in the interval [0,1], &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;not </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_visibility</span> <span class="o">!=</span> <span class="n">value</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_parameter_changed</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_visibility</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">num_resolving</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;bool : indicates whether photon-number-resolving detectors are used.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_resolving</span>
+
+    <span class="nd">@num_resolving</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">num_resolving</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Setter for whether the detector is photon-number resolving.</span>
+<span class="sd">        Measurement operators must be recomputed if this value is changed.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        value : bool</span>
+<span class="sd">            New value of whether photon-number resolving measurement operators are used.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_resolving</span> <span class="o">!=</span> <span class="n">value</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_parameter_changed</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_num_resolving</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">_prob_no_photon_detected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Probability that no photons are detected at a particular detector, given that n photons arrive.</span>
+<span class="sd">        This can only occur if all n photons get lost and a dark count does not occur.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_p_dark</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_det_eff</span><span class="p">)</span> <span class="o">**</span> <span class="n">n</span>
+
+    <span class="k">def</span> <span class="nf">_prob_exactly_one_photon_detected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Probability that exactly one photon is detected at a particular detector, given that n photons arrive.</span>
+<span class="sd">        This can occur if exactly 1 out of n photons gets detected (there exist (n choose 1) = n combinations of this),</span>
+<span class="sd">        while simultaneously no dark count occurs, or all photons get lost, but a dark count occurs which is registered</span>
+<span class="sd">        as a single photon.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Separate case to circumvent raising 0.0 to a negative power when detection efficiency is 1</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_p_dark</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">n</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_det_eff</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_det_eff</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_p_dark</span><span class="p">)</span>
+            <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_det_eff</span><span class="p">)</span> <span class="o">**</span> <span class="n">n</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_p_dark</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_set_meas_operators_with_beamsplitter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sets the measurement (Kraus) operators for getting a certain click pattern with visibility,</span>
+<span class="sd">        detector efficiency and dark counts included.</span>
+<span class="sd">        First we determine the projectors for having a certain number of photons arriving at one of the detectors,</span>
+<span class="sd">        provided the Hong-Ou-Mandel dip visibility at hand.</span>
+<span class="sd">        Then we include detection efficiency and dark counts to get a full set of POVMs, after which we find a</span>
+<span class="sd">        representation in terms of Kraus operators by taking the matrix square root.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Start with setting the projective POVMs for a certain number of photons arriving at a detector</span>
+        <span class="c1"># Assuming mu is real</span>
+        <span class="n">mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_visibility</span><span class="p">)</span>
+        <span class="c1"># A derivation of these projectors can be found in Appendix D.5 of https://arxiv.org/abs/1903.09778.</span>
+        <span class="n">projectors</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]),</span>
+            <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span> <span class="mi">1</span>
+            <span class="o">/</span> <span class="mi">2</span>
+            <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]),</span>
+            <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span> <span class="mi">1</span>
+            <span class="o">/</span> <span class="mi">2</span>
+            <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">mu</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">mu</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]</span>
+            <span class="p">),</span>
+            <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span> <span class="mi">1</span>
+            <span class="o">/</span> <span class="mi">2</span>
+            <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">mu</span> <span class="o">*</span> <span class="n">mu</span><span class="p">]]</span>
+            <span class="p">),</span>
+            <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span> <span class="mi">1</span>
+            <span class="o">/</span> <span class="mi">4</span>
+            <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">mu</span> <span class="o">*</span> <span class="n">mu</span><span class="p">]]</span>
+            <span class="p">),</span>
+            <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span> <span class="mi">1</span>
+            <span class="o">/</span> <span class="mi">4</span>
+            <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">mu</span> <span class="o">*</span> <span class="n">mu</span><span class="p">]]</span>
+            <span class="p">),</span>
+        <span class="p">}</span>
+        <span class="c1"># Now include the detector efficiency and dark-count probability to get the resulting measurement outcome POVMs</span>
+        <span class="c1"># We assume that a dark count *can* occur simultaneously with the detection of a regular photon, based on the</span>
+        <span class="c1"># detector model described in https://arxiv.org/abs/1109.0194.</span>
+        <span class="c1"># Furthermore we assume that at most one dark count can occur simultaneously in a single detector.</span>
+        <span class="c1"># We define the POVMs for photon-number resolving detectors, which can be easily combined in order to construct</span>
+        <span class="c1"># the POVMs for non-photon-number resolving detectors.</span>
+        <span class="c1"># Initialize POVMs</span>
+        <span class="n">no_photons_at_both</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+        <span class="n">one_photon_at_A_none_at_B</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+        <span class="n">multiple_photons_at_A_none_at_B</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+        <span class="n">one_photon_at_B_none_at_A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+        <span class="n">multiple_photons_at_B_none_at_A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+        <span class="n">at_least_one_photon_at_both</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+        <span class="c1"># Note that at most two photons in total can arrive simultaneously at a detector</span>
+        <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span> <span class="o">-</span> <span class="n">m</span><span class="p">):</span>
+                <span class="n">no_click_m</span><span class="p">,</span> <span class="n">no_click_n</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_prob_no_photon_detected</span><span class="p">(</span><span class="n">m</span><span class="p">),</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_prob_no_photon_detected</span><span class="p">(</span><span class="n">n</span><span class="p">),</span>
+                <span class="p">)</span>
+                <span class="n">one_photon_m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prob_exactly_one_photon_detected</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+                <span class="n">one_photon_n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prob_exactly_one_photon_detected</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+                <span class="c1"># No photons get detected at either detector. This can only occur if</span>
+                <span class="c1"># m photons arrive at A, which all get lost and no dark count occurs, and</span>
+                <span class="c1"># n photons arrive at B, which all get lost and no dark count occurs.</span>
+                <span class="n">no_photons_at_both</span> <span class="o">+=</span> <span class="n">no_click_m</span> <span class="o">*</span> <span class="n">no_click_n</span> <span class="o">*</span> <span class="n">projectors</span><span class="p">[(</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">)]</span>
+                <span class="c1"># Exactly one photon gets detected at A, while none are detected at B. This can only occur if</span>
+                <span class="c1"># m photons arrive at A, of which exactly 1 gets detected, and</span>
+                <span class="c1"># n photons arrive at B, after which no photons are detected</span>
+                <span class="n">one_photon_at_A_none_at_B</span> <span class="o">+=</span> <span class="p">(</span>
+                    <span class="n">one_photon_m</span> <span class="o">*</span> <span class="n">no_click_n</span> <span class="o">*</span> <span class="n">projectors</span><span class="p">[(</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">)]</span>
+                <span class="p">)</span>
+                <span class="c1"># Multiple photon gets detected at A, while none are detected at B. This can only occur if</span>
+                <span class="c1"># m photons arrive at A, after which two or more are detected, and</span>
+                <span class="c1"># n photons arrive at B, after which no photons are detected</span>
+                <span class="c1"># Here we use the fact that Pr(X &gt;= 2) = 1 - Pr(X = 1) - Pr(X = 0).</span>
+                <span class="n">multiple_photons_at_A_none_at_B</span> <span class="o">+=</span> <span class="p">(</span>
+                    <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">no_click_m</span> <span class="o">-</span> <span class="n">one_photon_m</span><span class="p">)</span> <span class="o">*</span> <span class="n">no_click_n</span> <span class="o">*</span> <span class="n">projectors</span><span class="p">[(</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">)]</span>
+                <span class="p">)</span>
+                <span class="c1"># Due to symmetry, we can follow the same reasoning when A and B are switched</span>
+                <span class="n">one_photon_at_B_none_at_A</span> <span class="o">+=</span> <span class="p">(</span>
+                    <span class="n">one_photon_n</span> <span class="o">*</span> <span class="n">no_click_m</span> <span class="o">*</span> <span class="n">projectors</span><span class="p">[(</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">)]</span>
+                <span class="p">)</span>
+                <span class="n">multiple_photons_at_B_none_at_A</span> <span class="o">+=</span> <span class="p">(</span>
+                    <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">no_click_n</span> <span class="o">-</span> <span class="n">one_photon_n</span><span class="p">)</span> <span class="o">*</span> <span class="n">no_click_m</span> <span class="o">*</span> <span class="n">projectors</span><span class="p">[(</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">)]</span>
+                <span class="p">)</span>
+                <span class="c1"># Finally, we consider the case when at least one photon arrives at both detectors.</span>
+                <span class="c1"># This can only occur if</span>
+                <span class="c1"># m photons arrive at detector A, of which at least one gets detected, and</span>
+                <span class="c1"># n photons arrive at detector B, of which at least one gets detected.</span>
+                <span class="c1"># Here we use the fact that Pr(X &gt;= 1) = 1 - Pr(X = 0).</span>
+                <span class="n">at_least_one_photon_at_both</span> <span class="o">+=</span> <span class="p">(</span>
+                    <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">no_click_m</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">no_click_n</span><span class="p">)</span> <span class="o">*</span> <span class="n">projectors</span><span class="p">[(</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">)]</span>
+                <span class="p">)</span>
+
+        <span class="c1"># Set the Kraus operator by taking the matrix square root of the POVMs</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_resolving</span><span class="p">:</span>
+            <span class="c1"># In this case we cannot distinguish between one or two photons getting detected</span>
+            <span class="n">n_00</span> <span class="o">=</span> <span class="n">ops</span><span class="o">.</span><span class="n">Operator</span><span class="p">(</span><span class="s2">&quot;n_0&quot;</span><span class="p">,</span> <span class="n">sqrtm</span><span class="p">(</span><span class="n">no_photons_at_both</span><span class="p">))</span>
+            <span class="n">n_10</span> <span class="o">=</span> <span class="n">ops</span><span class="o">.</span><span class="n">Operator</span><span class="p">(</span>
+                <span class="s2">&quot;n_10&quot;</span><span class="p">,</span>
+                <span class="n">sqrtm</span><span class="p">(</span><span class="n">one_photon_at_A_none_at_B</span> <span class="o">+</span> <span class="n">multiple_photons_at_A_none_at_B</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="n">n_01</span> <span class="o">=</span> <span class="n">ops</span><span class="o">.</span><span class="n">Operator</span><span class="p">(</span>
+                <span class="s2">&quot;n_01&quot;</span><span class="p">,</span>
+                <span class="n">sqrtm</span><span class="p">(</span><span class="n">one_photon_at_B_none_at_A</span> <span class="o">+</span> <span class="n">multiple_photons_at_B_none_at_A</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="n">n_11</span> <span class="o">=</span> <span class="n">ops</span><span class="o">.</span><span class="n">Operator</span><span class="p">(</span><span class="s2">&quot;n_11&quot;</span><span class="p">,</span> <span class="n">sqrtm</span><span class="p">(</span><span class="n">at_least_one_photon_at_both</span><span class="p">))</span>
+            <span class="n">meas_operators</span> <span class="o">=</span> <span class="p">[</span><span class="n">n_00</span><span class="p">,</span> <span class="n">n_10</span><span class="p">,</span> <span class="n">n_01</span><span class="p">,</span> <span class="n">n_11</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># We have two separate operators for one or two photons arriving at one the detectors, allowing us to</span>
+            <span class="c1"># identify false positives during entanglement generation</span>
+            <span class="n">n_00</span> <span class="o">=</span> <span class="n">ops</span><span class="o">.</span><span class="n">Operator</span><span class="p">(</span><span class="s2">&quot;n_00&quot;</span><span class="p">,</span> <span class="n">sqrtm</span><span class="p">(</span><span class="n">no_photons_at_both</span><span class="p">))</span>
+            <span class="n">n_10</span> <span class="o">=</span> <span class="n">ops</span><span class="o">.</span><span class="n">Operator</span><span class="p">(</span><span class="s2">&quot;n_10&quot;</span><span class="p">,</span> <span class="n">sqrtm</span><span class="p">(</span><span class="n">one_photon_at_A_none_at_B</span><span class="p">))</span>
+            <span class="n">n_01</span> <span class="o">=</span> <span class="n">ops</span><span class="o">.</span><span class="n">Operator</span><span class="p">(</span><span class="s2">&quot;n_01&quot;</span><span class="p">,</span> <span class="n">sqrtm</span><span class="p">(</span><span class="n">one_photon_at_B_none_at_A</span><span class="p">))</span>
+            <span class="n">n_11</span> <span class="o">=</span> <span class="n">ops</span><span class="o">.</span><span class="n">Operator</span><span class="p">(</span><span class="s2">&quot;n_11&quot;</span><span class="p">,</span> <span class="n">sqrtm</span><span class="p">(</span><span class="n">at_least_one_photon_at_both</span><span class="p">))</span>
+            <span class="n">n_20</span> <span class="o">=</span> <span class="n">ops</span><span class="o">.</span><span class="n">Operator</span><span class="p">(</span><span class="s2">&quot;n_20&quot;</span><span class="p">,</span> <span class="n">sqrtm</span><span class="p">(</span><span class="n">multiple_photons_at_A_none_at_B</span><span class="p">))</span>
+            <span class="n">n_02</span> <span class="o">=</span> <span class="n">ops</span><span class="o">.</span><span class="n">Operator</span><span class="p">(</span><span class="s2">&quot;n_02&quot;</span><span class="p">,</span> <span class="n">sqrtm</span><span class="p">(</span><span class="n">multiple_photons_at_B_none_at_A</span><span class="p">))</span>
+            <span class="n">meas_operators</span> <span class="o">=</span> <span class="p">[</span><span class="n">n_00</span><span class="p">,</span> <span class="n">n_10</span><span class="p">,</span> <span class="n">n_01</span><span class="p">,</span> <span class="n">n_11</span><span class="p">,</span> <span class="n">n_20</span><span class="p">,</span> <span class="n">n_02</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_meas_operators</span> <span class="o">=</span> <span class="n">meas_operators</span>
+
+    <span class="k">def</span> <span class="nf">_set_meas_operators_without_beamsplitter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the measurement operators for simple measurements in the Z basis.</span>
+<span class="sd">        Note that we do not distinguish between number and non-number resolving detectors,</span>
+<span class="sd">        since at most one photon can arrive.</span>
+<span class="sd">        If a dark count would occur simultaneously with a single photon, we could measure at most</span>
+<span class="sd">        two photons, but from this we can still deduce that a single regular photon had arrived.</span>
+<span class="sd">        Note that since we do not have a beam splitter in this case, there is also no Hong-Ou-Mandel</span>
+<span class="sd">        interference visibility involved.&quot;&quot;&quot;</span>
+        <span class="c1"># The projectors without a beam splitter are straight-forward</span>
+        <span class="n">projectors</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]),</span>
+            <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]),</span>
+            <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]),</span>
+            <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]),</span>
+        <span class="p">}</span>
+        <span class="c1"># Initialize POVMs</span>
+        <span class="n">no_clicks_at_both</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+        <span class="n">click_at_A_none_at_B</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+        <span class="n">click_at_B_none_at_A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+        <span class="n">click_at_both</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+        <span class="c1"># Note that at most one regular photon can arrive at a detector in this case</span>
+        <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+                <span class="n">no_click_m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prob_no_photon_detected</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+                <span class="n">no_click_n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prob_no_photon_detected</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+                <span class="c1"># No photons get detected at either detector. This can only occur if</span>
+                <span class="c1"># m photons arrive at A, which all get lost and no dark count occurs, and</span>
+                <span class="c1"># n photons arrive at B, which all get lost and no dark count occurs.</span>
+                <span class="n">no_clicks_at_both</span> <span class="o">+=</span> <span class="n">no_click_m</span> <span class="o">*</span> <span class="n">no_click_n</span> <span class="o">*</span> <span class="n">projectors</span><span class="p">[(</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">)]</span>
+                <span class="c1"># At least one photon gets detected at A, while none are detected at B. This can only occur if</span>
+                <span class="c1"># m photons arrive at A, of which exactly 1 gets detected, and</span>
+                <span class="c1"># n photons arrive at B, after which no photons are detected</span>
+                <span class="c1"># Here we use the fact that Pr(X &gt;= 1) = 1 - Pr(X = 0)</span>
+                <span class="n">click_at_A_none_at_B</span> <span class="o">+=</span> <span class="p">(</span>
+                    <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">no_click_m</span><span class="p">)</span> <span class="o">*</span> <span class="n">no_click_n</span> <span class="o">*</span> <span class="n">projectors</span><span class="p">[(</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">)]</span>
+                <span class="p">)</span>
+                <span class="c1"># Due to symmetry, we can follow the same reasoning when A and B are switched</span>
+                <span class="n">click_at_B_none_at_A</span> <span class="o">+=</span> <span class="p">(</span>
+                    <span class="n">no_click_m</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">no_click_n</span><span class="p">)</span> <span class="o">*</span> <span class="n">projectors</span><span class="p">[(</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">)]</span>
+                <span class="p">)</span>
+                <span class="c1"># Finally, we consider the case when at least one photon arrives at both detectors.</span>
+                <span class="c1"># This can only occur if</span>
+                <span class="c1"># m photons arrive at detector A, of which at least one gets detected, and</span>
+                <span class="c1"># n photons arrive at detector B, of which at least one gets detected.</span>
+                <span class="c1"># Here we again use the fact that Pr(X &gt;= 1) = 1 - Pr(X = 0).</span>
+                <span class="n">click_at_both</span> <span class="o">+=</span> <span class="p">(</span>
+                    <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">no_click_m</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">no_click_n</span><span class="p">)</span> <span class="o">*</span> <span class="n">projectors</span><span class="p">[(</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">)]</span>
+                <span class="p">)</span>
+
+        <span class="n">n_00</span> <span class="o">=</span> <span class="n">ops</span><span class="o">.</span><span class="n">Operator</span><span class="p">(</span><span class="s2">&quot;n_00_no_bs&quot;</span><span class="p">,</span> <span class="n">sqrtm</span><span class="p">(</span><span class="n">no_clicks_at_both</span><span class="p">))</span>
+        <span class="n">n_01</span> <span class="o">=</span> <span class="n">ops</span><span class="o">.</span><span class="n">Operator</span><span class="p">(</span><span class="s2">&quot;n_01_no_bs&quot;</span><span class="p">,</span> <span class="n">sqrtm</span><span class="p">(</span><span class="n">click_at_A_none_at_B</span><span class="p">))</span>
+        <span class="n">n_10</span> <span class="o">=</span> <span class="n">ops</span><span class="o">.</span><span class="n">Operator</span><span class="p">(</span><span class="s2">&quot;n_10_no_bs&quot;</span><span class="p">,</span> <span class="n">sqrtm</span><span class="p">(</span><span class="n">click_at_B_none_at_A</span><span class="p">))</span>
+        <span class="n">n_11</span> <span class="o">=</span> <span class="n">ops</span><span class="o">.</span><span class="n">Operator</span><span class="p">(</span><span class="s2">&quot;n_11_no_bs&quot;</span><span class="p">,</span> <span class="n">sqrtm</span><span class="p">(</span><span class="n">click_at_both</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_meas_operators</span> <span class="o">=</span> <span class="p">[</span><span class="n">n_00</span><span class="p">,</span> <span class="n">n_01</span><span class="p">,</span> <span class="n">n_10</span><span class="p">,</span> <span class="n">n_11</span><span class="p">]</span>
+
+<div class="viewcode-block" id="TwinDetector.preprocess_inputs">
+<a class="viewcode-back" href="../detectors.html#detectors.TwinDetector.preprocess_inputs">[docs]</a>
+    <span class="k">def</span> <span class="nf">preprocess_inputs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Function must be overriden by subclass&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TwinDetector.postprocess_outputs">
+<a class="viewcode-back" href="../detectors.html#detectors.TwinDetector.postprocess_outputs">[docs]</a>
+    <span class="k">def</span> <span class="nf">postprocess_outputs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dict_port_outcomes</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Function must be overriden by subclass&quot;</span><span class="p">)</span></div>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_convert_to_mode_encoding</span><span class="p">(</span><span class="n">q</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Converts a dual-rail encoded single qubit state to a</span>
+<span class="sd">        two-qubit, presence-absence encoded qubit state in the original modes.</span>
+<span class="sd">        The state |0&gt; is converted to |01&gt; (no photon in mode 1, one photon in mode 2),</span>
+<span class="sd">        while the state |1&gt; is converted to |10&gt; (one photon in mode 1, no photon in mode 2).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        q : :obj:`~netsquid.qubits.Qubit`</span>
+<span class="sd">            Incoming dual-rail encoded qubit.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        q_mode_1 : :obj:`~netsquid.qubits.Qubit`</span>
+<span class="sd">            Single-rail encoded qubit in the first mode.</span>
+<span class="sd">        q_mode_2 : :obj:`~netsquid.qubits.Qubit`</span>
+<span class="sd">            Single-rail encoded qubit in the second mode.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">q</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">q</span><span class="o">.</span><span class="n">qstate</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Create two qubits in state |00&gt;, so no photons in either time window</span>
+            <span class="n">q_mode_1</span><span class="p">,</span> <span class="n">q_mode_2</span> <span class="o">=</span> <span class="n">qapi</span><span class="o">.</span><span class="n">create_qubits</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">q_mode_1</span> <span class="o">=</span> <span class="n">q</span>
+            <span class="p">(</span><span class="n">q_mode_2</span><span class="p">,)</span> <span class="o">=</span> <span class="n">qapi</span><span class="o">.</span><span class="n">create_qubits</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="c1"># Create entangled state of the two qubits in presence-absence encoding</span>
+            <span class="n">qapi</span><span class="o">.</span><span class="n">operate</span><span class="p">([</span><span class="n">q_mode_1</span><span class="p">,</span> <span class="n">q_mode_2</span><span class="p">],</span> <span class="n">ops</span><span class="o">.</span><span class="n">CNOT</span><span class="p">)</span>
+            <span class="n">qapi</span><span class="o">.</span><span class="n">operate</span><span class="p">(</span><span class="n">q_mode_2</span><span class="p">,</span> <span class="n">ops</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">q_mode_1</span><span class="p">,</span> <span class="n">q_mode_2</span>
+
+    <span class="k">def</span> <span class="nf">_handle_qinput</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="c1"># TODO: decide if this override is still necessary after netsquid has been patched</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Override of QuantumDetector method to allow for incoming qubits to be `None`. For the rest left unchanged.&quot;&quot;&quot;</span>
+        <span class="c1"># Store or discard qubits when they arrive, and trigger</span>
+        <span class="n">meta</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">meta</span>
+        <span class="n">sender</span> <span class="o">=</span> <span class="n">meta</span><span class="p">[</span><span class="s2">&quot;rx_port_name&quot;</span><span class="p">]</span>
+        <span class="n">arrival_time</span> <span class="o">=</span> <span class="n">sim_time</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">qubit</span> <span class="ow">in</span> <span class="n">message</span><span class="o">.</span><span class="n">items</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">qubit</span><span class="p">,</span> <span class="n">Qubit</span><span class="p">)</span> <span class="ow">and</span> <span class="n">qubit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;A message should contain Qubits, not </span><span class="si">{</span><span class="n">qubit</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_dead_time</span><span class="p">:</span>
+                <span class="n">qapi</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">qubit</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_qubits_per_port</span><span class="p">[</span><span class="n">sender</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">arrival_time</span><span class="p">,</span> <span class="n">qubit</span><span class="p">,</span> <span class="n">meta</span><span class="p">))</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_triggered</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">trigger</span><span class="p">()</span>
+
+<div class="viewcode-block" id="TwinDetector.trigger">
+<a class="viewcode-back" href="../detectors.html#detectors.TwinDetector.trigger">[docs]</a>
+    <span class="k">def</span> <span class="nf">trigger</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># TODO: remove when netsquid is patched</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Start the measurement process.</span>
+
+<span class="sd">        Schedules the measurement after the system delay.</span>
+<span class="sd">        When called the detector should be ready to measure.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        QuantumDetectorError</span>
+<span class="sd">            If the detector is already triggered.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_triggered</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">QuantumDetectorError</span><span class="p">(</span><span class="s2">&quot;QuantumDetector is already triggered&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_triggered</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">sys_delay</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">[</span><span class="s2">&quot;system_delay&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_schedule_after</span><span class="p">(</span><span class="n">sys_delay</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_evtype_measure</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_measure</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="c1"># TODO: remove when netsquid is patched</span>
+        <span class="c1"># Callback for private measure event</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_triggered</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">measure</span><span class="p">()</span>
+
+<div class="viewcode-block" id="TwinDetector.measure">
+<a class="viewcode-back" href="../detectors.html#detectors.TwinDetector.measure">[docs]</a>
+    <span class="k">def</span> <span class="nf">measure</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># TODO: remove when netsquid is patched</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Perform a measurement on the received qubits.</span>
+
+<span class="sd">        Applies preprocessing to the qubits before the measurement, and</span>
+<span class="sd">        applies postprocessing to the measured classical outcomes.</span>
+<span class="sd">        After the measurement all qubits are discarded.</span>
+
+<span class="sd">        If an observable is specified, all qubits will be measured individually.</span>
+<span class="sd">        Otherwise, if measurement operators are specified, all qubits will be measured with these operators.</span>
+<span class="sd">        The qubits are ordered by port number and arrival time.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        QuantumDetectorError</span>
+<span class="sd">            If the number of qubits doesn&#39;t match the measurement operators when `error_on_fail` is set.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_triggered</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">preprocess_inputs</span><span class="p">()</span>
+        <span class="c1"># Get all qubits per port.</span>
+        <span class="n">q_lists</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_qubits_per_port</span><span class="p">[</span><span class="n">port_name</span><span class="p">]</span> <span class="k">for</span> <span class="n">port_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_port_names</span>
+        <span class="p">]</span>
+        <span class="n">__</span><span class="p">,</span> <span class="n">qubits</span><span class="p">,</span> <span class="n">__</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">q_list</span> <span class="ow">in</span> <span class="n">q_lists</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">q_list</span><span class="p">])</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_meas_operators</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Measurement using observables</span>
+            <span class="n">outcomes</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">qubit</span> <span class="ow">in</span> <span class="n">qubits</span><span class="p">:</span>
+                <span class="n">m</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">qapi</span><span class="o">.</span><span class="n">measure</span><span class="p">(</span><span class="n">qubit</span><span class="p">,</span> <span class="n">observable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_observable</span><span class="p">,</span> <span class="n">discard</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">outcomes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_qubits_per_port</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Measurement using Kraus operators</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">outcomes</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">qapi</span><span class="o">.</span><span class="n">gmeasure</span><span class="p">(</span><span class="n">qubits</span><span class="p">,</span> <span class="n">meas_operators</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_meas_operators</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="p">]</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="c1"># Measurement failed</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_error_on_fail</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">QuantumDetectorError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;The number of qubits (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">qubits</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;does not match the measurement operators&quot;</span>
+                    <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_schedule_now</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">evtype_measure_fail</span><span class="p">)</span>
+                <span class="n">outcomes</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">qubit</span> <span class="ow">in</span> <span class="n">qubits</span><span class="p">:</span>
+                    <span class="n">qapi</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">qubit</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_qubits_per_port</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="c1"># Take the measurement outcomes and put the outcomes on the ports</span>
+        <span class="n">outcomes_per_port</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">port_name</span><span class="p">:</span> <span class="n">outcomes</span><span class="p">[:]</span> <span class="k">for</span> <span class="n">port_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output_port_names</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">postprocess_outputs</span><span class="p">(</span><span class="n">outcomes_per_port</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="n">outcomes_per_port</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_dead_time</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">system_dead_time</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">[</span><span class="s2">&quot;dead_time&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">[</span><span class="s2">&quot;system_delay&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">system_dead_time</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>  <span class="c1"># Could also schedule_now, but this avoids an event.</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_schedule_after</span><span class="p">(</span><span class="n">system_dead_time</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_evtype_ready</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_finish</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="c1"># TODO: remove when netsquid is patched</span>
+        <span class="c1"># Callback for private finish event</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+
+<div class="viewcode-block" id="TwinDetector.finish">
+<a class="viewcode-back" href="../detectors.html#detectors.TwinDetector.finish">[docs]</a>
+    <span class="k">def</span> <span class="nf">finish</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># TODO: remove when netsquid is patched</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Finish the detection round.</span>
+
+<span class="sd">        This method is called when the dead time ends.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_dead_time</span> <span class="o">=</span> <span class="kc">False</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="BSMDetector">
+<a class="viewcode-back" href="../detectors.html#detectors.BSMDetector">[docs]</a>
+<span class="k">class</span> <span class="nc">BSMDetector</span><span class="p">(</span><span class="n">TwinDetector</span><span class="p">):</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Component that performs a photon-based probabilistic Bell-state measurement (BSM) using linear optics.</span>
+<span class="sd">    Supports single-rail (presence-absence) and dual-rail encoding for single-qubit states and multiplexing.</span>
+
+<span class="sd">    Schematic of setup:</span>
+
+<span class="sd">    .. code-block :: text</span>
+
+<span class="sd">                --------------------</span>
+<span class="sd">                |   /|             |</span>
+<span class="sd">        cout0 : &gt; A( |===     =====&lt; : qin0</span>
+<span class="sd">                |   \|   \\ //     |</span>
+<span class="sd">                |       ------ BS  |</span>
+<span class="sd">                |   /|   // \\     |</span>
+<span class="sd">        cout1 : &gt; B( |===     =====&lt; : qin1</span>
+<span class="sd">                |   \|             |</span>
+<span class="sd">                --------------------</span>
+
+<span class="sd">    Contains a single beam splitter (BS), which interferes incoming photons, and two photon detectors A and B.</span>
+<span class="sd">    Two input ports `qin0` and `qin1` handle register incoming qubits,</span>
+<span class="sd">    after which a (possibly noisy) measurement is done.</span>
+<span class="sd">    The measurement outcome, successful mode (if any) and optional additional information are transmitted</span>
+<span class="sd">    using output ports `cout0` and `cout1`.</span>
+<span class="sd">    Measurements are only possible for single-qubit states in either presence-absence or dual-rail encoding, and</span>
+<span class="sd">    only performed when the two messages arrive simultaneously.</span>
+<span class="sd">    The `is_number_state` property of the received qubits is used to determine whether single-rail encoding</span>
+<span class="sd">    or dual-rail encoding is used.</span>
+<span class="sd">    The number of multiplexing modes is automatically identified by the number of qubits in the received messages.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    name : str</span>
+<span class="sd">        Name of detector.</span>
+<span class="sd">    p_dark : float, optional</span>
+<span class="sd">        Dark-count probability, i.e. probability of measuring a photon while no photon was present, per detector.</span>
+<span class="sd">    det_eff : float, optional</span>
+<span class="sd">        Efficiency per detector, i.e. the probability of detecting an incoming photon.</span>
+<span class="sd">    visibility : float, optional</span>
+<span class="sd">        Visibility of the Hong-Ou-Mandel dip, also referred to as the photon indistinguishability.</span>
+<span class="sd">    num_resolving : bool, optional</span>
+<span class="sd">        If set to True, photon-number-resolving detectors will be used, otherwise threshold detectors.</span>
+<span class="sd">    allow_multiple_successful_modes : bool, optional</span>
+<span class="sd">        If set to True, multiple modes can be successful otherwise the detector stops measuring after the first</span>
+<span class="sd">        successful mode.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">,</span>
+        <span class="n">p_dark</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">det_eff</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">visibility</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">num_resolving</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">allow_multiple_successful_modes</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">name</span><span class="p">,</span>
+            <span class="n">p_dark</span><span class="o">=</span><span class="n">p_dark</span><span class="p">,</span>
+            <span class="n">det_eff</span><span class="o">=</span><span class="n">det_eff</span><span class="p">,</span>
+            <span class="n">visibility</span><span class="o">=</span><span class="n">visibility</span><span class="p">,</span>
+            <span class="n">num_resolving</span><span class="o">=</span><span class="n">num_resolving</span><span class="p">,</span>
+            <span class="n">num_input_ports</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="n">num_output_ports</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="n">meas_operators</span><span class="o">=</span><span class="p">[],</span>
+            <span class="n">output_meta</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;successful_modes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="kc">None</span><span class="p">]},</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_allow_multiple_successful_modes</span> <span class="o">=</span> <span class="n">allow_multiple_successful_modes</span>
+        <span class="c1"># Dictionary that maps an outcome of one of our measurement operators to a BSMOutcome, where</span>
+        <span class="c1"># 0 : no click</span>
+        <span class="c1"># 1 : detector A clicked corresponding to |01&gt; + |10&gt; (a Pauli X correction w.r.t |00&gt; + |11&gt;)</span>
+        <span class="c1"># 2 : detector B clicked corresponding to |01&gt; - |10&gt; (a Pauli Y correction w.r.t |00&gt; + |11&gt;)</span>
+        <span class="c1"># 3 : both detector A and B clicked</span>
+        <span class="c1"># Only in case of number resolving</span>
+        <span class="c1"># 4 : detector A detected 2 or more photons</span>
+        <span class="c1"># 5 : detector B detected 2 or more photons</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_measoutcome2bsmoutcome</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="mi">0</span><span class="p">:</span> <span class="n">BSMOutcome</span><span class="p">(</span><span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+            <span class="mi">1</span><span class="p">:</span> <span class="n">BSMOutcome</span><span class="p">(</span><span class="n">success</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">bell_index</span><span class="o">=</span><span class="n">BellIndex</span><span class="o">.</span><span class="n">PSI_PLUS</span><span class="p">),</span>
+            <span class="mi">2</span><span class="p">:</span> <span class="n">BSMOutcome</span><span class="p">(</span><span class="n">success</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">bell_index</span><span class="o">=</span><span class="n">BellIndex</span><span class="o">.</span><span class="n">PSI_MINUS</span><span class="p">),</span>
+            <span class="mi">3</span><span class="p">:</span> <span class="n">BSMOutcome</span><span class="p">(</span><span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+            <span class="mi">4</span><span class="p">:</span> <span class="n">BSMOutcome</span><span class="p">(</span><span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+            <span class="mi">5</span><span class="p">:</span> <span class="n">BSMOutcome</span><span class="p">(</span><span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+        <span class="p">}</span>
+
+<div class="viewcode-block" id="BSMDetector.preprocess_inputs">
+<a class="viewcode-back" href="../detectors.html#detectors.BSMDetector.preprocess_inputs">[docs]</a>
+    <span class="k">def</span> <span class="nf">preprocess_inputs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Functionality incorporated in `measure()`&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="BSMDetector.postprocess_outputs">
+<a class="viewcode-back" href="../detectors.html#detectors.BSMDetector.postprocess_outputs">[docs]</a>
+    <span class="k">def</span> <span class="nf">postprocess_outputs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dict_port_outcomes</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Functionality incorporated in `measure()`&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="BSMDetector.measure">
+<a class="viewcode-back" href="../detectors.html#detectors.BSMDetector.measure">[docs]</a>
+    <span class="k">def</span> <span class="nf">measure</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Perform a measurement on the received qubits.</span>
+
+<span class="sd">        Applies preprocessing to the qubits before the measurement, and</span>
+<span class="sd">        applies postprocessing to the measured classical outcomes.</span>
+<span class="sd">        After the measurement all qubits are discarded.</span>
+
+<span class="sd">        Override of superclass method to support multiplexed measurements and dual-rail encoded qubit measurements.</span>
+<span class="sd">        If some of the parameters have changed, the measurement operators are reset.</span>
+<span class="sd">        First the correct qubit-pair per mode is selected.</span>
+<span class="sd">        If the qubits are in presence-absence encoding, we can measure the qubits directly,</span>
+<span class="sd">        but for dual-rail encoding we first transform the qubits to two single-mode qubits</span>
+<span class="sd">        and perform the double-click scheme.</span>
+<span class="sd">        The qubit encoding is determined from the `is_number_state` property.</span>
+<span class="sd">        All the raw measurement outcomes (int) are transformed to a BSMOutcome.</span>
+<span class="sd">        Additionally, the successful mode (if any) is transmitted as the meta information</span>
+<span class="sd">        of the classical output message.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        QuantumDetectorError</span>
+<span class="sd">            If the `is_number_state` property is not the same for the pair of qubits.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_triggered</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parameter_changed</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_meas_operators_with_beamsplitter</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_parameter_changed</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="c1"># Get all qubits per port.</span>
+
+        <span class="n">q_lists</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_qubits_per_port</span><span class="p">[</span><span class="n">port_name</span><span class="p">]</span> <span class="k">for</span> <span class="n">port_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_port_names</span>
+        <span class="p">]</span>
+        <span class="n">arrival_times</span><span class="p">,</span> <span class="n">qubits</span><span class="p">,</span> <span class="n">__</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span>
+            <span class="o">*</span><span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">q_list</span> <span class="ow">in</span> <span class="n">q_lists</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">q_list</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">num_modes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">qubits</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+        <span class="c1"># Override for multiplexed measurement</span>
+        <span class="n">outcomes</span> <span class="o">=</span> <span class="p">[</span><span class="n">BSMOutcome</span><span class="p">(</span><span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">)]</span>
+        <span class="k">for</span> <span class="n">mode</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_modes</span><span class="p">):</span>
+            <span class="c1"># Only perform a measurement if the two arrival times are exactly equal</span>
+            <span class="n">arrival_time_left</span><span class="p">,</span> <span class="n">arrival_time_right</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">arrival_times</span><span class="p">[</span><span class="n">mode</span><span class="p">],</span>
+                <span class="n">arrival_times</span><span class="p">[</span><span class="n">num_modes</span> <span class="o">+</span> <span class="n">mode</span><span class="p">],</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">arrival_time_left</span> <span class="o">!=</span> <span class="n">arrival_time_right</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">QuantumDetectorError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Arrival times of qubits not equal.</span><span class="se">\n</span><span class="s2">Left qubit arrived at &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">arrival_time_left</span><span class="si">}</span><span class="s2">, while right qubit arrived at </span><span class="si">{</span><span class="n">arrival_time_right</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="p">)</span>
+            <span class="c1"># Perform pair-wise measurement for a single mode</span>
+            <span class="n">qubit_left</span><span class="p">,</span> <span class="n">qubit_right</span> <span class="o">=</span> <span class="n">qubits</span><span class="p">[</span><span class="n">mode</span><span class="p">],</span> <span class="n">qubits</span><span class="p">[</span><span class="n">num_modes</span> <span class="o">+</span> <span class="n">mode</span><span class="p">]</span>
+            <span class="c1"># Determine whether the qubits are number states</span>
+            <span class="c1"># If qubits are number states and they are lost, they are set to `None`</span>
+            <span class="n">is_qubit_left_number_state</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="kc">False</span> <span class="k">if</span> <span class="n">qubit_left</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">qubit_left</span><span class="o">.</span><span class="n">is_number_state</span>
+            <span class="p">)</span>
+            <span class="n">is_qubit_right_number_state</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="kc">False</span> <span class="k">if</span> <span class="n">qubit_right</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">qubit_right</span><span class="o">.</span><span class="n">is_number_state</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">is_qubit_left_number_state</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">is_qubit_right_number_state</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">QuantumDetectorError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;BSMDetector </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> received a pair of qubits from either side &quot;</span>
+                    <span class="s2">&quot;for which one is a number state while the other is not.&quot;</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">is_qubit_left_number_state</span><span class="p">:</span>
+                <span class="c1"># Measure in presence-absence encoding</span>
+                <span class="n">outcome</span> <span class="o">=</span> <span class="n">qapi</span><span class="o">.</span><span class="n">gmeasure</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">qubit_left</span><span class="p">,</span> <span class="n">qubit_right</span><span class="p">],</span> <span class="n">meas_operators</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_meas_operators</span>
+                <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">outcome</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measoutcome2bsmoutcome</span><span class="p">[</span><span class="n">outcome</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Measure in dual-rail encoding in each of the two modes separately</span>
+                <span class="n">qubit_left_mode_1</span><span class="p">,</span> <span class="n">qubit_left_mode_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_convert_to_mode_encoding</span><span class="p">(</span>
+                    <span class="n">qubit_left</span>
+                <span class="p">)</span>
+                <span class="n">qubit_right_mode_1</span><span class="p">,</span> <span class="n">qubit_right_mode_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_convert_to_mode_encoding</span><span class="p">(</span>
+                    <span class="n">qubit_right</span>
+                <span class="p">)</span>
+                <span class="n">outcome_mode_1</span> <span class="o">=</span> <span class="n">qapi</span><span class="o">.</span><span class="n">gmeasure</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">qubit_left_mode_1</span><span class="p">,</span> <span class="n">qubit_right_mode_1</span><span class="p">],</span>
+                    <span class="n">meas_operators</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_meas_operators</span><span class="p">,</span>
+                <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">outcome_mode_2</span> <span class="o">=</span> <span class="n">qapi</span><span class="o">.</span><span class="n">gmeasure</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">qubit_left_mode_2</span><span class="p">,</span> <span class="n">qubit_right_mode_2</span><span class="p">],</span>
+                    <span class="n">meas_operators</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_meas_operators</span><span class="p">,</span>
+                <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">outcome_mode_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measoutcome2bsmoutcome</span><span class="p">[</span><span class="n">outcome_mode_1</span><span class="p">]</span>
+                <span class="n">outcome_mode_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measoutcome2bsmoutcome</span><span class="p">[</span><span class="n">outcome_mode_2</span><span class="p">]</span>
+                <span class="c1"># A measurement in the double-click scheme is successful if and only if there is a single detector click</span>
+                <span class="c1"># in both modes</span>
+                <span class="k">if</span> <span class="n">outcome_mode_1</span><span class="o">.</span><span class="n">success</span> <span class="ow">and</span> <span class="n">outcome_mode_2</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+                    <span class="c1"># If the same detector clicked twice the state is presumed to be projected onto</span>
+                    <span class="c1"># `BellIndex.PSI_PLUS`, otherwise it&#39;s `BellIndex.PSI_MINUS`.</span>
+                    <span class="k">if</span> <span class="n">outcome_mode_1</span><span class="o">.</span><span class="n">bell_index</span> <span class="o">==</span> <span class="n">outcome_mode_2</span><span class="o">.</span><span class="n">bell_index</span><span class="p">:</span>
+                        <span class="n">outcome</span> <span class="o">=</span> <span class="n">BSMOutcome</span><span class="p">(</span>
+                            <span class="n">success</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">bell_index</span><span class="o">=</span><span class="n">BellIndex</span><span class="o">.</span><span class="n">PSI_PLUS</span>
+                        <span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">outcome</span> <span class="o">=</span> <span class="n">BSMOutcome</span><span class="p">(</span>
+                            <span class="n">success</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">bell_index</span><span class="o">=</span><span class="n">BellIndex</span><span class="o">.</span><span class="n">PSI_MINUS</span>
+                        <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Not both modes are successful, so the overall outcome is unsuccessful</span>
+                    <span class="n">outcome</span> <span class="o">=</span> <span class="n">BSMOutcome</span><span class="p">(</span><span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">outcome</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+                <span class="c1"># Append this outcome and the corresponding mode to be transmitted back in a classical message</span>
+                <span class="c1"># and if multiple modes are not allowed break the for-loop so that the rest of the qubits are not measured</span>
+                <span class="c1"># (iff not _allow_multiple_successful_modes)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">outcomes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+                    <span class="c1"># first success remove the fail placeholder</span>
+                    <span class="n">outcomes</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">outcomes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">outcome</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">&quot;successful_modes&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="p">[</span><span class="kc">None</span><span class="p">]:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">&quot;successful_modes&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">&quot;successful_modes&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">logger</span><span class="o">.</span><span class="n">isEnabledFor</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">):</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Successful BSM in BSMDetector </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> at time </span><span class="si">{</span><span class="n">sim_time</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;with outcome </span><span class="si">{</span><span class="n">outcome</span><span class="si">}</span><span class="s2"> and successful mode </span><span class="si">{</span><span class="n">mode</span><span class="si">}</span><span class="s2">.&quot;</span>
+                    <span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_allow_multiple_successful_modes</span><span class="p">:</span>
+                    <span class="k">break</span>
+        <span class="c1"># Discard all the qubits</span>
+        <span class="p">[</span><span class="n">qapi</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">qubit</span><span class="p">)</span> <span class="k">for</span> <span class="n">qubit</span> <span class="ow">in</span> <span class="n">qubits</span> <span class="k">if</span> <span class="n">qubit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qubits_per_port</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="c1"># Take the measurement outcomes and put the outcomes on the ports</span>
+        <span class="n">outcomes_per_port</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">port_name</span><span class="p">:</span> <span class="n">outcomes</span><span class="p">[:]</span> <span class="k">for</span> <span class="n">port_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output_port_names</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="n">outcomes_per_port</span><span class="p">)</span>
+        <span class="c1"># Reset the meta information</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">&quot;successful_modes&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_dead_time</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">system_dead_time</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">[</span><span class="s2">&quot;dead_time&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">[</span><span class="s2">&quot;system_delay&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">system_dead_time</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>  <span class="c1"># Could also schedule_now, but this avoids an event.</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_schedule_after</span><span class="p">(</span><span class="n">system_dead_time</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_evtype_ready</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="QKDDetector">
+<a class="viewcode-back" href="../detectors.html#detectors.QKDDetector">[docs]</a>
+<span class="k">class</span> <span class="nc">QKDDetector</span><span class="p">(</span><span class="n">TwinDetector</span><span class="p">):</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Detector able to perform photon-based qubit measurements in three bases (X, Y and Z).</span>
+<span class="sd">     Outcomes can be used to extract a secret key from entangled states used for quantum key distribution (QKD).</span>
+
+<span class="sd">    Schematic of setup:</span>
+
+<span class="sd">    .. code-block :: text</span>
+
+<span class="sd">        Without beam splitter (Z basis)   With beam splitter (BS) and phase shifter (PS)(X and Y bases)</span>
+<span class="sd">                ----------------                      -----------------------</span>
+<span class="sd">                |   /|         |                      |   /|           PS   |</span>
+<span class="sd">                | A( |=========&lt; : qin0               | A( |===     ==|xx|==&lt; : qin0</span>
+<span class="sd">                |   \|         |                      |   \|   \\ //        |</span>
+<span class="sd">        cout0 : &gt;              |              cout0 : &gt;       ------ BS     |</span>
+<span class="sd">                |   /|         |                      |   /|   // \\        |</span>
+<span class="sd">                | B( |=========&lt; : qin1               | B( |===     ========&lt; : qin1</span>
+<span class="sd">                |   \|         |                      |   \|                |</span>
+<span class="sd">                ----------------                      -----------------------</span>
+
+<span class="sd">    Able to perform measurements in both single and dual-rail encodings.</span>
+<span class="sd">    If a list of qubits is received simultaneously on both input ports, single-rail encoding is assumed to be used.</span>
+<span class="sd">    If a list of qubits is only received on the `qin0` port, dual-rail encoding is assumed to be used.</span>
+<span class="sd">    The qubits are then converted into two single-rail qubits each.</span>
+<span class="sd">    Depending on the measurement basis, a different setup is used.</span>
+<span class="sd">    Measurements in the Z basis are performed by directly measuring the incoming qubits.</span>
+<span class="sd">    For measurements in the X basis, the incoming qubits are first interfered on a beam splitter.</span>
+<span class="sd">    For measurements in the Y basis, a phase shift is additionally applied to one of the two qubits.</span>
+<span class="sd">    The measurement outcome is transmitted using a single classical output port `cout0`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    name : str</span>
+<span class="sd">        Name of detector.</span>
+<span class="sd">    measurement_basis : str in [&#39;X&#39;, &#39;Y&#39;, &#39;Z&#39;]</span>
+<span class="sd">        Measurement basis in which the incoming qubits are measured.</span>
+<span class="sd">    p_dark : float, optional</span>
+<span class="sd">        Dark-count probability, i.e. probability of measuring a photon while no photon was present, per detector.</span>
+<span class="sd">    det_eff : float, optional</span>
+<span class="sd">        Efficiency per detector, i.e. the probability of detecting an incoming photon.</span>
+<span class="sd">    visibility : float, optional</span>
+<span class="sd">        Visibility of the Hong-Ou-Mandel dip, also referred to as the photon indistinguishability.</span>
+<span class="sd">    num_resolving : bool, optional</span>
+<span class="sd">        If set to True, photon-number-resolving detectors will be used, otherwise threshold detectors.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">,</span>
+        <span class="n">measurement_basis</span><span class="o">=</span><span class="s2">&quot;Z&quot;</span><span class="p">,</span>
+        <span class="n">p_dark</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">det_eff</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">visibility</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">num_resolving</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">name</span><span class="p">,</span>
+            <span class="n">p_dark</span><span class="o">=</span><span class="n">p_dark</span><span class="p">,</span>
+            <span class="n">det_eff</span><span class="o">=</span><span class="n">det_eff</span><span class="p">,</span>
+            <span class="n">visibility</span><span class="o">=</span><span class="n">visibility</span><span class="p">,</span>
+            <span class="n">num_resolving</span><span class="o">=</span><span class="n">num_resolving</span><span class="p">,</span>
+            <span class="n">num_input_ports</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="n">num_output_ports</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">meas_operators</span><span class="o">=</span><span class="p">[</span><span class="n">ops</span><span class="o">.</span><span class="n">Z</span><span class="p">],</span>
+            <span class="n">output_meta</span><span class="o">=</span><span class="p">{},</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_measurement_basis</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">measurement_basis</span> <span class="o">=</span> <span class="n">measurement_basis</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_phase_shifter</span> <span class="o">=</span> <span class="n">ops</span><span class="o">.</span><span class="n">Operator</span><span class="p">(</span><span class="s2">&quot;phase_shifter&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="n">j</span><span class="p">]]))</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">measurement_basis</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;str: the measurement basis used&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measurement_basis</span>
+
+    <span class="nd">@measurement_basis</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">measurement_basis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Setter for the measurement basis. If this value is changed, the measurement operators might be changed.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        value : str</span>
+<span class="sd">            New measurement basis to be used.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;X&quot;</span><span class="p">,</span> <span class="s2">&quot;Y&quot;</span><span class="p">,</span> <span class="s2">&quot;Z&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Invalid measurement basis, must be either &#39;X&#39;, &#39;Y&#39; or &#39;Z&#39; not </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measurement_basis</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measurement_basis</span> <span class="o">!=</span> <span class="n">value</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_parameter_changed</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_measurement_basis</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">_measurement2qkdoutcome</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">measurement_outcome</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">measurement_outcome</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="n">QKDOutcome</span><span class="p">(</span>
+                <span class="n">success</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">outcome</span><span class="o">=</span><span class="n">measurement_outcome</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="n">measurement_basis</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_measurement_basis</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">QKDOutcome</span><span class="p">(</span>
+                <span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">outcome</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">measurement_basis</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_measurement_basis</span>
+            <span class="p">)</span>
+
+<div class="viewcode-block" id="QKDDetector.measure">
+<a class="viewcode-back" href="../detectors.html#detectors.QKDDetector.measure">[docs]</a>
+    <span class="k">def</span> <span class="nf">measure</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Perform a measurement on the received qubits.</span>
+
+<span class="sd">        Applies preprocessing to the qubits before the measurement, and</span>
+<span class="sd">        applies postprocessing to the measured classical outcomes.</span>
+<span class="sd">        After the measurement all qubits are discarded.</span>
+
+<span class="sd">        Override of superclass method to support multiplexed measurements and dual-rail encoded qubit measurements.</span>
+<span class="sd">        If some of the parameters have changed, the measurement operators are reset.</span>
+<span class="sd">        First the correct qubit-pair per mode is selected.</span>
+<span class="sd">        If the qubits are in presence-absence encoding, we can measure the qubits directly,</span>
+<span class="sd">        but for dual-rail encoding we first transform the qubits to two single-mode qubits</span>
+<span class="sd">        and perform the double-click scheme.</span>
+<span class="sd">        The qubit encoding is determined from the `is_number_state` property.</span>
+<span class="sd">        All the raw measurement outcomes (int) are transformed to a BSMOutcome.</span>
+<span class="sd">        Additionally, the successful mode (if any) is transmitted as the meta information</span>
+<span class="sd">        of the classical output message.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        QuantumDetectorError</span>
+<span class="sd">            If the `is_number_state` property is not the same for the pair of qubits.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_triggered</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parameter_changed</span><span class="p">:</span>
+            <span class="c1"># Reset the measurement operators based on which basis is used</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measurement_basis</span> <span class="o">==</span> <span class="s2">&quot;Z&quot;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_set_meas_operators_without_beamsplitter</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_set_meas_operators_with_beamsplitter</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_parameter_changed</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="n">time_bin</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_qubits_per_port</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;qin1&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">time_bin</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># Get all qubits per port.</span>
+        <span class="n">q_lists</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_qubits_per_port</span><span class="p">[</span><span class="n">port_name</span><span class="p">]</span> <span class="k">for</span> <span class="n">port_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_port_names</span>
+        <span class="p">]</span>
+        <span class="n">arrival_times</span><span class="p">,</span> <span class="n">qubits</span><span class="p">,</span> <span class="n">metas</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span>
+            <span class="o">*</span><span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">q_list</span> <span class="ow">in</span> <span class="n">q_lists</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">q_list</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="n">num_modes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">qubits</span><span class="p">)</span> <span class="k">if</span> <span class="n">time_bin</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="n">qubits</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+
+        <span class="n">outcomes</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">mode</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_modes</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">time_bin</span><span class="p">:</span>
+                <span class="c1"># Only a single photon is received on the qin0 port, split it up into two photons and perform rotation</span>
+                <span class="n">q_early_or_Left</span><span class="p">,</span> <span class="n">q_late_or_right</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_convert_to_mode_encoding</span><span class="p">(</span>
+                    <span class="n">qubits</span><span class="p">[</span><span class="n">mode</span><span class="p">]</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># presence absence</span>
+                <span class="n">q_early_or_Left</span><span class="p">,</span> <span class="n">q_late_or_right</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">qubits</span><span class="p">[</span><span class="n">mode</span><span class="p">],</span>
+                    <span class="n">qubits</span><span class="p">[</span><span class="n">num_modes</span> <span class="o">+</span> <span class="n">mode</span><span class="p">],</span>
+                <span class="p">)</span>
+
+                <span class="c1"># Only perform a measurement if the two arrival times are exactly equal</span>
+                <span class="n">arrival_time_left</span><span class="p">,</span> <span class="n">arrival_time_right</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">arrival_times</span><span class="p">[</span><span class="n">mode</span><span class="p">],</span>
+                    <span class="n">arrival_times</span><span class="p">[</span><span class="n">num_modes</span> <span class="o">+</span> <span class="n">mode</span><span class="p">],</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">arrival_time_left</span> <span class="o">!=</span> <span class="n">arrival_time_right</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">QuantumDetectorError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Arrival times of qubits not equal.</span><span class="se">\n</span><span class="s2">Left qubit arrived at &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">arrival_time_left</span><span class="si">}</span><span class="s2">, while right qubit arrived at &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">arrival_time_right</span><span class="si">}</span><span class="s2">.&quot;</span>
+                    <span class="p">)</span>
+                <span class="c1"># Determine whether the qubits are number states</span>
+                <span class="c1"># If qubits are number states and they are lost, they are set to `None`</span>
+                <span class="n">is_qubit_left_number_state</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="kc">False</span>
+                    <span class="k">if</span> <span class="n">q_early_or_Left</span> <span class="ow">is</span> <span class="kc">None</span>
+                    <span class="k">else</span> <span class="n">q_early_or_Left</span><span class="o">.</span><span class="n">is_number_state</span>
+                <span class="p">)</span>
+                <span class="n">is_qubit_right_number_state</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="kc">False</span>
+                    <span class="k">if</span> <span class="n">q_late_or_right</span> <span class="ow">is</span> <span class="kc">None</span>
+                    <span class="k">else</span> <span class="n">q_late_or_right</span><span class="o">.</span><span class="n">is_number_state</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">is_qubit_left_number_state</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">is_qubit_right_number_state</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">QuantumDetectorError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;BSMDetector </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> received a pair of qubits from either side &quot;</span>
+                        <span class="s2">&quot;for which one is a number states while the other is not.&quot;</span>
+                    <span class="p">)</span>
+                <span class="k">assert</span> <span class="n">is_qubit_left_number_state</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measurement_basis</span> <span class="o">==</span> <span class="s2">&quot;Y&quot;</span><span class="p">:</span>
+                <span class="n">qapi</span><span class="o">.</span><span class="n">operate</span><span class="p">(</span><span class="n">q_early_or_Left</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_phase_shifter</span><span class="p">)</span>
+
+            <span class="c1"># measure</span>
+            <span class="n">outcome</span> <span class="o">=</span> <span class="n">qapi</span><span class="o">.</span><span class="n">gmeasure</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">q_early_or_Left</span><span class="p">,</span> <span class="n">q_late_or_right</span><span class="p">],</span> <span class="n">meas_operators</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_meas_operators</span>
+            <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">outcome</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measurement2qkdoutcome</span><span class="p">(</span><span class="n">outcome</span><span class="p">)</span>
+            <span class="n">outcomes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">outcome</span><span class="p">)</span>
+
+        <span class="c1"># Discard all the qubits</span>
+        <span class="p">[</span><span class="n">qapi</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">qubit</span><span class="p">)</span> <span class="k">for</span> <span class="n">qubit</span> <span class="ow">in</span> <span class="n">qubits</span> <span class="k">if</span> <span class="n">qubit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_qubits_per_port</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="c1"># Take the measurement outcomes and put the outcomes on the ports</span>
+        <span class="n">outcomes_per_port</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">port_name</span><span class="p">:</span> <span class="n">outcomes</span><span class="p">[:]</span> <span class="k">for</span> <span class="n">port_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output_port_names</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="n">outcomes_per_port</span><span class="p">)</span>
+        <span class="c1"># Reset the meta information</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">&quot;successful_modes&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_dead_time</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">system_dead_time</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">[</span><span class="s2">&quot;dead_time&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">[</span><span class="s2">&quot;system_delay&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">system_dead_time</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>  <span class="c1"># Could also schedule_now, but this avoids an event.</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_schedule_after</span><span class="p">(</span><span class="n">system_dead_time</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_evtype_ready</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="ModeError">
+<a class="viewcode-back" href="../detectors.html#detectors.ModeError">[docs]</a>
+<span class="k">class</span> <span class="nc">ModeError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Different numbers of modes coming from sources.&quot;&quot;&quot;</span>
+
+    <span class="k">pass</span></div>
+
+</pre></div>
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2024, Victor Virag
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
+    </body>
+</html>
