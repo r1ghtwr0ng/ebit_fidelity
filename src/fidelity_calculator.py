@@ -123,14 +123,13 @@ class FidelityCalculator(Component):
         Returns
         -------
         float
-            The fidelity value between the qubits in the Bell state |B00>.
+            The fidelity value between the qubits in the Bell state ``|B00>``.
 
         Notes
         -----
-        This method also calculates fidelities for several target states (|00>, |11>, and Bell states B00, B01, B10, B11).
-        Fidelity for the Bell state |B00> is returned, and all results are logged for debugging.
+        This method also calculates fidelities for several target states (``|00>``, ``|11>``, and Bell states ``B00``, ``B01``, ``B10``, ``B11``).
+        Fidelity for the Bell state ``|B00>`` is returned, and all results are logged for debugging.
         """
-        # TODO fix the issue where 11 is interpreted as state 2
         try:
             fidelities = {
                 "|00>": qapi.fidelity(
