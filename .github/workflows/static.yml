@@ -1,5 +1,5 @@
 # Simple workflow for deploying static content to GitHub Pages
-name: Deploy static content to Pages
+name: Build and deploy docs to pages
 
 on:
   # Runs on pushes targeting the default branch (update if needed)
@@ -44,18 +44,18 @@ jobs:
           pip install -r requirements.txt
           pip install sphinx furo
           pip install --user --extra-index-url https://${NETSQUID_USERNAME}:${NETSQUID_PASSWORD}@pypi.netsquid.org netsquid
-      - name: Build Sphinx documentation
+
+      - name: Clean and build Sphinx documentation
         run: |
           cd docs
-          make html
+          make clean    # This will clear out the previous build
+          make html     # Build fresh HTML documentation
 
       - name: Upload built HTML files
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload only the HTML build directory
           path: 'docs/build/html'
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
