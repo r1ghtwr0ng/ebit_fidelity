@@ -12,12 +12,12 @@ from netsquid.util.simtools import sim_time
 from netsquid.util.simlog import logger
 
 __all__ = [
-    'BSMOutcome',
-    'QKDOutcome',
-    'TwinDetector',
-    'BSMDetector',
-    'QKDDetector',
-    'ModeError',
+    "BSMOutcome",
+    "QKDOutcome",
+    "TwinDetector",
+    "BSMDetector",
+    "QKDDetector",
+    "ModeError",
 ]
 
 
@@ -38,6 +38,7 @@ class BSMOutcome:
         `BellIndex.PSI_PLUS` or `BellIndex.PSI_MINUS`.
         Default value set to -1 to force a user to set the correct BellIndex.
     """
+
     success: bool
     bell_index: BellIndex = -1
 
@@ -61,6 +62,7 @@ class QKDOutcome:
         while for the X and Y basis the two incoming photons are interfered using a beam splitter, where
         for the Y basis an additional phase shift is applied to one of the two photons.
     """
+
     success: bool
     measurement_basis: str
     outcome: int
@@ -119,16 +121,36 @@ class TwinDetector(QuantumDetector):
 
     """
 
-    def __init__(self, name: str, p_dark: float, det_eff: float, visibility: float, num_resolving: bool,
-                 num_input_ports: int, num_output_ports: int, meas_operators: list, output_meta: dict):
+    def __init__(
+        self,
+        name: str,
+        p_dark: float,
+        det_eff: float,
+        visibility: float,
+        num_resolving: bool,
+        num_input_ports: int,
+        num_output_ports: int,
+        meas_operators: list,
+        output_meta: dict,
+    ):
         # Initialize the parameters
-        self._p_dark, self._det_eff, self._visibility, self._num_resolving = None, None, None, None
+        self._p_dark, self._det_eff, self._visibility, self._num_resolving = (
+            None,
+            None,
+            None,
+            None,
+        )
         self.p_dark = p_dark
         self.det_eff = det_eff
         self.visibility = visibility
         self.num_resolving = num_resolving
-        super().__init__(name, num_input_ports=num_input_ports, num_output_ports=num_output_ports,
-                         meas_operators=meas_operators, output_meta=output_meta)
+        super().__init__(
+            name,
+            num_input_ports=num_input_ports,
+            num_output_ports=num_output_ports,
+            meas_operators=meas_operators,
+            output_meta=output_meta,
+        )
         # TODO: remove when netsquid is patched
         self._is_triggered = False
         self._in_dead_time = False
@@ -148,7 +170,9 @@ class TwinDetector(QuantumDetector):
             New value of the dark count probability.
         """
         if not 1 >= value >= 0:
-            raise ValueError(f"Value of dark-count probability p_dark must be in the interval [0,1], not {value}")
+            raise ValueError(
+                f"Value of dark-count probability p_dark must be in the interval [0,1], not {value}"
+            )
         if self._p_dark != value:
             self._parameter_changed = True
         self._p_dark = value
@@ -167,7 +191,9 @@ class TwinDetector(QuantumDetector):
         value : float
             New value of the detection efficiency."""
         if not 1 >= value >= 0:
-            raise ValueError(f"Value of detection efficiency det_eff must be in the interval [0,1], not {value}")
+            raise ValueError(
+                f"Value of detection efficiency det_eff must be in the interval [0,1], not {value}"
+            )
         if self._det_eff != value:
             self._parameter_changed = True
         self._det_eff = value
@@ -187,8 +213,10 @@ class TwinDetector(QuantumDetector):
             New value of the Hong-Ou-Mandel interference visibility.
         """
         if not 1 >= value >= 0:
-            raise ValueError(f"Value of Hong-Ou-Mandel interference visibility must be in the interval [0,1], "
-                             f"not {value}")
+            raise ValueError(
+                f"Value of Hong-Ou-Mandel interference visibility must be in the interval [0,1], "
+                f"not {value}"
+            )
         if self._visibility != value:
             self._parameter_changed = True
         self._visibility = value
@@ -224,8 +252,10 @@ class TwinDetector(QuantumDetector):
         if n == 0:
             # Separate case to circumvent raising 0.0 to a negative power when detection efficiency is 1
             return self._p_dark
-        return n * self._det_eff * (1 - self._det_eff) ** (n - 1) * (1 - self._p_dark) + \
-            (1 - self._det_eff) ** n * self._p_dark
+        return (
+            n * self._det_eff * (1 - self._det_eff) ** (n - 1) * (1 - self._p_dark)
+            + (1 - self._det_eff) ** n * self._p_dark
+        )
 
     def _set_meas_operators_with_beamsplitter(self):
         """Sets the measurement (Kraus) operators for getting a certain click pattern with visibility,
@@ -239,12 +269,32 @@ class TwinDetector(QuantumDetector):
         # Assuming mu is real
         mu = np.sqrt(self._visibility)
         # A derivation of these projectors can be found in Appendix D.5 of https://arxiv.org/abs/1903.09778.
-        projectors = {(0, 0): np.array([[1, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
-                      (1, 0): 1 / 2 * np.array([[0, 0, 0, 0], [0, 1, mu, 0], [0, mu, 1, 0], [0, 0, 0, 0]]),
-                      (0, 1): 1 / 2 * np.array([[0, 0, 0, 0], [0, 1, -1 * mu, 0], [0, -1 * mu, 1, 0], [0, 0, 0, 0]]),
-                      (1, 1): 1 / 2 * np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 1 - mu * mu]]),
-                      (2, 0): 1 / 4 * np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 1 + mu * mu]]),
-                      (0, 2): 1 / 4 * np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 1 + mu * mu]])}
+        projectors = {
+            (0, 0): np.array([[1, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+            (1, 0): 1
+            / 2
+            * np.array([[0, 0, 0, 0], [0, 1, mu, 0], [0, mu, 1, 0], [0, 0, 0, 0]]),
+            (0, 1): 1
+            / 2
+            * np.array(
+                [[0, 0, 0, 0], [0, 1, -1 * mu, 0], [0, -1 * mu, 1, 0], [0, 0, 0, 0]]
+            ),
+            (1, 1): 1
+            / 2
+            * np.array(
+                [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 1 - mu * mu]]
+            ),
+            (2, 0): 1
+            / 4
+            * np.array(
+                [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 1 + mu * mu]]
+            ),
+            (0, 2): 1
+            / 4
+            * np.array(
+                [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 1 + mu * mu]]
+            ),
+        }
         # Now include the detector efficiency and dark-count probability to get the resulting measurement outcome POVMs
         # We assume that a dark count *can* occur simultaneously with the detection of a regular photon, based on the
         # detector model described in https://arxiv.org/abs/1109.0194.
@@ -261,7 +311,10 @@ class TwinDetector(QuantumDetector):
         # Note that at most two photons in total can arrive simultaneously at a detector
         for m in range(3):
             for n in range(3 - m):
-                no_click_m, no_click_n = self._prob_no_photon_detected(m), self._prob_no_photon_detected(n)
+                no_click_m, no_click_n = (
+                    self._prob_no_photon_detected(m),
+                    self._prob_no_photon_detected(n),
+                )
                 one_photon_m = self._prob_exactly_one_photon_detected(m)
                 one_photon_n = self._prob_exactly_one_photon_detected(n)
                 # No photons get detected at either detector. This can only occur if
@@ -271,28 +324,44 @@ class TwinDetector(QuantumDetector):
                 # Exactly one photon gets detected at A, while none are detected at B. This can only occur if
                 # m photons arrive at A, of which exactly 1 gets detected, and
                 # n photons arrive at B, after which no photons are detected
-                one_photon_at_A_none_at_B += one_photon_m * no_click_n * projectors[(m, n)]
+                one_photon_at_A_none_at_B += (
+                    one_photon_m * no_click_n * projectors[(m, n)]
+                )
                 # Multiple photon gets detected at A, while none are detected at B. This can only occur if
                 # m photons arrive at A, after which two or more are detected, and
                 # n photons arrive at B, after which no photons are detected
                 # Here we use the fact that Pr(X >= 2) = 1 - Pr(X = 1) - Pr(X = 0).
-                multiple_photons_at_A_none_at_B += (1 - no_click_m - one_photon_m) * no_click_n * projectors[(m, n)]
+                multiple_photons_at_A_none_at_B += (
+                    (1 - no_click_m - one_photon_m) * no_click_n * projectors[(m, n)]
+                )
                 # Due to symmetry, we can follow the same reasoning when A and B are switched
-                one_photon_at_B_none_at_A += one_photon_n * no_click_m * projectors[(m, n)]
-                multiple_photons_at_B_none_at_A += (1 - no_click_n - one_photon_n) * no_click_m * projectors[(m, n)]
+                one_photon_at_B_none_at_A += (
+                    one_photon_n * no_click_m * projectors[(m, n)]
+                )
+                multiple_photons_at_B_none_at_A += (
+                    (1 - no_click_n - one_photon_n) * no_click_m * projectors[(m, n)]
+                )
                 # Finally, we consider the case when at least one photon arrives at both detectors.
                 # This can only occur if
                 # m photons arrive at detector A, of which at least one gets detected, and
                 # n photons arrive at detector B, of which at least one gets detected.
                 # Here we use the fact that Pr(X >= 1) = 1 - Pr(X = 0).
-                at_least_one_photon_at_both += (1 - no_click_m) * (1 - no_click_n) * projectors[(m, n)]
+                at_least_one_photon_at_both += (
+                    (1 - no_click_m) * (1 - no_click_n) * projectors[(m, n)]
+                )
 
         # Set the Kraus operator by taking the matrix square root of the POVMs
         if not self.num_resolving:
             # In this case we cannot distinguish between one or two photons getting detected
             n_00 = ops.Operator("n_0", sqrtm(no_photons_at_both))
-            n_10 = ops.Operator("n_10", sqrtm(one_photon_at_A_none_at_B + multiple_photons_at_A_none_at_B))
-            n_01 = ops.Operator("n_01", sqrtm(one_photon_at_B_none_at_A + multiple_photons_at_B_none_at_A))
+            n_10 = ops.Operator(
+                "n_10",
+                sqrtm(one_photon_at_A_none_at_B + multiple_photons_at_A_none_at_B),
+            )
+            n_01 = ops.Operator(
+                "n_01",
+                sqrtm(one_photon_at_B_none_at_A + multiple_photons_at_B_none_at_A),
+            )
             n_11 = ops.Operator("n_11", sqrtm(at_least_one_photon_at_both))
             meas_operators = [n_00, n_10, n_01, n_11]
         else:
@@ -317,10 +386,12 @@ class TwinDetector(QuantumDetector):
         Note that since we do not have a beam splitter in this case, there is also no Hong-Ou-Mandel
         interference visibility involved."""
         # The projectors without a beam splitter are straight-forward
-        projectors = {(0, 0): np.array([[1, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
-                      (0, 1): np.array([[0, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
-                      (1, 0): np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]]),
-                      (1, 1): np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 1]])}
+        projectors = {
+            (0, 0): np.array([[1, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+            (0, 1): np.array([[0, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+            (1, 0): np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]]),
+            (1, 1): np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 1]]),
+        }
         # Initialize POVMs
         no_clicks_at_both = np.zeros([4, 4], dtype=complex)
         click_at_A_none_at_B = np.zeros([4, 4], dtype=complex)
@@ -339,15 +410,21 @@ class TwinDetector(QuantumDetector):
                 # m photons arrive at A, of which exactly 1 gets detected, and
                 # n photons arrive at B, after which no photons are detected
                 # Here we use the fact that Pr(X >= 1) = 1 - Pr(X = 0)
-                click_at_A_none_at_B += (1 - no_click_m) * no_click_n * projectors[(m, n)]
+                click_at_A_none_at_B += (
+                    (1 - no_click_m) * no_click_n * projectors[(m, n)]
+                )
                 # Due to symmetry, we can follow the same reasoning when A and B are switched
-                click_at_B_none_at_A += no_click_m * (1 - no_click_n) * projectors[(m, n)]
+                click_at_B_none_at_A += (
+                    no_click_m * (1 - no_click_n) * projectors[(m, n)]
+                )
                 # Finally, we consider the case when at least one photon arrives at both detectors.
                 # This can only occur if
                 # m photons arrive at detector A, of which at least one gets detected, and
                 # n photons arrive at detector B, of which at least one gets detected.
                 # Here we again use the fact that Pr(X >= 1) = 1 - Pr(X = 0).
-                click_at_both += (1 - no_click_m) * (1 - no_click_n) * projectors[(m, n)]
+                click_at_both += (
+                    (1 - no_click_m) * (1 - no_click_n) * projectors[(m, n)]
+                )
 
         n_00 = ops.Operator("n_00_no_bs", sqrtm(no_clicks_at_both))
         n_01 = ops.Operator("n_01_no_bs", sqrtm(click_at_A_none_at_B))
@@ -386,7 +463,7 @@ class TwinDetector(QuantumDetector):
             q_mode_1, q_mode_2 = qapi.create_qubits(2)
         else:
             q_mode_1 = q
-            q_mode_2, = qapi.create_qubits(1)
+            (q_mode_2,) = qapi.create_qubits(1)
             # Create entangled state of the two qubits in presence-absence encoding
             qapi.operate([q_mode_1, q_mode_2], ops.CNOT)
             qapi.operate(q_mode_2, ops.X)
@@ -425,7 +502,7 @@ class TwinDetector(QuantumDetector):
         if self._is_triggered:
             raise QuantumDetectorError("QuantumDetector is already triggered")
         self._is_triggered = True
-        sys_delay = self.properties['system_delay']
+        sys_delay = self.properties["system_delay"]
         self._schedule_after(sys_delay, self._evtype_measure)
 
     def _measure(self, event=None):
@@ -455,7 +532,9 @@ class TwinDetector(QuantumDetector):
         self._is_triggered = False
         self.preprocess_inputs()
         # Get all qubits per port.
-        q_lists = [self._qubits_per_port[port_name] for port_name in self._input_port_names]
+        q_lists = [
+            self._qubits_per_port[port_name] for port_name in self._input_port_names
+        ]
         __, qubits, __ = zip(*[item for q_list in q_lists for item in q_list])
         if self._meas_operators is None:
             # Measurement using observables
@@ -467,12 +546,16 @@ class TwinDetector(QuantumDetector):
         else:
             # Measurement using Kraus operators
             try:
-                outcomes = [qapi.gmeasure(qubits, meas_operators=self._meas_operators)[0]]
+                outcomes = [
+                    qapi.gmeasure(qubits, meas_operators=self._meas_operators)[0]
+                ]
             except ValueError:
                 # Measurement failed
                 if self._error_on_fail:
-                    raise QuantumDetectorError(f"The number of qubits ({len(qubits)} "
-                                               f"does not match the measurement operators")
+                    raise QuantumDetectorError(
+                        f"The number of qubits ({len(qubits)} "
+                        f"does not match the measurement operators"
+                    )
                 self._schedule_now(self.evtype_measure_fail)
                 outcomes = []
             finally:
@@ -480,11 +563,15 @@ class TwinDetector(QuantumDetector):
                     qapi.discard(qubit)
                 self._qubits_per_port.clear()
         # Take the measurement outcomes and put the outcomes on the ports
-        outcomes_per_port = {port_name: outcomes[:] for port_name in self._output_port_names}
+        outcomes_per_port = {
+            port_name: outcomes[:] for port_name in self._output_port_names
+        }
         self.postprocess_outputs(outcomes_per_port)
         self.inform(outcomes_per_port)
         self._in_dead_time = True
-        system_dead_time = self.properties['dead_time'] - self.properties['system_delay']
+        system_dead_time = (
+            self.properties["dead_time"] - self.properties["system_delay"]
+        )
         if system_dead_time <= 0:
             self.finish()  # Could also schedule_now, but this avoids an event.
         else:
@@ -552,11 +639,26 @@ class BSMDetector(TwinDetector):
 
     """
 
-    def __init__(self, name, p_dark=0., det_eff=1., visibility=1., num_resolving=False,
-                 allow_multiple_successful_modes=False):
-        super().__init__(name, p_dark=p_dark, det_eff=det_eff, visibility=visibility, num_resolving=num_resolving,
-                         num_input_ports=2, num_output_ports=2, meas_operators=[],
-                         output_meta={"successful_modes": [None]})
+    def __init__(
+        self,
+        name,
+        p_dark=0.0,
+        det_eff=1.0,
+        visibility=1.0,
+        num_resolving=False,
+        allow_multiple_successful_modes=False,
+    ):
+        super().__init__(
+            name,
+            p_dark=p_dark,
+            det_eff=det_eff,
+            visibility=visibility,
+            num_resolving=num_resolving,
+            num_input_ports=2,
+            num_output_ports=2,
+            meas_operators=[],
+            output_meta={"successful_modes": [None]},
+        )
         self._allow_multiple_successful_modes = allow_multiple_successful_modes
         # Dictionary that maps an outcome of one of our measurement operators to a BSMOutcome, where
         # 0 : no click
@@ -566,12 +668,14 @@ class BSMDetector(TwinDetector):
         # Only in case of number resolving
         # 4 : detector A detected 2 or more photons
         # 5 : detector B detected 2 or more photons
-        self._measoutcome2bsmoutcome = {0: BSMOutcome(success=False),
-                                        1: BSMOutcome(success=True, bell_index=BellIndex.PSI_PLUS),
-                                        2: BSMOutcome(success=True, bell_index=BellIndex.PSI_MINUS),
-                                        3: BSMOutcome(success=False),
-                                        4: BSMOutcome(success=False),
-                                        5: BSMOutcome(success=False)}
+        self._measoutcome2bsmoutcome = {
+            0: BSMOutcome(success=False),
+            1: BSMOutcome(success=True, bell_index=BellIndex.PSI_PLUS),
+            2: BSMOutcome(success=True, bell_index=BellIndex.PSI_MINUS),
+            3: BSMOutcome(success=False),
+            4: BSMOutcome(success=False),
+            5: BSMOutcome(success=False),
+        }
 
     def preprocess_inputs(self):
         """Functionality incorporated in `measure()`"""
@@ -610,38 +714,63 @@ class BSMDetector(TwinDetector):
             self._parameter_changed = False
         # Get all qubits per port.
 
-        q_lists = [self._qubits_per_port[port_name] for port_name in self._input_port_names]
-        arrival_times, qubits, __ = zip(*[item for q_list in q_lists for item in q_list])
+        q_lists = [
+            self._qubits_per_port[port_name] for port_name in self._input_port_names
+        ]
+        arrival_times, qubits, __ = zip(
+            *[item for q_list in q_lists for item in q_list]
+        )
         num_modes = len(qubits) // 2
         # Override for multiplexed measurement
         outcomes = [BSMOutcome(success=False)]
         for mode in range(num_modes):
             # Only perform a measurement if the two arrival times are exactly equal
-            arrival_time_left, arrival_time_right = arrival_times[mode], arrival_times[num_modes + mode]
+            arrival_time_left, arrival_time_right = (
+                arrival_times[mode],
+                arrival_times[num_modes + mode],
+            )
             if arrival_time_left != arrival_time_right:
-                raise QuantumDetectorError(f"Arrival times of qubits not equal.\nLeft qubit arrived at "
-                                           f"{arrival_time_left}, while right qubit arrived at {arrival_time_right}.")
+                raise QuantumDetectorError(
+                    f"Arrival times of qubits not equal.\nLeft qubit arrived at "
+                    f"{arrival_time_left}, while right qubit arrived at {arrival_time_right}."
+                )
             # Perform pair-wise measurement for a single mode
             qubit_left, qubit_right = qubits[mode], qubits[num_modes + mode]
             # Determine whether the qubits are number states
             # If qubits are number states and they are lost, they are set to `None`
-            is_qubit_left_number_state = False if qubit_left is None else qubit_left.is_number_state
-            is_qubit_right_number_state = False if qubit_right is None else qubit_right.is_number_state
+            is_qubit_left_number_state = (
+                False if qubit_left is None else qubit_left.is_number_state
+            )
+            is_qubit_right_number_state = (
+                False if qubit_right is None else qubit_right.is_number_state
+            )
             if is_qubit_left_number_state is not is_qubit_right_number_state:
-                raise QuantumDetectorError(f"BSMDetector {self.name} received a pair of qubits from either side "
-                                           "for which one is a number state while the other is not.")
+                raise QuantumDetectorError(
+                    f"BSMDetector {self.name} received a pair of qubits from either side "
+                    "for which one is a number state while the other is not."
+                )
             if is_qubit_left_number_state:
                 # Measure in presence-absence encoding
-                outcome = qapi.gmeasure([qubit_left, qubit_right], meas_operators=self._meas_operators)[0]
+                outcome = qapi.gmeasure(
+                    [qubit_left, qubit_right], meas_operators=self._meas_operators
+                )[0]
                 outcome = self._measoutcome2bsmoutcome[outcome]
             else:
                 # Measure in dual-rail encoding in each of the two modes separately
-                qubit_left_mode_1, qubit_left_mode_2 = self._convert_to_mode_encoding(qubit_left)
-                qubit_right_mode_1, qubit_right_mode_2 = self._convert_to_mode_encoding(qubit_right)
-                outcome_mode_1 = qapi.gmeasure([qubit_left_mode_1, qubit_right_mode_1],
-                                               meas_operators=self._meas_operators)[0]
-                outcome_mode_2 = qapi.gmeasure([qubit_left_mode_2, qubit_right_mode_2],
-                                               meas_operators=self._meas_operators)[0]
+                qubit_left_mode_1, qubit_left_mode_2 = self._convert_to_mode_encoding(
+                    qubit_left
+                )
+                qubit_right_mode_1, qubit_right_mode_2 = self._convert_to_mode_encoding(
+                    qubit_right
+                )
+                outcome_mode_1 = qapi.gmeasure(
+                    [qubit_left_mode_1, qubit_right_mode_1],
+                    meas_operators=self._meas_operators,
+                )[0]
+                outcome_mode_2 = qapi.gmeasure(
+                    [qubit_left_mode_2, qubit_right_mode_2],
+                    meas_operators=self._meas_operators,
+                )[0]
                 outcome_mode_1 = self._measoutcome2bsmoutcome[outcome_mode_1]
                 outcome_mode_2 = self._measoutcome2bsmoutcome[outcome_mode_2]
                 # A measurement in the double-click scheme is successful if and only if there is a single detector click
@@ -650,9 +779,13 @@ class BSMDetector(TwinDetector):
                     # If the same detector clicked twice the state is presumed to be projected onto
                     # `BellIndex.PSI_PLUS`, otherwise it's `BellIndex.PSI_MINUS`.
                     if outcome_mode_1.bell_index == outcome_mode_2.bell_index:
-                        outcome = BSMOutcome(success=True, bell_index=BellIndex.PSI_PLUS)
+                        outcome = BSMOutcome(
+                            success=True, bell_index=BellIndex.PSI_PLUS
+                        )
                     else:
-                        outcome = BSMOutcome(success=True, bell_index=BellIndex.PSI_MINUS)
+                        outcome = BSMOutcome(
+                            success=True, bell_index=BellIndex.PSI_MINUS
+                        )
                 else:
                     # Not both modes are successful, so the overall outcome is unsuccessful
                     outcome = BSMOutcome(success=False)
@@ -668,20 +801,26 @@ class BSMDetector(TwinDetector):
                     self._meta["successful_modes"] = []
                 self._meta["successful_modes"].append(mode)
                 if logger.isEnabledFor(logging.DEBUG):
-                    logger.debug(f"Successful BSM in BSMDetector {self.name} at time {sim_time()}"
-                                 f"with outcome {outcome} and successful mode {mode}.")
+                    logger.debug(
+                        f"Successful BSM in BSMDetector {self.name} at time {sim_time()}"
+                        f"with outcome {outcome} and successful mode {mode}."
+                    )
                 if not self._allow_multiple_successful_modes:
                     break
         # Discard all the qubits
         [qapi.discard(qubit) for qubit in qubits if qubit is not None]
         self._qubits_per_port.clear()
         # Take the measurement outcomes and put the outcomes on the ports
-        outcomes_per_port = {port_name: outcomes[:] for port_name in self._output_port_names}
+        outcomes_per_port = {
+            port_name: outcomes[:] for port_name in self._output_port_names
+        }
         self.inform(outcomes_per_port)
         # Reset the meta information
         self._meta["successful_modes"] = [None]
         self._in_dead_time = True
-        system_dead_time = self.properties['dead_time'] - self.properties['system_delay']
+        system_dead_time = (
+            self.properties["dead_time"] - self.properties["system_delay"]
+        )
         if system_dead_time <= 0:
             self.finish()  # Could also schedule_now, but this avoids an event.
         else:
@@ -733,9 +872,27 @@ class QKDDetector(TwinDetector):
         If set to True, photon-number-resolving detectors will be used, otherwise threshold detectors.
 
     """
-    def __init__(self, name, measurement_basis="Z", p_dark=0., det_eff=1., visibility=1., num_resolving=False):
-        super().__init__(name, p_dark=p_dark, det_eff=det_eff, visibility=visibility, num_resolving=num_resolving,
-                         num_input_ports=2, num_output_ports=1, meas_operators=[ops.Z], output_meta={})
+
+    def __init__(
+        self,
+        name,
+        measurement_basis="Z",
+        p_dark=0.0,
+        det_eff=1.0,
+        visibility=1.0,
+        num_resolving=False,
+    ):
+        super().__init__(
+            name,
+            p_dark=p_dark,
+            det_eff=det_eff,
+            visibility=visibility,
+            num_resolving=num_resolving,
+            num_input_ports=2,
+            num_output_ports=1,
+            meas_operators=[ops.Z],
+            output_meta={},
+        )
         self._measurement_basis = None
         self.measurement_basis = measurement_basis
         self._phase_shifter = ops.Operator("phase_shifter", np.array([[1, 0], [0, 1j]]))
@@ -754,17 +911,25 @@ class QKDDetector(TwinDetector):
         value : str
             New measurement basis to be used.
         """
-        if value not in ['X', 'Y', 'Z']:
-            raise ValueError(f"Invalid measurement basis, must be either 'X', 'Y' or 'Z' not {value}")
+        if value not in ["X", "Y", "Z"]:
+            raise ValueError(
+                f"Invalid measurement basis, must be either 'X', 'Y' or 'Z' not {value}"
+            )
         if self._measurement_basis is not None and self._measurement_basis != value:
             self._parameter_changed = True
         self._measurement_basis = value
 
     def _measurement2qkdoutcome(self, measurement_outcome):
         if measurement_outcome in [1, 2]:
-            return QKDOutcome(success=True, outcome=measurement_outcome - 1, measurement_basis=self._measurement_basis)
+            return QKDOutcome(
+                success=True,
+                outcome=measurement_outcome - 1,
+                measurement_basis=self._measurement_basis,
+            )
         else:
-            return QKDOutcome(success=False, outcome=-1, measurement_basis=self._measurement_basis)
+            return QKDOutcome(
+                success=False, outcome=-1, measurement_basis=self._measurement_basis
+            )
 
     def measure(self):
         """Perform a measurement on the received qubits.
@@ -803,8 +968,12 @@ class QKDDetector(TwinDetector):
             time_bin = True
 
         # Get all qubits per port.
-        q_lists = [self._qubits_per_port[port_name] for port_name in self._input_port_names]
-        arrival_times, qubits, metas = zip(*[item for q_list in q_lists for item in q_list])
+        q_lists = [
+            self._qubits_per_port[port_name] for port_name in self._input_port_names
+        ]
+        arrival_times, qubits, metas = zip(
+            *[item for q_list in q_lists for item in q_list]
+        )
 
         num_modes = len(qubits) if time_bin else len(qubits) // 2
 
@@ -813,31 +982,53 @@ class QKDDetector(TwinDetector):
         for mode in range(num_modes):
             if time_bin:
                 # Only a single photon is received on the qin0 port, split it up into two photons and perform rotation
-                q_early_or_Left, q_late_or_right = self._convert_to_mode_encoding(qubits[mode])
+                q_early_or_Left, q_late_or_right = self._convert_to_mode_encoding(
+                    qubits[mode]
+                )
             else:
                 # presence absence
-                q_early_or_Left, q_late_or_right = qubits[mode], qubits[num_modes + mode]
+                q_early_or_Left, q_late_or_right = (
+                    qubits[mode],
+                    qubits[num_modes + mode],
+                )
 
                 # Only perform a measurement if the two arrival times are exactly equal
-                arrival_time_left, arrival_time_right = arrival_times[mode], arrival_times[num_modes + mode]
+                arrival_time_left, arrival_time_right = (
+                    arrival_times[mode],
+                    arrival_times[num_modes + mode],
+                )
                 if arrival_time_left != arrival_time_right:
-                    raise QuantumDetectorError(f"Arrival times of qubits not equal.\nLeft qubit arrived at "
-                                               f"{arrival_time_left}, while right qubit arrived at "
-                                               f"{arrival_time_right}.")
+                    raise QuantumDetectorError(
+                        f"Arrival times of qubits not equal.\nLeft qubit arrived at "
+                        f"{arrival_time_left}, while right qubit arrived at "
+                        f"{arrival_time_right}."
+                    )
                 # Determine whether the qubits are number states
                 # If qubits are number states and they are lost, they are set to `None`
-                is_qubit_left_number_state = False if q_early_or_Left is None else q_early_or_Left.is_number_state
-                is_qubit_right_number_state = False if q_late_or_right is None else q_late_or_right.is_number_state
+                is_qubit_left_number_state = (
+                    False
+                    if q_early_or_Left is None
+                    else q_early_or_Left.is_number_state
+                )
+                is_qubit_right_number_state = (
+                    False
+                    if q_late_or_right is None
+                    else q_late_or_right.is_number_state
+                )
                 if is_qubit_left_number_state is not is_qubit_right_number_state:
-                    raise QuantumDetectorError(f"BSMDetector {self.name} received a pair of qubits from either side "
-                                               "for which one is a number states while the other is not.")
+                    raise QuantumDetectorError(
+                        f"BSMDetector {self.name} received a pair of qubits from either side "
+                        "for which one is a number states while the other is not."
+                    )
                 assert is_qubit_left_number_state
 
             if self._measurement_basis == "Y":
                 qapi.operate(q_early_or_Left, self._phase_shifter)
 
             # measure
-            outcome = qapi.gmeasure([q_early_or_Left, q_late_or_right], meas_operators=self._meas_operators)[0]
+            outcome = qapi.gmeasure(
+                [q_early_or_Left, q_late_or_right], meas_operators=self._meas_operators
+            )[0]
             outcome = self._measurement2qkdoutcome(outcome)
             outcomes.append(outcome)
 
@@ -845,12 +1036,16 @@ class QKDDetector(TwinDetector):
         [qapi.discard(qubit) for qubit in qubits if qubit is not None]
         self._qubits_per_port.clear()
         # Take the measurement outcomes and put the outcomes on the ports
-        outcomes_per_port = {port_name: outcomes[:] for port_name in self._output_port_names}
+        outcomes_per_port = {
+            port_name: outcomes[:] for port_name in self._output_port_names
+        }
         self.inform(outcomes_per_port)
         # Reset the meta information
         self._meta["successful_modes"] = None
         self._in_dead_time = True
-        system_dead_time = self.properties['dead_time'] - self.properties['system_delay']
+        system_dead_time = (
+            self.properties["dead_time"] - self.properties["system_delay"]
+        )
         if system_dead_time <= 0:
             self.finish()  # Could also schedule_now, but this avoids an event.
         else:
@@ -859,4 +1054,5 @@ class QKDDetector(TwinDetector):
 
 class ModeError(Exception):
     """Different numbers of modes coming from sources."""
+
     pass
