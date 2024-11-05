@@ -1,6 +1,6 @@
 # **Ebit Fidelity**
 
-[![Docs](https://img.shields.io/badge/Docs-Ebit%20Fidelity%20Docs-blue)](https://r1ghtwr0ng.github.io/ebit_fidelity/detectors.html)
+[![Docs](https://img.shields.io/badge/Docs-Ebit%20Fidelity%20Docs-blue)](https://r1ghtwr0ng.github.io/ebit_fidelity/index.html)
 [![License](https://badgen.net/badge/License/MIT/blue)](https://opensource.org/licenses/MIT)
 
 Repository for the research and analysis of entangled bit (ebit) fidelity in a Free Space Optics (FSO) switch. The project uses NetSquid, a quantum network simulation software, to test the behavior of the switch in data center network topologies.
