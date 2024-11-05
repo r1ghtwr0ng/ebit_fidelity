@@ -35,12 +35,15 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install dependencies
+      - name: Install dependencies and NetSquid
+        env:
+          NETSQUID_USERNAME: ${{ secrets.NETSQUID_USERNAME }}
+          NETSQUID_PASSWORD: ${{ secrets.NETSQUID_PASSWORD }}
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install sphinx furo # Add furo or any other theme you're using
-
+          pip install sphinx furo
+          pip install --user --extra-index-url https://${NETSQUID_USERNAME}:${NETSQUID_PASSWORD}@pypi.netsquid.org netsquid
       - name: Build Sphinx documentation
         run: |
           cd docs
