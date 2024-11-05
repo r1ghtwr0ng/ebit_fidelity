@@ -159,7 +159,10 @@ class QPUEntity(ns.pydynaa.Entity):
         """
         logging.debug(f"(QPUEntity | {self.name}) received: {msg}")
         bell_idx = msg.items[0].bell_index
-
+        if self.__correction:
+            logging.debug(
+                f"(QPUEntity | {self.name}) Fidelities output: Bell Index: {bell_idx}"
+            )
         if bell_idx == 1 and self.__correction:
             # This means the state is in state |01> + |10> and needs X correction to become |00> + |11>
             logging.debug(f"(QPUEntity | {self.name}) Performing X correction")
