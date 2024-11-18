@@ -12,7 +12,17 @@ from netsquid.components.models import FibreDelayModel, FibreLossModel
 
 class FSOSwitch(Component):
     def __init__(self, name):
-        ports = ["qin0", "qin1", "qin2", "qout0", "qout1", "qout2", "cout0", "cout1"]
+        ports = [
+            "qin0",
+            "qin1",
+            "qin2",
+            "qout0",
+            "qout1",
+            "qout2",
+            "cout0",
+            "cout1",
+            "cout2",
+        ]
         super().__init__(name, port_names=ports)
         self.__setup_fibre_channels()
         self.__setup_bsm_detector()
@@ -25,18 +35,29 @@ class FSOSwitch(Component):
         # Add subcomponents
         self.add_subcomponent(bsm_detector)
 
-        self.ports["qout0"].bind_output_handler(
-            lambda msg: bsm_detector.ports["qin0"].tx_input(msg)
+        self.ports["qout0"].bind_input_handler(
+            self.__relay_to_bsm_detector, tag_meta=True
         )
-        self.ports["qout1"].bind_output_handler(
-            lambda msg: bsm_detector.ports["qin1"].tx_input(msg)
+        self.ports["qout1"].bind_input_handler(
+            self.__relay_to_bsm_detector, tag_meta=True
         )
         bsm_detector.ports["cout0"].bind_output_handler(
-            lambda msg: self.ports["cout0"].tx_input(msg)
+            self.__relay_from_bsm_detector, tag_meta=True
         )
         bsm_detector.ports["cout1"].bind_output_handler(
-            lambda msg: self.ports["cout1"].tx_input(msg)
+            self.__relay_from_bsm_detector, tag_meta=True
         )
+
+    def __relay_from_bsm_detector(self, msg):
+        port_name = msg.meta.pop("rx_port_name", "missing_port_metadata")
+        port = self.ports[port_name]
+        logging.debug(f"BSM response: {msg} | {port}")
+        port.tx_output(msg)
+
+    def __relay_to_bsm_detector(self, msg):
+        port = f"qin{msg.meta.pop('rx_port_name', 'missing_port_metadata')[-1]}"
+        bsm = self.subcomponents.get(f"BSM[{self.name}]", None)
+        bsm.ports[port].tx_input(msg)
 
     def __setup_fibre_channels(self):
         """Initialize the fibre loss channels through which photons are routed"""
@@ -141,7 +162,9 @@ class FSOSwitch(Component):
         dict_headers = json.loads(serialized_headers)
         outbound_port = dict_headers.pop("outport", None)
         # Debug print
-        logging.info(f"Routing qubit to port: {outbound_port}")
+        logging.info(
+            f"(FSOSwitch | {self.name}) Relaying qubit to port: {outbound_port}"
+        )
 
         # Serialize headers before sending (dict is unhashable)
         msg.meta["header"] = json.dumps(dict_headers)
@@ -151,7 +174,7 @@ class FSOSwitch(Component):
         """Handle inbound qubit on a given port and route through a lossy channel"""
         inbound_port = msg.meta.get("rx_port_name", "missing_port_name")
         logging.debug(
-            f"(FSOSwitch | {self.name}) LETS FUCKING DEBUG THIS SHIT AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA Received {msg} on port {inbound_port}"
+            f"(FSOSwitch | {self.name}) Received {msg} on port {inbound_port}"
         )
         # TODO extract destination from message metadata and route through the correct channel
         outbound_port = self.__routing_table[inbound_port]
@@ -169,7 +192,6 @@ class FSOSwitch(Component):
         # 2 -> Long channel
         channel_idx = abs(int(inbound_port[-1]) - int(outbound_port[-1]))
         channel = self.__channels[channel_idx]
-        logging.debug(f"Fucking channel man: {channel.ports['send']} | msg: {msg}")
 
         # Serialize the headers before sending
         msg.meta["header"] = json.dumps(dict_headers)

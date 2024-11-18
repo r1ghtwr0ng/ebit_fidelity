@@ -177,7 +177,9 @@ class QPUEntity(ns.pydynaa.Entity):
         msg : Message
             The message containing BSM results for corrections.
         """
-        logging.debug(f"(QPUEntity | {self.name}) received: {msg}")
+        logging.debug(
+            f"(QPUEntity | {self.name}) CORRECTION PORT !!!!!!!!!!!!!!!!!!!! received: {msg}"
+        )
         bell_idx = msg.items[0].bell_index
         if self.__correction:
             logging.debug(
@@ -238,6 +240,7 @@ class QPUEntity(ns.pydynaa.Entity):
         position : int, optional
             The memory position of the qubit to emit, by default 0.
         """
+        # TODO fuck the no cloning theorem, just .copy() the object and off to the fidelity calculator
         self.processor.pop(position, skip_noise=True, positional_qout=True)
         self.__measuring = True
 
