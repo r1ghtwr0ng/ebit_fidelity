@@ -33,6 +33,7 @@ def run():
     bob.processor.ports["qout0_hdr"].connect(calculator.ports["qin1"])
 
     # Connect fsoswitch correction outputs to QPU correction inputs
+    # TODO fix the issues with tx_input instead of tx_output in FSO switch !!!!!!!!!!!!!!
     fsoswitch.ports["cout0"].connect(alice.processor.ports["correction"])
     fsoswitch.ports["cout1"].connect(bob.processor.ports["correction"])
 
