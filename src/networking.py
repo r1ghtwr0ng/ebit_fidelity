@@ -3,3 +3,4 @@ class MessageHeader():
         self.id = id
         self.output_q = output_q
         self.output_c = output_c
+
