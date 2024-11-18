@@ -1,3 +1,4 @@
+import json
 import logging
 from detectors import BSMDetector
 from netsquid.components import Component
@@ -6,7 +7,8 @@ from netsquid.examples.repeater_chain import FibreDepolarizeModel
 from netsquid.components.models import FibreDelayModel, FibreLossModel
 
 # TODO fix this by adding a well-defined header object at some point
-#from networking import MessageHeader
+# from networking import MessageHeader
+
 
 class FSOSwitch(Component):
     def __init__(self, name):
@@ -41,21 +43,21 @@ class FSOSwitch(Component):
         model_parameters = {
             "short": {
                 "init_loss": 0,
-                "len_loss": 0,#.25,
+                "len_loss": 0,  # .25,
                 "init_depolar": 0,
                 "len_depolar": 0,
                 "channel_len": 1,
             },
             "mid": {
                 "init_loss": 0,
-                "len_loss": 0,#.25,
+                "len_loss": 0,  # .25,
                 "init_depolar": 0,
                 "len_depolar": 0,
                 "channel_len": 1.2,
             },
             "long": {
                 "init_loss": 0,
-                "len_loss": 0,#.25,
+                "len_loss": 0,  # .25,
                 "init_depolar": 0,
                 "len_depolar": 0,
                 "channel_len": 1.4,
@@ -118,74 +120,66 @@ class FSOSwitch(Component):
         )
 
         # Add subcomponents
-        self.add_subcomponent(qchannel_short)
-        self.add_subcomponent(qchannel_mid)
-        self.add_subcomponent(qchannel_long)
+        self.__channels = [qchannel_short, qchannel_mid, qchannel_long]
 
-    def __handle_incoming(self, msg):
-        event_id = msg.meta['put_event'].id
-        #header = msg.meta['header']
-        #request_id = header['request_id']
-        #input = self.__lookup_input(request_id)
-        # TODO register the event ID in the routing table for future reference
-
-        print(f"Fucking debug shit ------------ {self.subcomponents}")
-        
     def __setup_port_forwarding(self):
         """Setup routing for the incoming ports through the lossy channels to the output ports"""
         # Bind input handlers
-        self.ports["qin0"].bind_input_handler(self.__handle_incoming)
-        self.ports["qin1"].bind_input_handler(
-            lambda msg: print(f"Received msg on port qin1: {msg}")
-        )
-        self.ports["qin2"].bind_input_handler(
-            lambda msg: print(f"Received msg on port qin: {msg}")
-        )
+        self.ports["qin0"].bind_input_handler(self.__recv_qubit, tag_meta=True)
+        self.ports["qin1"].bind_input_handler(self.__recv_qubit, tag_meta=True)
+        self.ports["qin2"].bind_input_handler(self.__recv_qubit, tag_meta=True)
 
         # Bind output handlers
-        self.subcomponents["qchannel_short"].ports["recv"].bind_input_handler(
-            self.__send_qubit
-        )
-        self.subcomponents["qchannel_mid"].ports["recv"].bind_input_handler(
-            self.__send_qubit
-        )
-        self.subcomponents["qchannel_long"].ports["recv"].bind_input_handler(
-            self.__send_qubit
-        )
+        self.__channels[0].ports["recv"].bind_output_handler(self.__relay_qubit)
+        self.__channels[1].ports["recv"].bind_output_handler(self.__relay_qubit)
+        self.__channels[2].ports["recv"].bind_output_handler(self.__relay_qubit)
 
-    def __send_qubit(self, msg):
+    def __relay_qubit(self, msg):
         """Route message to the necessary output port depending on the header contents"""
-        # sim_event_id, destination_switch, entanglement_id, herald_input
-        outbound_port = msg.header["outport"]
+        # Deserialize the headers from the msg metadata
+        serialized_headers = msg.meta.get("header", "{}")
+        dict_headers = json.loads(serialized_headers)
+        outbound_port = dict_headers.pop("outport", None)
+        # Debug print
+        logging.info(f"Routing qubit to port: {outbound_port}")
+
+        # Serialize headers before sending (dict is unhashable)
+        msg.meta["header"] = json.dumps(dict_headers)
         self.ports[outbound_port].tx_input(msg)
 
-    def __recv_qubit(self, msg, inbound_port):
+    def __recv_qubit(self, msg):
         """Handle inbound qubit on a given port and route through a lossy channel"""
+        inbound_port = msg.meta.get("rx_port_name", "missing_port_name")
         logging.debug(
-            f"(FSOSwitch | {self.name}) Received {msg} on port {inbound_port}"
+            f"(FSOSwitch | {self.name}) LETS FUCKING DEBUG THIS SHIT AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA Received {msg} on port {inbound_port}"
         )
         # TODO extract destination from message metadata and route through the correct channel
-        routing_table = {
-            "qin0": {
-                "qout0": self.subcomponents["qchannel_short"],
-                "qout1": self.subcomponents["qchannel_mid"],
-                "qout2": self.subcomponents["qchannel_long"],
-            },
-            "qin1": {
-                "qout0": self.subcomponents["qchannel_mid"],
-                "qout1": self.subcomponents["qchannel_short"],
-                "qout2": self.subcomponents["qchannel_mid"],
-            },
-            "qin2": {
-                "qout0": self.subcomponents["qchannel_long"],
-                "qout1": self.subcomponents["qchannel_mid"],
-                "qout2": self.subcomponents["qchannel_short"],
-            },
-        }
-        outbound_port = msg.header["outport"]
-        channel = routing_table[inbound_port][outbound_port]
+        outbound_port = self.__routing_table[inbound_port]
+
+        # Deserialize the JSON headers
+        serialized_headers = msg.meta.get("header", "{}")
+        dict_headers = json.loads(serialized_headers)
+        dict_headers["outport"] = outbound_port
+        logging.info(
+            f"!!! Incoming port: {inbound_port} | Outbound port: {outbound_port}"
+        )
+        # Calculate which channel to route through:
+        # 0 -> Short channel
+        # 1 -> Medium channel
+        # 2 -> Long channel
+        channel_idx = abs(int(inbound_port[-1]) - int(outbound_port[-1]))
+        channel = self.__channels[channel_idx]
+        logging.debug(f"Fucking channel man: {channel.ports['send']} | msg: {msg}")
+
+        # Serialize the headers before sending
+        msg.meta["header"] = json.dumps(dict_headers)
         channel.ports["send"].tx_input(msg)
 
-    def switch(self, input, output):
-        pass
+    def switch(self, routing_table):
+        valid_keys = list(routing_table.keys()) == ["qin0", "qin1", "qin2"]
+        valid_vals = list(routing_table.values()) == ["qout0", "qout1", "qout2"]
+        if not (valid_keys and valid_vals):
+            logging.error(f"Invalid routing rable: {routing_table}")
 
+        self.__routing_table = routing_table.copy()
+        # TODO set timeout by which you will switch to the next request

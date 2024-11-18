@@ -1,4 +1,5 @@
 # Imports section
+import json
 import logging
 import netsquid as ns
 
@@ -107,26 +108,26 @@ class QPUEntity(ns.pydynaa.Entity):
         self.processor.set_program_done_callback(self.__on_program_done, once=False)
         self.processor.set_program_fail_callback(self.__on_program_fail, once=False)
         self.processor.ports["qin0"].bind_input_handler(self.__recv_qubit)
-        self.processor.ports["qout"].bind_output_handler(self.__setup_header_wrapper, tag_meta=True)
-        self.processor.ports["qout0"].bind_output_handler(self.__setup_header_wrapper, tag_meta=True)
+        self.processor.ports["qout"].bind_output_handler(
+            self.__setup_header_wrapper, tag_meta=True
+        )
+        self.processor.ports["qout0"].bind_output_handler(
+            self.__setup_header_wrapper, tag_meta=True
+        )
         self.processor.ports["correction"].bind_input_handler(
             self.__correction_callback
         )
 
     def __setup_header_wrapper(self, msg):
         # TODO find out what the event that emitted the message was
-        port = msg.meta['rx_port_name']
-        event_id = msg.meta['put_event'].id
-        request_id = 2# self.__lookup_request(event_id)
+        port = msg.meta.get("rx_port_name", "missing_port_metadata")
+        event_id = msg.meta["put_event"].id
+        request_id = self.__request_id
 
-        header = {
-            'event_id': event_id,
-            'request_id': request_id
-        }
-        msg.meta['header'] = header
+        header = {"event_id": event_id, "request_id": request_id}
+        msg.meta["header"] = json.dumps(header)
         logging.debug(f"Added a header to the fucking thing: {msg} [{port}]")
-        self.processor.ports[f"{port}_hdr"].tx_input(msg)
-
+        self.processor.ports[f"{port}_hdr"].tx_output(msg)
 
     # Callback for when a QPU program finishes executing successfully
     def __on_program_done(self):
@@ -134,9 +135,9 @@ class QPUEntity(ns.pydynaa.Entity):
         logging.debug(f"(QPUEntity | {self.name}) program complete")
         if len(self.__queue) > 0 and not self.processor.busy:
             if self.processor.peek(0, skip_noise=True)[0] is not None:
-                (next_program, request_id) = self.__queue.popleft()
+                next_program = self.__queue.popleft()
                 logging.debug(
-                    f"(QPUEntity | {self.name}) queuing next program: {next_program} with request ID: {request_id}"
+                    f"(QPUEntity | {self.name}) queuing next program: {next_program}"
                 )
                 self.add_program(next_program)
         else:
@@ -194,8 +195,15 @@ class QPUEntity(ns.pydynaa.Entity):
             logging.debug(f"(QPUEntity | {self.name}) No correction needed")
 
     # ======== PUBLIC METHODS ========
+    # Register a current request ID to send over to the FSO switch
+    def register_id(self, id):
+        """
+        Register the request ID which is expected by the FSO switch in the msg metadata.
+        """
+        self.__request_id = id
+
     # Use this function to append programs to the object queue
-    def add_program(self, request_id, program):
+    def add_program(self, program):
         """
         Add a program to the queue and execute if the processor is available.
 
@@ -209,17 +217,17 @@ class QPUEntity(ns.pydynaa.Entity):
             if not self.__measuring:
                 logging.debug(f"(QPUEntity | {self.name}) executing program {program}")
                 event = self.processor.execute_program(program)
-                event.wait(callback=lambda: logging.debug(f"Program done callback on RID: {request_id}"))
+                # event.wait(callback=lambda: logging.debug(f"Program done callback"))
             else:
                 logging.debug(
                     f"(QPUEntity | {self.name}) appending program to queue (measuring qubit fidelity)"
                 )
-                self.__queue.append((program, request_id))
+                self.__queue.append(program)
         else:
             logging.debug(
                 f"(QPUEntity | {self.name}) appending program to queue (QPU busy)"
             )
-            self.__queue.append((program, request_id))
+            self.__queue.append(program)
 
     def start_fidelity_calculation(self, position=0):
         """
@@ -233,19 +241,17 @@ class QPUEntity(ns.pydynaa.Entity):
         self.processor.pop(position, skip_noise=True, positional_qout=True)
         self.__measuring = True
 
-    def emit(self, request_id, position=0):
+    def emit(self, position=0):
         """
         Trigger the emission of a photon entangled with the memory qubit at the specified position.
 
         Parameters
         ----------
-        request_id : int
-            Identifier for the parent link-layer request.
         position : int
             The memory position of the qubit to emit and entangle with a photon.
         """
 
-        self.add_program(request_id, EmitProgram(position, self.__emission_idx))
+        self.add_program(EmitProgram(position, self.__emission_idx))
 
 
 class EmitProgram(QuantumProgram):

@@ -40,12 +40,17 @@ def run():
     calculator.ports["qout1"].connect(bob.processor.ports["qin0"])
 
     # TODO add quantum fibre channel between QPU and fsoswitch
+    # Setup the routing table for the FSO switch
+    routing = {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}
+    fsoswitch.switch(routing)
 
     # Start emit programs for both QPUEntities
     alice_req = 1
     bob_req = 2
-    alice.emit(alice_req )
-    bob.emit(bob_req)
+    alice.register_id(alice_req)
+    bob.register_id(bob_req)
+    alice.emit()
+    bob.emit()
 
     # Run simulation
     logging.debug("Starting simulation")
@@ -58,7 +63,7 @@ def run():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     result = []
-    for i in range(5):
+    for i in range(10):
         logging.debug(f"Starting Run {i}")
         ret = run()
         result += ret
