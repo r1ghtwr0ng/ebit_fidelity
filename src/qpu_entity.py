@@ -1,12 +1,16 @@
 # Imports section
+import copy
+import time
 import json
 import logging
 import netsquid as ns
 
 from collections import deque
+from netsquid.components.component import Message
 from netsquid.components.qprogram import QuantumProgram
 from netsquid.components.qprocessor import QuantumProcessor
 
+import netsquid.qubits.qubitapi as qapi
 import netsquid.components.instructions as instr
 
 
@@ -40,6 +44,7 @@ class QPUEntity(ns.pydynaa.Entity):
         self.__setup_callbacks()
         self.__requests = {}
         self.__events = {}
+        self.__calc_fideltiy = False
 
     # ======== PRIVATE METHODS ========
     # Helper function to create a simple QPU with a few useful instructions
@@ -140,11 +145,6 @@ class QPUEntity(ns.pydynaa.Entity):
                     f"(QPUEntity | {self.name}) queuing next program: {next_program}"
                 )
                 self.add_program(next_program)
-        else:
-            logging.debug(
-                f"(QPUEntity | {self.name}) Emitting qubit for fidelity measurement"
-            )
-            self.start_fidelity_calculation()
 
     # Callback for when a QPU program exits with a failure
     def __on_program_fail(self):
@@ -195,6 +195,8 @@ class QPUEntity(ns.pydynaa.Entity):
             self.add_program(CorrectYProgram())
         else:
             logging.debug(f"(QPUEntity | {self.name}) No correction needed")
+        # time.sleep(1)
+        # self.start_fidelity_calculation(self.__request_id)
 
     # ======== PUBLIC METHODS ========
     # Register a current request ID to send over to the FSO switch
@@ -218,7 +220,7 @@ class QPUEntity(ns.pydynaa.Entity):
         if not self.processor.busy:
             if not self.__measuring:
                 logging.debug(f"(QPUEntity | {self.name}) executing program {program}")
-                event = self.processor.execute_program(program)
+                _event = self.processor.execute_program(program)  # TODO handle event
                 # event.wait(callback=lambda: logging.debug(f"Program done callback"))
             else:
                 logging.debug(
@@ -231,18 +233,30 @@ class QPUEntity(ns.pydynaa.Entity):
             )
             self.__queue.append(program)
 
-    def start_fidelity_calculation(self, position=0):
+    def get_qubit(self, position=0):
+        qubit = self.processor.peek(position, skip_noise=True)[0]
+        return qubit
+
+    def start_fidelity_calculation(self, request_id, position=0):
         """
         Emit a qubit from memory for fidelity calculation.
 
         Parameters
         ----------
+        request_id: str, required
+            The ID associated with the fidelity measurement request.
         position : int, optional
             The memory position of the qubit to emit, by default 0.
         """
-        # TODO fuck the no cloning theorem, just .copy() the object and off to the fidelity calculator
-        self.processor.pop(position, skip_noise=True, positional_qout=True)
-        self.__measuring = True
+        header = {"request_id": request_id}
+        qubit = self.processor.peek(position, skip_noise=True)[0]
+        state = qubit.qstate.qrepr
+        print(f"State: {state}")
+        clone = qapi.create_qubits(1, no_state=True)[0]
+        qapi.assign_qstate(clone, state)
+        msg = Message(qubit)
+        msg.meta["header"] = json.dumps(header)
+        self.ports["fidelity_out"].tx_output(msg)
 
     def emit(self, position=0):
         """

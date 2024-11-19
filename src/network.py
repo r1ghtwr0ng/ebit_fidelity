@@ -1,6 +1,9 @@
 # Imports section
 import logging
+import numpy as np
 import netsquid as ns
+import netsquid.qubits.ketstates as ks
+import netsquid.qubits.qubitapi as qapi
 
 # Import from own code
 from qpu_entity import QPUEntity
@@ -58,7 +61,20 @@ def run():
     stats = ns.sim_run()
     logging.debug(stats)
 
-    return calculator.get_fidelities()
+    qubit0 = alice.get_qubit(0)
+    qubit1 = bob.get_qubit(0)
+    fidelities = {
+        "|00>": qapi.fidelity([qubit0, qubit1], np.array([1, 0, 0, 0]), squared=True),
+        "|11>": qapi.fidelity([qubit0, qubit1], np.array([0, 0, 0, 1]), squared=True),
+        "B00": qapi.fidelity([qubit0, qubit1], ks.b00, squared=True),
+        "B01": qapi.fidelity([qubit0, qubit1], ks.b01, squared=True),
+        "B10": qapi.fidelity([qubit0, qubit1], ks.b10, squared=True),
+        "B11": qapi.fidelity([qubit0, qubit1], ks.b11, squared=True),
+    }
+
+    logging.info(f"Output: {fidelities}")
+    return fidelities["B00"]
+    # return calculator.get_fidelities()
 
 
 if __name__ == "__main__":
@@ -67,6 +83,6 @@ if __name__ == "__main__":
     for i in range(10):
         logging.debug(f"Starting Run {i}")
         ret = run()
-        result += ret
+        result.append(ret)
 
     logging.info(result)
