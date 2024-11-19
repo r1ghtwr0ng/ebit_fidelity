@@ -48,6 +48,18 @@ class FSOSwitch(Component):
             self.__relay_from_bsm_detector, tag_meta=True
         )
 
+    def __setup_port_forwarding(self):
+        """Setup routing for the incoming ports through the lossy channels to the output ports"""
+        # Bind input handlers
+        self.ports["qin0"].bind_input_handler(self.__recv_qubit, tag_meta=True)
+        self.ports["qin1"].bind_input_handler(self.__recv_qubit, tag_meta=True)
+        self.ports["qin2"].bind_input_handler(self.__recv_qubit, tag_meta=True)
+
+        # Bind output handlers
+        self.__channels[0].ports["recv"].bind_output_handler(self.__relay_qubit)
+        self.__channels[1].ports["recv"].bind_output_handler(self.__relay_qubit)
+        self.__channels[2].ports["recv"].bind_output_handler(self.__relay_qubit)
+
     def __relay_from_bsm_detector(self, msg):
         port_name = msg.meta.pop("rx_port_name", "missing_port_metadata")
         port = self.ports[port_name]
@@ -142,18 +154,6 @@ class FSOSwitch(Component):
 
         # Add subcomponents
         self.__channels = [qchannel_short, qchannel_mid, qchannel_long]
-
-    def __setup_port_forwarding(self):
-        """Setup routing for the incoming ports through the lossy channels to the output ports"""
-        # Bind input handlers
-        self.ports["qin0"].bind_input_handler(self.__recv_qubit, tag_meta=True)
-        self.ports["qin1"].bind_input_handler(self.__recv_qubit, tag_meta=True)
-        self.ports["qin2"].bind_input_handler(self.__recv_qubit, tag_meta=True)
-
-        # Bind output handlers
-        self.__channels[0].ports["recv"].bind_output_handler(self.__relay_qubit)
-        self.__channels[1].ports["recv"].bind_output_handler(self.__relay_qubit)
-        self.__channels[2].ports["recv"].bind_output_handler(self.__relay_qubit)
 
     def __relay_qubit(self, msg):
         """Route message to the necessary output port depending on the header contents"""
