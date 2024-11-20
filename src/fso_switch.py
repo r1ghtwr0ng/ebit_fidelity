@@ -12,7 +12,7 @@ class FSOSwitch(Component):
     TODO write docs on the component.
     """
 
-    def __init__(self, name):
+    def __init__(self, name, model_parameters):
         ports = [
             "qin0",
             "qin1",
@@ -25,14 +25,18 @@ class FSOSwitch(Component):
             "cout2",
         ]
         super().__init__(name, port_names=ports)
-        self.__setup_fibre_channels()
+        self.__setup_fibre_channels(model_parameters)
         self.__setup_bsm_detector()
         self.__setup_port_forwarding()
 
     def __setup_bsm_detector(self):
         """
         Creates a BSM detector component and adds it as a subcomponent to the FSO Switch.
-        Port bindings: [FSO] qout0 -> qin0"""
+        Port bindings:  [FSO] qout0 -> qin0  [BSM]
+                        [FSO] qout1 -> qin1  [BSM]
+                        [FSO] cout0 <- cout0 [BSM]
+                        [FSO] cout1 <- cout1 [BSM]
+        """
         # Create BSMDetector component
         bsm_detector = BSMDetector(f"BSM[{self.name}]")
 
@@ -43,18 +47,6 @@ class FSOSwitch(Component):
         self.ports["qout1"].bind_output_handler(bsm_detector.ports["qin1"].tx_input)
         bsm_detector.ports["cout0"].bind_output_handler(self.ports["cout0"].tx_output)
         bsm_detector.ports["cout1"].bind_output_handler(self.ports["cout1"].tx_output)
-        # self.ports["qout0"].bind_input_handler(
-        #    self.__relay_to_bsm_detector, tag_meta=True
-        # )
-        # self.ports["qout1"].bind_input_handler(
-        #    self.__relay_to_bsm_detector, tag_meta=True
-        # )
-        # bsm_detector.ports["cout0"].bind_output_handler(
-        #    self.__relay_from_bsm_detector, tag_meta=True
-        # )
-        # bsm_detector.ports["cout1"].bind_output_handler(
-        #    self.__relay_from_bsm_detector, tag_meta=True
-        # )
 
     def __setup_port_forwarding(self):
         """Setup routing for the incoming ports through the lossy channels to the output ports"""
@@ -68,43 +60,14 @@ class FSOSwitch(Component):
         self.__channels[1].ports["recv"].bind_output_handler(self.__relay_qubit)
         self.__channels[2].ports["recv"].bind_output_handler(self.__relay_qubit)
 
-    def __relay_from_bsm_detector(self, msg):
-        port_name = msg.meta.pop("rx_port_name", "missing_port_metadata")
-        port = self.ports[port_name]
-        logging.debug(f"BSM response: {msg} | {port}")
-        port.tx_output(msg)
+    def __setup_fibre_channels(self, model_parameters):
+        """
+        Initialize the fibre loss channels through which photons are routed
 
-    def __relay_to_bsm_detector(self, msg):
-        port = f"qin{msg.meta.pop('rx_port_name', 'missing_port_metadata')[-1]}"
-        bsm = self.subcomponents.get(f"BSM[{self.name}]", None)
-        bsm.ports[port].tx_input(msg)
-
-    def __setup_fibre_channels(self):
-        """Initialize the fibre loss channels through which photons are routed"""
-        model_parameters = {
-            "short": {
-                "init_loss": 0,
-                "len_loss": 0,  # .25,
-                "init_depolar": 0,
-                "len_depolar": 0,
-                "channel_len": 1,
-            },
-            "mid": {
-                "init_loss": 0,
-                "len_loss": 0,  # .25,
-                "init_depolar": 0,
-                "len_depolar": 0,
-                "channel_len": 1.2,
-            },
-            "long": {
-                "init_loss": 0,
-                "len_loss": 0,  # .25,
-                "init_depolar": 0,
-                "len_depolar": 0,
-                "channel_len": 1.4,
-            },
-        }
-
+        Parameters
+        ----------
+        model_parameters
+        """
         # Model the fibre loss, delay and dephasing of the different routes in the switch
         model_map_short = {
             "delay_model": FibreDelayModel(
