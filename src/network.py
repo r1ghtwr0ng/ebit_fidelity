@@ -1,11 +1,10 @@
-# Imports section
+import time
 import logging
 import numpy as np
 import netsquid as ns
 import netsquid.qubits.ketstates as ks
 import netsquid.qubits.qubitapi as qapi
 
-# Import from own code
 from qpu_entity import QPUEntity
 from fso_switch import FSOSwitch
 from fidelity_calculator import FidelityCalculator
@@ -14,7 +13,7 @@ from fidelity_calculator import FidelityCalculator
 # from netsquid.components.models import FibreDelayModel, FibreLossModel
 
 
-# ---- CLASSES ----
+# Runs the simulation once.
 def run():
     # Reset simulation
     ns.sim_reset()
@@ -25,6 +24,7 @@ def run():
     # Integration with the FSOSwitch
     alice = QPUEntity("AliceQPU", correction=False)
     bob = QPUEntity("BobQPU", correction=True)
+    _charlie = QPUEntity("CharlieQPU", correction=True)  # TODO use 3 nodes
 
     # Connect QPU output ports to the switch input
     fsoswitch = FSOSwitch("bsm_fsoswitch")
@@ -36,7 +36,6 @@ def run():
     bob.processor.ports["qout0_hdr"].connect(calculator.ports["qin1"])
 
     # Connect fsoswitch correction outputs to QPU correction inputs
-    # TODO fix the issues with tx_input instead of tx_output in FSO switch !!!!!!!!!!!!!!
     fsoswitch.ports["cout0"].connect(alice.processor.ports["correction"])
     fsoswitch.ports["cout1"].connect(bob.processor.ports["correction"])
 
@@ -57,10 +56,11 @@ def run():
     bob.emit()
 
     # Run simulation
-    logging.debug("Starting simulation")
+    logging.info("Starting simulation")
     stats = ns.sim_run()
     logging.debug(stats)
 
+    status = alice.get_status()
     qubit0 = alice.get_qubit(0)
     qubit1 = bob.get_qubit(0)
     fidelities = {
@@ -72,16 +72,17 @@ def run():
         "B11": qapi.fidelity([qubit0, qubit1], ks.b11, squared=True),
     }
 
-    logging.info(f"Output: {fidelities}")
+    if status:
+        logging.info(f"[GREPPABLE] Simulation output: {fidelities}")
+
     return fidelities["B00"]
-    # return calculator.get_fidelities()
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     result = []
-    for i in range(10):
-        logging.debug(f"Starting Run {i}")
+    for i in range(100):
+        logging.info(f"Starting Run {i}")
         ret = run()
         result.append(ret)
 

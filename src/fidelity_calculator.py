@@ -1,4 +1,3 @@
-# Imports section
 import logging
 import numpy as np
 
