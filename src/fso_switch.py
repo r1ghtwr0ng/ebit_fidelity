@@ -6,11 +6,12 @@ from netsquid.components import QuantumChannel
 from netsquid.examples.repeater_chain import FibreDepolarizeModel
 from netsquid.components.models import FibreDelayModel, FibreLossModel
 
-# TODO fix this by adding a well-defined header object at some point
-# from networking import MessageHeader
-
 
 class FSOSwitch(Component):
+    """
+    TODO write docs on the component.
+    """
+
     def __init__(self, name):
         ports = [
             "qin0",
@@ -29,24 +30,31 @@ class FSOSwitch(Component):
         self.__setup_port_forwarding()
 
     def __setup_bsm_detector(self):
+        """
+        Creates a BSM detector component and adds it as a subcomponent to the FSO Switch.
+        Port bindings: [FSO] qout0 -> qin0"""
         # Create BSMDetector component
         bsm_detector = BSMDetector(f"BSM[{self.name}]")
 
         # Add subcomponents
         self.add_subcomponent(bsm_detector)
 
-        self.ports["qout0"].bind_input_handler(
-            self.__relay_to_bsm_detector, tag_meta=True
-        )
-        self.ports["qout1"].bind_input_handler(
-            self.__relay_to_bsm_detector, tag_meta=True
-        )
-        bsm_detector.ports["cout0"].bind_output_handler(
-            self.__relay_from_bsm_detector, tag_meta=True
-        )
-        bsm_detector.ports["cout1"].bind_output_handler(
-            self.__relay_from_bsm_detector, tag_meta=True
-        )
+        self.ports["qout0"].bind_output_handler(bsm_detector.ports["qin0"].tx_input)
+        self.ports["qout1"].bind_output_handler(bsm_detector.ports["qin1"].tx_input)
+        bsm_detector.ports["cout0"].bind_output_handler(self.ports["cout0"].tx_output)
+        bsm_detector.ports["cout1"].bind_output_handler(self.ports["cout1"].tx_output)
+        # self.ports["qout0"].bind_input_handler(
+        #    self.__relay_to_bsm_detector, tag_meta=True
+        # )
+        # self.ports["qout1"].bind_input_handler(
+        #    self.__relay_to_bsm_detector, tag_meta=True
+        # )
+        # bsm_detector.ports["cout0"].bind_output_handler(
+        #    self.__relay_from_bsm_detector, tag_meta=True
+        # )
+        # bsm_detector.ports["cout1"].bind_output_handler(
+        #    self.__relay_from_bsm_detector, tag_meta=True
+        # )
 
     def __setup_port_forwarding(self):
         """Setup routing for the incoming ports through the lossy channels to the output ports"""
@@ -168,7 +176,7 @@ class FSOSwitch(Component):
 
         # Serialize headers before sending (dict is unhashable)
         msg.meta["header"] = json.dumps(dict_headers)
-        self.ports[outbound_port].tx_input(msg)
+        self.ports[outbound_port].tx_output(msg)
 
     def __recv_qubit(self, msg):
         """Handle inbound qubit on a given port and route through a lossy channel"""

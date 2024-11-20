@@ -1,6 +1,3 @@
-# Imports section
-import copy
-import time
 import json
 import logging
 import netsquid as ns
@@ -32,7 +29,6 @@ class QPUEntity(ns.pydynaa.Entity):
     """
 
     def __init__(self, name, correction=False, qbit_count=2, depolar_rate=0):
-        logging.debug(f"(QPUEntity | {name}) Logging check in __init__")
         super().__init__()
         self.name = name
         # The last qubit slot is used for photon emission into fibre
@@ -41,6 +37,7 @@ class QPUEntity(ns.pydynaa.Entity):
         self.__correction = correction
         self.__queue = deque()
         self.__measuring = False
+        self.__status = False
         self.__setup_callbacks()
         self.__requests = {}
         self.__events = {}
@@ -112,7 +109,6 @@ class QPUEntity(ns.pydynaa.Entity):
         """Set up callback handling for when programs complete."""
         self.processor.set_program_done_callback(self.__on_program_done, once=False)
         self.processor.set_program_fail_callback(self.__on_program_fail, once=False)
-        self.processor.ports["qin0"].bind_input_handler(self.__recv_qubit)
         self.processor.ports["qout"].bind_output_handler(
             self.__setup_header_wrapper, tag_meta=True
         )
@@ -124,6 +120,9 @@ class QPUEntity(ns.pydynaa.Entity):
         )
 
     def __setup_header_wrapper(self, msg):
+        """
+        TODO parameters, etc.
+        """
         # TODO find out what the event that emitted the message was
         port = msg.meta.get("rx_port_name", "missing_port_metadata")
         event_id = msg.meta["put_event"].id
@@ -131,7 +130,6 @@ class QPUEntity(ns.pydynaa.Entity):
 
         header = {"event_id": event_id, "request_id": request_id}
         msg.meta["header"] = json.dumps(header)
-        logging.debug(f"Added a header to the fucking thing: {msg} [{port}]")
         self.processor.ports[f"{port}_hdr"].tx_output(msg)
 
     # Callback for when a QPU program finishes executing successfully
@@ -148,23 +146,14 @@ class QPUEntity(ns.pydynaa.Entity):
 
     # Callback for when a QPU program exits with a failure
     def __on_program_fail(self):
-        """Inform of program failure."""
-        logging.debug(f"(QPUEntity | {self.name}) program resulted in failure")
+        """Callback that's run on QPU program failure."""
+        logging.debug(f"(QPUEntity | {self.name}) program resulted in a failure.")
         if len(self.__queue) > 0:
             (next_program, request_id) = self.__queue.popleft()
             logging.debug(
                 f"(QPUEntity | {self.name}) queuing next program: {next_program} with request ID: {request_id}"
             )
             self.add_program(next_program)
-
-    # On qubit receival (back from fidelity check) return it to QPU and unset busy flag
-    def __recv_qubit(self, msg):
-        logging.debug(
-            f"(QPUEntity | {self.name}) Received qubit back, returning to QPU position 0"
-        )
-        qubit = msg.items[0]
-        self.processor.put(qubit, 0)
-        self.__measuring = False  # Unset the flag which blocks QPU ops
 
     # Callback function for applying qubit corrections based on BSMDetector output
     def __correction_callback(self, msg):
@@ -177,14 +166,13 @@ class QPUEntity(ns.pydynaa.Entity):
         msg : Message
             The message containing BSM results for corrections.
         """
-        logging.debug(
-            f"(QPUEntity | {self.name}) CORRECTION PORT !!!!!!!!!!!!!!!!!!!! received: {msg}"
-        )
         bell_idx = msg.items[0].bell_index
+        self.__status = msg.items[0].success
         if self.__correction:
             logging.debug(
                 f"(QPUEntity | {self.name}) Fidelities output: Bell Index: {bell_idx}"
             )
+
         if bell_idx == 1 and self.__correction:
             # This means the state is in state |01> + |10> and needs X correction to become |00> + |11>
             logging.debug(f"(QPUEntity | {self.name}) Performing X correction")
@@ -195,16 +183,19 @@ class QPUEntity(ns.pydynaa.Entity):
             self.add_program(CorrectYProgram())
         else:
             logging.debug(f"(QPUEntity | {self.name}) No correction needed")
-        # time.sleep(1)
-        # self.start_fidelity_calculation(self.__request_id)
 
     # ======== PUBLIC METHODS ========
     # Register a current request ID to send over to the FSO switch
-    def register_id(self, id):
+    def register_id(self, request_id):
         """
         Register the request ID which is expected by the FSO switch in the msg metadata.
+
+        Parameters
+        ----------
+        request_id: str, required
+            ID of the request being registered.
         """
-        self.__request_id = id
+        self.__request_id = request_id
 
     # Use this function to append programs to the object queue
     def add_program(self, program):
@@ -221,6 +212,7 @@ class QPUEntity(ns.pydynaa.Entity):
             if not self.__measuring:
                 logging.debug(f"(QPUEntity | {self.name}) executing program {program}")
                 _event = self.processor.execute_program(program)  # TODO handle event
+                # TODO handle this event somehow
                 # event.wait(callback=lambda: logging.debug(f"Program done callback"))
             else:
                 logging.debug(
@@ -232,6 +224,19 @@ class QPUEntity(ns.pydynaa.Entity):
                 f"(QPUEntity | {self.name}) appending program to queue (QPU busy)"
             )
             self.__queue.append(program)
+
+    # Get the status of the last exchange request
+    def get_status(self):
+        """
+        Getter function to retrieve the status outcome of a given request.
+
+        Parameters
+        ----------
+        request_id: str, required
+            ID of the request whose status you want to check.
+        """
+        # TODO search by request ID
+        return self.__status
 
     def get_qubit(self, position=0):
         qubit = self.processor.peek(position, skip_noise=True)[0]
