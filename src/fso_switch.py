@@ -70,11 +70,11 @@ class FSOSwitch(Component):
         """
         # Model the fibre loss, delay and dephasing of the different routes in the switch
         model_map_short = {
-            "delay_model": FibreDelayModel(
+            "delay_model": FibreDelayModel(),
+            "quantum_noise_model": FibreDepolarizeModel(
                 p_depol_init=model_parameters["short"]["init_depolar"],
                 p_depol_length=model_parameters["short"]["len_depolar"],
             ),
-            "quantum_noise_model": FibreDepolarizeModel(),
             "quantum_loss_model": FibreLossModel(
                 p_loss_init=model_parameters["short"]["init_loss"],
                 p_loss_length=model_parameters["short"]["len_loss"],
@@ -82,11 +82,10 @@ class FSOSwitch(Component):
             ),
         }
         model_map_mid = {
-            "delay_model": FibreDelayModel(
+            "quantum_noise_model": FibreDepolarizeModel(
                 p_depol_init=model_parameters["mid"]["init_depolar"],
                 p_depol_length=model_parameters["mid"]["len_depolar"],
             ),
-            "quantum_noise_model": FibreDepolarizeModel(),
             "quantum_loss_model": FibreLossModel(
                 p_loss_init=model_parameters["mid"]["init_loss"],
                 p_loss_length=model_parameters["mid"]["len_loss"],
@@ -94,11 +93,11 @@ class FSOSwitch(Component):
             ),
         }
         model_map_long = {
-            "delay_model": FibreDelayModel(
+            "delay_model": FibreDelayModel(),
+            "quantum_noise_model": FibreDepolarizeModel(
                 p_depol_init=model_parameters["long"]["init_depolar"],
                 p_depol_length=model_parameters["long"]["len_depolar"],
             ),
-            "quantum_noise_model": FibreDepolarizeModel(),
             "quantum_loss_model": FibreLossModel(
                 p_loss_init=model_parameters["long"]["init_loss"],
                 p_loss_length=model_parameters["long"]["len_loss"],

@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 import netsquid as ns
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import netsquid.qubits.ketstates as ks
 import netsquid.qubits.qubitapi as qapi
 
@@ -33,13 +33,13 @@ def get_fidelities(alice, bob):
 
 
 # Runs the simulation once.
-def run(model_parameters):
+def run(model_parameters, depolar_rate):
     # Reset simulation
     ns.sim_reset()
 
     # Integration with the FSOSwitch
-    alice = QPUEntity("AliceQPU", correction=False)
-    bob = QPUEntity("BobQPU", correction=True)
+    alice = QPUEntity("AliceQPU", correction=False, depolar_rate=depolar_rate)
+    bob = QPUEntity("BobQPU", correction=True, depolar_rate=depolar_rate)
     _charlie = QPUEntity("CharlieQPU", correction=True)  # TODO use 3 nodes
 
     # Connect QPU output ports to the switch input
@@ -73,35 +73,60 @@ def run(model_parameters):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    model_parameters = {
-        "short": {
-            "init_loss": 0,
-            "len_loss": 0,  # .25,
-            "init_depolar": 0,
-            "len_depolar": 0,
-            "channel_len": 1,
-        },
-        "mid": {
-            "init_loss": 0,
-            "len_loss": 0,  # .25,
-            "init_depolar": 0,
-            "len_depolar": 0,
-            "channel_len": 1.2,
-        },
-        "long": {
-            "init_loss": 0,
-            "len_loss": 0,  # .25,
-            "init_depolar": 0,
-            "len_depolar": 0,
-            "channel_len": 1.4,
-        },
-    }
-    result = []
-    for i in range(100):
-        logging.info(f"Starting Run {i}")
-        status, fidelity = run(model_parameters)
-        if status:
-            result.append(fidelity)
+    logging.basicConfig(level=logging.CRITICAL)
 
+    y = []
+    x = np.linspace(0, 1, 10)
+
+    # Loss parameter dB to probability conversion
+    loss = lambda db: 1 - pow(10, -(db / 10))
+    for i, depolar in enumerate(x):
+        model_parameters = {
+            "short": {
+                "init_loss": loss(1.319),
+                "len_loss": 0,  # .25,
+                "init_depolar": depolar,
+                "len_depolar": 0,
+                "channel_len": 0.005,
+            },
+            "mid": {
+                "init_loss": loss(2.12),
+                "len_loss": 0,  # .25,
+                "init_depolar": depolar,
+                "len_depolar": 0,
+                "channel_len": 0.00587,
+            },
+            "long": {
+                "init_loss": loss(2.005),
+                "len_loss": 0,  # .25,
+                "init_depolar": depolar,
+                "len_depolar": 0,
+                "channel_len": 0.00756,
+            },
+        }
+        result = []
+        for _ in range(1000):
+            status, fidelity = run(model_parameters, depolar)
+            if status:
+                result.append(fidelity)
+
+        count = len(result)
+        if count == 0:
+            avg = 0
+        else:
+            avg = np.average(result)
+        print(f"Run: {i}, dephase: {depolar}, count: {count}, fidelity: {avg}")
+        y.append(avg)
+
+    fig, ax = plt.subplots()
+    ax.plot(x, y)
+
+    ax.set(
+        xlabel="Loss probability",
+        ylabel="EBit fidelity average",
+    )
+    ax.grid()
+
+    fig.savefig("test.png")
+    plt.show()
     logging.info(f"Fidelities for successful results: {result}")
