@@ -72,41 +72,49 @@ def run(model_parameters, depolar_rate):
     return get_fidelities(alice, bob)
 
 
+# Convert dB loss to probability
+# TODO check validity of formula
+def loss(decibels):
+    return 1 - pow(10, -(decibels / 10))
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.CRITICAL)
 
-    y = []
-    x = np.linspace(0, 1, 10)
+    total = 5000
+    fidelities = []
+    avg_attempts = []
+    x = np.linspace(0, 0.5, 50)
 
     # Loss parameter dB to probability conversion
-    loss = lambda db: 1 - pow(10, -(db / 10))
     for i, depolar in enumerate(x):
         model_parameters = {
             "short": {
                 "init_loss": loss(1.319),
-                "len_loss": 0,  # .25,
+                "len_loss": 0.25,  # .25,
                 "init_depolar": depolar,
                 "len_depolar": 0,
                 "channel_len": 0.005,
             },
             "mid": {
                 "init_loss": loss(2.12),
-                "len_loss": 0,  # .25,
+                "len_loss": 0.25,  # .25,
                 "init_depolar": depolar,
                 "len_depolar": 0,
                 "channel_len": 0.00587,
             },
             "long": {
                 "init_loss": loss(2.005),
-                "len_loss": 0,  # .25,
+                "len_loss": 0.25,  # .25,
                 "init_depolar": depolar,
                 "len_depolar": 0,
                 "channel_len": 0.00756,
             },
         }
         result = []
-        for _ in range(1000):
+        for j in range(total):
             status, fidelity = run(model_parameters, depolar)
+            print(f"Progress: {j}", end="\r")
             if status:
                 result.append(fidelity)
 
@@ -115,18 +123,21 @@ if __name__ == "__main__":
             avg = 0
         else:
             avg = np.average(result)
-        print(f"Run: {i}, dephase: {depolar}, count: {count}, fidelity: {avg}")
-        y.append(avg)
+        print(
+            f"Run: {i}, dephase: {depolar}, count: {count}, fidelity: {avg}, avg attempts: {total/count}"
+        )
+        avg_attempts.append(total / count)
+        fidelities.append(avg)
 
     fig, ax = plt.subplots()
-    ax.plot(x, y)
+    ax.plot(x, fidelities)
 
     ax.set(
         xlabel="Loss probability",
-        ylabel="EBit fidelity average",
+        ylabel="Average ebit fidelity",
     )
     ax.grid()
 
-    fig.savefig("test.png")
+    fig.savefig("plots/test.png")
     plt.show()
-    logging.info(f"Fidelities for successful results: {result}")
+    logging.info("Done")
