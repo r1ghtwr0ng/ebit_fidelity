@@ -1,7 +1,7 @@
+import gc
 import logging
 import numpy as np
 import netsquid as ns
-import matplotlib.pyplot as plt
 import netsquid.qubits.ketstates as ks
 import netsquid.qubits.qubitapi as qapi
 
@@ -76,68 +76,3 @@ def run(model_parameters, depolar_rate):
 # TODO check validity of formula
 def loss(decibels):
     return 1 - pow(10, -(decibels / 10))
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.CRITICAL)
-
-    total = 5000
-    fidelities = []
-    avg_attempts = []
-    x = np.linspace(0, 0.5, 50)
-
-    # Loss parameter dB to probability conversion
-    for i, depolar in enumerate(x):
-        model_parameters = {
-            "short": {
-                "init_loss": loss(1.319),
-                "len_loss": 0.25,  # .25,
-                "init_depolar": depolar,
-                "len_depolar": 0,
-                "channel_len": 0.005,
-            },
-            "mid": {
-                "init_loss": loss(2.12),
-                "len_loss": 0.25,  # .25,
-                "init_depolar": depolar,
-                "len_depolar": 0,
-                "channel_len": 0.00587,
-            },
-            "long": {
-                "init_loss": loss(2.005),
-                "len_loss": 0.25,  # .25,
-                "init_depolar": depolar,
-                "len_depolar": 0,
-                "channel_len": 0.00756,
-            },
-        }
-        result = []
-        for j in range(total):
-            status, fidelity = run(model_parameters, depolar)
-            print(f"Progress: {j}", end="\r")
-            if status:
-                result.append(fidelity)
-
-        count = len(result)
-        if count == 0:
-            avg = 0
-        else:
-            avg = np.average(result)
-        print(
-            f"Run: {i}, dephase: {depolar}, count: {count}, fidelity: {avg}, avg attempts: {total/count}"
-        )
-        avg_attempts.append(total / count)
-        fidelities.append(avg)
-
-    fig, ax = plt.subplots()
-    ax.plot(x, fidelities)
-
-    ax.set(
-        xlabel="Loss probability",
-        ylabel="Average ebit fidelity",
-    )
-    ax.grid()
-
-    fig.savefig("plots/test.png")
-    plt.show()
-    logging.info("Done")
