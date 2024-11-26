@@ -32,7 +32,7 @@ def get_fidelities(alice, bob):
 
 
 # Runs the simulation several times, determined by the batch size.
-def batch_run(model_parameters, qpu_depolar_rate, batch_size):
+def batch_run(model_parameters, qpu_depolar_rate, switch_routing, batch_size):
     results = []
     for _ in range(batch_size):
         # Reset simulation
@@ -54,8 +54,7 @@ def batch_run(model_parameters, qpu_depolar_rate, batch_size):
 
         # TODO add quantum fibre channel between QPU and fsoswitch
         # Setup the routing table for the FSO switch
-        routing = {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}
-        fsoswitch.switch(routing)
+        fsoswitch.switch(switch_routing)
 
         # Start emit programs for both QPUEntities
         alice_req = 1

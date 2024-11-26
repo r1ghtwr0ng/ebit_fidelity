@@ -35,7 +35,14 @@ def configure_parameters(depolar_rate):
     return model_parameters
 
 
-def worker(model_parameters, qpu_depolar_rate, total_runs, output_queue, job_index):
+def worker(
+    model_parameters,
+    qpu_depolar_rate,
+    switch_routing,
+    total_runs,
+    output_queue,
+    job_index,
+):
     """
     Worker function to run the simulation in a separate process.
     Logs the start of the process and sends results via output_queue.
@@ -49,7 +56,9 @@ def worker(model_parameters, qpu_depolar_rate, total_runs, output_queue, job_ind
     """
     logging.info(f"Starting process {job_index} (PID: {mp.current_process().pid})")
     try:
-        result = batch_run(model_parameters, qpu_depolar_rate, total_runs)
+        result = batch_run(
+            model_parameters, qpu_depolar_rate, switch_routing, total_runs
+        )
         output_queue.put((job_index, result))
     except Exception as e:
         logging.error(
@@ -60,7 +69,9 @@ def worker(model_parameters, qpu_depolar_rate, total_runs, output_queue, job_ind
         logging.info(f"Process {job_index} (PID: {mp.current_process().pid}) finished.")
 
 
-def run_simulation(total_runs, fso_depolar_rates, qpu_depolar_rate=0, process_count=4):
+def run_simulation(
+    total_runs, switch_routing, fso_depolar_rates, qpu_depolar_rate=0, process_count=4
+):
     """
     Run simulations for given depolarization rates using multiple processes.
 
@@ -92,6 +103,7 @@ def run_simulation(total_runs, fso_depolar_rates, qpu_depolar_rate=0, process_co
                 args=(
                     model_parameters_list[next_job_index],
                     qpu_depolar_rate,
+                    switch_routing,
                     total_runs,
                     output_queue,
                     next_job_index,
@@ -152,22 +164,6 @@ def run_simulation(total_runs, fso_depolar_rates, qpu_depolar_rate=0, process_co
             )
         )
 
-    # Plot Average Attempts vs Loss Probability
-    # plt.figure(figsize=(8, 6))
-    # plt.plot(
-    #    fso_depolar_rates,
-    #    success_probabilities,
-    #    marker="s",
-    #    linestyle="-",
-    #    label="Average attempt probability",
-    # )
-    # plt.xlabel("Loss probability")
-    # plt.ylabel("Average attempts")
-    # plt.title("Average attempts vs. loss probability")
-    # plt.grid()
-    # plt.legend()
-    # plt.savefig("attempts.png")
-
     n_values = [1, 2, 3, 4, 5]
 
     # Plot the maximal distilled fidelity for 5 cases against the dephase rate
@@ -178,14 +174,14 @@ def run_simulation(total_runs, fso_depolar_rates, qpu_depolar_rate=0, process_co
         plt.plot(
             fso_depolar_rates,
             distilled_fidelities,
-            marker="o",
+            marker="none",
             linestyle="-",
             label=f"{n} Qubits",
         )
 
     plt.xlabel("Dephase probability")
     plt.ylabel("Distilled fidelity")
-    plt.title("Distilled fidelity vs. dephase probability for n Qubits")
+    plt.title("Distilled fidelity vs. dephase probability")
     plt.grid()
     plt.legend()
     plt.savefig("plots/distilled.png")
@@ -195,12 +191,18 @@ def run_simulation(total_runs, fso_depolar_rates, qpu_depolar_rate=0, process_co
 def main():
     # Set logging level
     logging.getLogger().setLevel(logging.INFO)
-    fso_depolar_rates = np.linspace(0, 0.5, 100)
+
+    # Set switch routing configuration
+    # TODO pass the switch routing as argument
+    switch_routing = {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}
+
+    fso_depolar_rates = np.linspace(0, 0.5, 10)
     qpu_depolar_rate = 0
-    total_runs = 10000
+    total_runs = 1000
     process_count = 4
     run_simulation(
-        total_runs,
+        total_runs=total_runs,
+        switch_routing=switch_routing,
         fso_depolar_rates=fso_depolar_rates,
         qpu_depolar_rate=qpu_depolar_rate,
         process_count=process_count,
