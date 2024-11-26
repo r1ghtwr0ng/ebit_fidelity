@@ -132,7 +132,7 @@ class FSOSwitch(Component):
         dict_headers = json.loads(serialized_headers)
         outbound_port = dict_headers.pop("outport", None)
         # Debug print
-        logging.info(
+        logging.debug(
             f"(FSOSwitch | {self.name}) Relaying qubit to port: {outbound_port}"
         )
 
@@ -153,7 +153,7 @@ class FSOSwitch(Component):
         serialized_headers = msg.meta.get("header", "{}")
         dict_headers = json.loads(serialized_headers)
         dict_headers["outport"] = outbound_port
-        logging.info(
+        logging.debug(
             f"!!! Incoming port: {inbound_port} | Outbound port: {outbound_port}"
         )
         # Calculate which channel to route through:
