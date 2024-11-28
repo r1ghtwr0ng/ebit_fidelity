@@ -193,13 +193,46 @@ def main():
     logging.getLogger().setLevel(logging.INFO)
 
     # Set switch routing configuration
-    # TODO pass the switch routing as argument
+    # All possible routing configurations, Alice and Bob bindings
+    # and route lengths for the 3x3
+    # 0: 2, 1: 1, 2: 0 (A: 1, B: 2) 1 1
+    # 0: 2, 1: 0, 2: 1 (A: 1, B: 2) 0 2
+    # 0: 0, 1: 2, 2: 1 (A: 0, B: 2) 0 1
+    # 0: 1, 1: 2, 2: 0 (A: 0, B: 2) 1 2
+    # 0: 0, 1: 1, 2: 2 (A: 0, B: 1) 0 0
+    # 0: 2, 1: 1, 2: 2 (A: 0, B: 2) 2 2
+    _switch_routings = [
+        (
+            {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},
+            {"Alice": "qin1", "Bob": "qin2"},
+        ),
+        (
+            {"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"},
+            {"Alice": "qin1", "Bob": "qin2"},
+        ),
+        (
+            {"qin0": "qout0", "qin1": "qout2", "qin2": "qout1"},
+            {"Alice": "qin0", "Bob": "qin2"},
+        ),
+        (
+            {"qin0": "qout1", "qin1": "qout2", "qin2": "qout0"},
+            {"Alice": "qin0", "Bob": "qin2"},
+        ),
+        (
+            {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"},
+            {"Alice": "qin0", "Bob": "qin1"},
+        ),
+        (
+            {"qin0": "qout2", "qin1": "qout1", "qin2": "qout2"},
+            {"Alice": "qin0", "Bob": "qin2"},
+        ),
+    ]
     switch_routing = {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}
 
-    fso_depolar_rates = np.linspace(0, 0.5, 10)
+    fso_depolar_rates = np.linspace(0, 0.5, 100)
     qpu_depolar_rate = 0
-    total_runs = 1000
-    process_count = 4
+    total_runs = 50000
+    process_count = 6
     run_simulation(
         total_runs=total_runs,
         switch_routing=switch_routing,
