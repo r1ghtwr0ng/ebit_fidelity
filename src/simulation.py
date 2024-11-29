@@ -13,6 +13,23 @@ from fso_switch import FSOSwitch
 
 # Get two qubits at positions 0 for alice and bob and calculate their fidelities
 def get_fidelities(alice, bob):
+    """
+    Calculate the fidelities of entangled qubits for Alice and Bob.
+
+    Parameters
+    ----------
+    alice : QPUEntity
+        The QPU entity representing Alice.
+    bob : QPUEntity
+        The QPU entity representing Bob.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - status (bool): True if both Alice and Bob have valid qubits, False otherwise.
+        - fidelity (float): Fidelity of the Bell state |B00>.
+    """
     status = alice.get_status() and bob.get_status()
     qubit0 = alice.get_qubit(0)
     qubit1 = bob.get_qubit(0)
@@ -33,43 +50,63 @@ def get_fidelities(alice, bob):
 
 # Runs the simulation several times, determined by the batch size.
 def batch_run(model_parameters, qpu_depolar_rate, switch_routing, batch_size):
+    """
+    Run multiple quantum simulations with specified configurations and collect results.
+
+    Parameters
+    ----------
+    model_parameters : dict
+        Configuration parameters for the FSO switch model.
+    qpu_depolar_rate : float
+        Depolarization rate for the QPU entities.
+    switch_routing : dict
+        Routing table for the FSO switch.
+    batch_size : int
+        Number of simulation runs in the batch.
+
+    Returns
+    -------
+    list[tuple]
+        A list of tuples containing the simulation status and fidelity for each run.
+    """
     results = []
     for _ in range(batch_size):
-        # Reset simulation
+        # Reset the simulation to avoid state carryover between runs.
         ns.sim_reset()
 
-        # Integration with the FSOSwitch
+        # Initialize QPU entities with their respective depolarization rates and correction settings.
         alice = QPUEntity("AliceQPU", correction=False, depolar_rate=qpu_depolar_rate)
         bob = QPUEntity("BobQPU", correction=True, depolar_rate=qpu_depolar_rate)
-        _charlie = QPUEntity("CharlieQPU", correction=True)  # TODO use 3 nodes
+        _charlie = QPUEntity("CharlieQPU", correction=True)
 
-        # Connect QPU output ports to the switch input
+        # Create and configure the FSO switch for routing quantum information.
         fsoswitch = FSOSwitch("bsm_fsoswitch", model_parameters)
         alice.processor.ports["qout_hdr"].connect(fsoswitch.ports["qin0"])
         bob.processor.ports["qout_hdr"].connect(fsoswitch.ports["qin1"])
 
-        # Connect fsoswitch correction outputs to QPU correction inputs
+        # Connect the FSO switch's correction outputs to the QPU correction inputs.
         fsoswitch.ports["cout0"].connect(alice.processor.ports["correction"])
         fsoswitch.ports["cout1"].connect(bob.processor.ports["correction"])
 
-        # TODO add quantum fibre channel between QPU and fsoswitch
-        # Setup the routing table for the FSO switch
+        # TODO: Implement quantum fiber channels for enhanced realism.
+        # Configure the routing table of the FSO switch.
         fsoswitch.switch(switch_routing)
 
-        # Start emit programs for both QPUEntities
-        alice_req = 1
-        bob_req = 2
+        # Start the emit programs for Alice and Bob QPUs.
+        alice_req = 1  # Unique identifier for Alice's request.
+        bob_req = 2  # Unique identifier for Bob's request.
         alice.register_id(alice_req)
         bob.register_id(bob_req)
         alice.emit()
         bob.emit()
 
-        # Run simulation
+        # Run the simulation and log the process.
         logging.debug("Starting simulation")
         stats = ns.sim_run()
         logging.debug(stats)
 
-        # Unpack tuple return for debug purposes
+        # Extract and log simulation results for debugging purposes.
         status, fidelity = get_fidelities(alice, bob)
         results.append((status, fidelity))
+
     return results

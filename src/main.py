@@ -11,25 +11,25 @@ from plotting import plot_fidelity
 def configure_parameters(depolar_rate):
     model_parameters = {
         "short": {
-            "init_loss": loss(1.319),
-            "len_loss": 0.25,
+            "init_loss": 0,  # loss(1.319),
+            "len_loss": 0,  # 0.25,
             "init_depolar": depolar_rate,
             "len_depolar": 0,
-            "channel_len": 0.005,
+            "channel_len": 0,  # 0.005,
         },
         "mid": {
-            "init_loss": loss(2.12),
-            "len_loss": 0.25,
+            "init_loss": 0,  # loss(2.12),
+            "len_loss": 0,  # 0.25,
             "init_depolar": depolar_rate,
             "len_depolar": 0,
-            "channel_len": 0.00587,
+            "channel_len": 0,  # 0.00587,
         },
         "long": {
-            "init_loss": loss(2.005),
-            "len_loss": 0.25,
+            "init_loss": 0,  # loss(2.005),
+            "len_loss": 0,  # 0.25,
             "init_depolar": depolar_rate,
             "len_depolar": 0,
-            "channel_len": 0.00756,
+            "channel_len": 0,  # 0.00756,
         },
     }
     return model_parameters
@@ -47,12 +47,18 @@ def worker(
     Worker function to run the simulation in a separate process.
     Logs the start of the process and sends results via output_queue.
 
-    Args:
-        model_parameters (dict): Simulation parameters.
-        qpu_depolar_rate (float): QPU depolarization rate.
-        total_runs (int): Number of runs.
-        output_queue (multiprocessing.Queue): Queue to store results.
-        job_index (int): Index of the job for logging purposes.
+    Parameters:
+    ----------
+    model_parameters : dict
+        Simulation parameters.
+    qpu_depolar_rate : float
+        QPU depolarization rate.
+    total_runs : int
+        Number of runs.
+    output_queue : multiprocessing.Queue
+        Queue to store results.
+    job_index : int
+        Index of the job for logging purposes.
     """
     logging.info(f"Starting process {job_index} (PID: {mp.current_process().pid})")
     try:
@@ -75,14 +81,16 @@ def run_simulation(
     """
     Run simulations for given depolarization rates using multiple processes.
 
-    Args:
-        total_runs (int): Number of runs per depolarization rate.
-        fso_depolar_rates (list): List of depolarization rates.
-        qpu_depolar_rate (float): Depolarization rate for QPU.
-        process_count (int): Number of concurrent processes.
-
-    Returns:
-        None
+    Parameters
+    ----------
+    total_runs : int
+        Number of runs per depolarization rate.
+    fso_depolar_rates : list
+        List of depolarization rates.
+    qpu_depolar_rate : float
+        Depolarization rate for QPU.
+    process_count : int
+        Number of concurrent processes.
     """
     model_parameters_list = [configure_parameters(rate) for rate in fso_depolar_rates]
 
@@ -212,7 +220,7 @@ def main():
 
     fso_depolar_rates = np.linspace(0, 0.5, 100)
     qpu_depolar_rate = 0
-    total_runs = 100
+    total_runs = 5000
     process_count = 10
     run_simulation(
         total_runs=total_runs,

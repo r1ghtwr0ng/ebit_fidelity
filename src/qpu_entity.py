@@ -12,8 +12,9 @@ import netsquid.qubits.qubitapi as qapi
 
 class QPUEntity(ns.pydynaa.Entity):
     """
-    Represents an entity (i.e. the legendary Alice and Bob) with a quantum processing unit (QPU) with a program queue and callback functionality.
-    If a program needs to be executed it should be added to the queue using the add_program method.
+    Represents an entity (i.e. the legendary Alice and Bob) with a quantum processing
+    unit (QPU) with a program queue and callback functionality. If a program needs to be
+    executed it should be added to the queue using the add_program method.
 
     Parameters
     ----------
@@ -29,10 +30,10 @@ class QPUEntity(ns.pydynaa.Entity):
 
     def __init__(self, name, correction=False, qbit_count=2, depolar_rate=0):
         super().__init__()
-        self.name = name
         # The last qubit slot is used for photon emission into fibre
-        self.__emission_idx = qbit_count - 1
+        self.name = name
         self.processor = self.__create_processor(name, qbit_count, depolar_rate)
+        self.__emission_idx = qbit_count - 1
         self.__correction = correction
         self.__queue = deque()
         self.__measuring = False
@@ -120,9 +121,18 @@ class QPUEntity(ns.pydynaa.Entity):
 
     def __setup_header_wrapper(self, msg):
         """
-        TODO parameters, etc.
+        Add metadata headers to outbound messages for routing and identification.
+
+        Parameters
+        ----------
+        msg : object
+            The message object containing metadata and payload to be transmitted.
+
+        Returns
+        -------
+        None
+            Modifies the message in place by adding a JSON-serialized header.
         """
-        # TODO find out what the event that emitted the message was
         port = msg.meta.get("rx_port_name", "missing_port_metadata")
         event_id = msg.meta["put_event"].id
         request_id = self.__request_id
@@ -157,8 +167,9 @@ class QPUEntity(ns.pydynaa.Entity):
     # Callback function for applying qubit corrections based on BSMDetector output
     def __correction_callback(self, msg):
         """
-        Callback function, this runs whenever a Bell state measurement is received for the emitted photons.
-        Used to apply qubit correction and get the ebit pair to the |00> + |11> Bell state.
+        Callback function, this runs whenever a Bell state measurement is received for
+        the emitted photons. Used to apply qubit correction and get the ebit pair to
+        the |00> + |11> Bell state.
 
         Parameters
         ----------
@@ -173,11 +184,13 @@ class QPUEntity(ns.pydynaa.Entity):
             )
 
         if bell_idx == 1 and self.__correction:
-            # This means the state is in state |01> + |10> and needs X correction to become |00> + |11>
+            # This means the state is in state |01> + |10> and needs X correction to
+            # become |00> + |11>
             logging.debug(f"(QPUEntity | {self.name}) Performing X correction")
             self.add_program(CorrectXProgram())
         elif bell_idx == 2 and self.__correction:
-            # This means the state is in state |01> - |10> and needs X correction to become |00> + |11>
+            # This means the state is in state |01> - |10> and needs X correction to
+            # become |00> + |11>
             logging.debug(f"(QPUEntity | {self.name}) Performing Y correction")
             self.add_program(CorrectYProgram())
         else:
@@ -264,7 +277,8 @@ class QPUEntity(ns.pydynaa.Entity):
 
     def emit(self, position=0):
         """
-        Trigger the emission of a photon entangled with the memory qubit at the specified position.
+        Trigger the emission of a photon entangled with the memory qubit at the
+        specified position.
 
         Parameters
         ----------
