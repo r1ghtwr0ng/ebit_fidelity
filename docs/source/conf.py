@@ -10,6 +10,7 @@
 import os
 import sys
 
+# Add the `src` directory to the Python path
 sys.path.insert(0, os.path.abspath("../../src"))
 
 project = "FSO Switch Sim"
@@ -18,20 +19,29 @@ author = "Victor Virag"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+
+# Exclude specific members from autodoc
 autodoc_default_options = {
     "exclude-members": "bell_index, success, measurement_basis, outcome"
 }
-autosummary_generate = True
+
+autosummary_generate = True  # Generate summary tables for modules
 extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.napoleon",  # Recommended for Google and NumPy style docstrings
-    "sphinx.ext.viewcode",  # Adds links to highlighted source code
-    "sphinx.ext.autosummary",  # Optional: Generates summary tables for modules
+    "sphinx.ext.autodoc",  # Automatically include docstrings
+    "sphinx.ext.napoleon",  # Support Google and NumPy style docstrings
+    "sphinx.ext.viewcode",  # Add links to source code
+    "sphinx.ext.autosummary",  # Generate module summary tables
 ]
 
 templates_path = ["_templates"]
-exclude_patterns = []
 
+# Exclude unnecessary files and directories
+exclude_patterns = [
+    "_build",  # Ignore build artifacts
+    "Thumbs.db",  # Windows file
+    ".DS_Store",  # macOS file
+    "**/__pycache__",
+]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
