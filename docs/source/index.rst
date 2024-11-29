@@ -14,4 +14,15 @@ documentation for details.
    :maxdepth: 2
    :caption: Contents:
 
+   detectors
+   fidelity_calculator
+   fso_switch
+   main
    modules
+   network
+   networking
+   plotting
+   qpu_entity
+   qpu_programs
+   simulation
+   utils
