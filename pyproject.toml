@@ -1,6 +1,6 @@
 [tool.ruff]
 select = ["E", "F", "W", "I"]
-ignore = ["W503", "W504"]
+ignore = ["W"]
 line-length = 88
 exclude = ["src/__pycache__", ".venv", "notebooks", "tests"]
 
