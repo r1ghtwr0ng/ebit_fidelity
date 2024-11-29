@@ -9,7 +9,18 @@ from netsquid.components.models import FibreDelayModel, FibreLossModel
 
 class FSOSwitch(Component):
     """
-    TODO write docs on the component.
+    A Free-Space Optical (FSO) switch component for routing quantum signals.
+
+    This component manages the routing of quantum information through lossy
+    channels, including the setup of a Bell-state measurement (BSM) detector
+    and fiber models for noise, loss, and delay.
+
+    Parameters
+    ----------
+    name : str
+        Name of the FSO switch.
+    model_parameters : dict
+        Configuration for fiber loss, delay, and depolarization models.
     """
 
     def __init__(self, name, model_parameters):
@@ -31,7 +42,7 @@ class FSOSwitch(Component):
 
     def __setup_bsm_detector(self):
         """
-        Creates a BSM detector component and adds it as a subcomponent to the FSO Switch.
+        Creates a BSM detector component and adds it as a subcomponent to the FSO Switch
         Port bindings:  [FSO] qout0 -> qin0  [BSM]
                         [FSO] qout1 -> qin1  [BSM]
                         [FSO] cout0 <- cout0 [BSM]
@@ -49,7 +60,10 @@ class FSOSwitch(Component):
         bsm_detector.ports["cout1"].bind_output_handler(self.ports["cout1"].tx_output)
 
     def __setup_port_forwarding(self):
-        """Setup routing for the incoming ports through the lossy channels to the output ports"""
+        """
+        Setup routing for the incoming ports through the lossy channels to the output
+        ports
+        """
         # Bind input handlers
         self.ports["qin0"].bind_input_handler(self.__recv_qubit, tag_meta=True)
         self.ports["qin1"].bind_input_handler(self.__recv_qubit, tag_meta=True)
@@ -62,13 +76,14 @@ class FSOSwitch(Component):
 
     def __setup_fibre_channels(self, model_parameters):
         """
-        Initialize the fibre loss channels through which photons are routed
+        Configure fibre loss channels with noise, delay, and depolarization models.
 
         Parameters
         ----------
-        model_parameters
+        model_parameters : dict
+            Configuration dictionary for short, mid, and long channels with
+            depolarization, loss, and delay parameters.
         """
-        # Model the fibre loss, delay and dephasing of the different routes in the switch
         model_map_short = {
             "delay_model": FibreDelayModel(),
             "quantum_noise_model": FibreDepolarizeModel(
@@ -126,8 +141,14 @@ class FSOSwitch(Component):
         self.__channels = [qchannel_short, qchannel_mid, qchannel_long]
 
     def __relay_qubit(self, msg):
-        """Route message to the necessary output port depending on the header contents"""
-        # Deserialize the headers from the msg metadata
+        """
+        Route an incoming quantum message to the appropriate output port.
+
+        Parameters
+        ----------
+        msg : object
+            Quantum message containing metadata for routing.
+        """
         serialized_headers = msg.meta.get("header", "{}")
         dict_headers = json.loads(serialized_headers)
         outbound_port = dict_headers.pop("outport", None)
@@ -141,12 +162,21 @@ class FSOSwitch(Component):
         self.ports[outbound_port].tx_output(msg)
 
     def __recv_qubit(self, msg):
-        """Handle inbound qubit on a given port and route through a lossy channel"""
+        """
+        Process an inbound qubit, determine the routing path, and forward it
+        through the appropriate lossy channel.
+
+        Parameters
+        ----------
+        msg : object
+            Quantum message received on a specific input port.
+        """
         inbound_port = msg.meta.get("rx_port_name", "missing_port_name")
         logging.debug(
             f"(FSOSwitch | {self.name}) Received {msg} on port {inbound_port}"
         )
-        # TODO extract destination from message metadata and route through the correct channel
+        # TODO extract destination from message metadata and route through the
+        # correct channel
         outbound_port = self.__routing_table[inbound_port]
 
         # Deserialize the JSON headers
@@ -168,6 +198,20 @@ class FSOSwitch(Component):
         channel.ports["send"].tx_input(msg)
 
     def switch(self, routing_table):
+        """
+        Configure the FSO switch's routing table for input-output port mapping.
+
+        Parameters
+        ----------
+        routing_table : dict
+            Dictionary mapping input ports (qin0, qin1, qin2) to output ports
+            (qout0, qout1, qout2).
+
+        Raises
+        ------
+        ValueError
+            If the provided routing table has invalid keys or values.
+        """
         valid_keys = list(routing_table.keys()) == ["qin0", "qin1", "qin2"]
         valid_vals = list(routing_table.values()) == ["qout0", "qout1", "qout2"]
         if not (valid_keys and valid_vals):

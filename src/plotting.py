@@ -2,7 +2,25 @@ import matplotlib.pyplot as plt
 from utils import distilled_fidelity
 
 
+# TODO parameters doc comment
 def plot_fidelity(success_fidelities, fso_depolar_rates, n_values=[1, 2, 3, 4, 5]):
+    """
+    Plot the distilled fidelity for varying qubit counts against the dephase rate.
+
+    Parameters
+    ----------
+    success_fidelities : list[float]
+        List of initial fidelities for successful quantum operations.
+    fso_depolar_rates : list[float]
+        List of dephase probabilities corresponding to each fidelity.
+    n_values : list[int], optional
+        Numbers of qubits used in entanglement distillation, by default [1, 2, 3, 4, 5].
+
+    Returns
+    -------
+    None
+        Saves the plot to "plots/distilled.png".
+    """
     # Plot the maximal distilled fidelity for 5 cases against the dephase rate
     plt.figure(figsize=(10, 6))
 
