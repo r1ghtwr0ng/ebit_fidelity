@@ -103,10 +103,10 @@ def batch_run(model_parameters, qpu_depolar_rate, switch_routing, batch_size):
         # Run the simulation and log the process.
         logging.debug("Starting simulation")
         stats = ns.sim_run()
-        logging.debug(stats)
+        simtime = ns.sim_time()
 
         # Extract and log simulation results for debugging purposes.
         status, fidelity = get_fidelities(alice, bob)
-        results.append((status, fidelity))
+        results.append((status, fidelity, simtime))
 
     return results
