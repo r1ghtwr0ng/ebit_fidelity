@@ -12,7 +12,8 @@ class EmitProgram(QuantumProgram):
     qubit1 : int
         The memory position of the qubit to initialize and entangle with a photon.
     qubit2 : int
-        The memory position or virtual index of the qubit that represents the photon output.
+        The memory position or virtual index of the qubit that represents the photon
+        output.
     """
 
     def __init__(self, qubit1, qubit2):
@@ -21,7 +22,8 @@ class EmitProgram(QuantumProgram):
 
     def program(self, **_):
         """
-        Run the emit program, initializing `qubit1` and emitting a photon entangled with it.
+        Run the emit program, initializing `qubit1` and emitting a photon entangled with
+        it.
 
         Uses
         ----
