@@ -4,28 +4,28 @@ import multiprocessing as mp
 
 from utils import loss
 from simulation import batch_run
-from plotting import plot_fidelity
+from plotting import plot_fidelity, plot_heatmap
 
 
 # TODO add doc comments
-def configure_parameters(depolar_rate):
+def configure_parameters(depolar_rate, loss_prob=0):
     model_parameters = {
         "short": {
-            "init_loss": 0,  # loss(1.319),
+            "init_loss": loss(loss_prob),  # loss(1.319)
             "len_loss": 0,  # 0.25,
             "init_depolar": depolar_rate,
             "len_depolar": 0,
             "channel_len": 0,  # 0.005,
         },
         "mid": {
-            "init_loss": 0,  # loss(2.12),
+            "init_loss": loss(loss_prob),  # loss(2.12),
             "len_loss": 0,  # 0.25,
             "init_depolar": depolar_rate,
             "len_depolar": 0,
             "channel_len": 0,  # 0.00587,
         },
         "long": {
-            "init_loss": 0,  # loss(2.005),
+            "init_loss": loss(loss_prob),  # loss(2.005)
             "len_loss": 0,  # 0.25,
             "init_depolar": depolar_rate,
             "len_depolar": 0,
@@ -76,7 +76,12 @@ def worker(
 
 
 def run_simulation(
-    total_runs, switch_routing, fso_depolar_rates, qpu_depolar_rate=0, process_count=4
+    total_runs,
+    switch_routing,
+    fso_depolar_rates,
+    qpu_depolar_rate=0,
+    process_count=4,
+    loss_prob=0,
 ):
     """
     Run simulations for given depolarization rates using multiple processes.
@@ -92,7 +97,9 @@ def run_simulation(
     process_count : int
         Number of concurrent processes.
     """
-    model_parameters_list = [configure_parameters(rate) for rate in fso_depolar_rates]
+    model_parameters_list = [
+        configure_parameters(rate, loss_prob) for rate in fso_depolar_rates
+    ]
 
     # Initialize process management
     active_processes = []
@@ -143,7 +150,9 @@ def run_simulation(
     success_probabilities = []
 
     for i, result in enumerate(results):
-        success_run_fidelities = [fidelity for status, fidelity in result if status]
+        success_run_fidelities = [
+            fidelity for status, fidelity, _simtime in result if status
+        ]
         success_count = len(success_run_fidelities)
         success_fidelity_avg = (
             np.average(success_run_fidelities) if success_count > 0 else 0
@@ -151,12 +160,12 @@ def run_simulation(
         success_fidelities.append(success_fidelity_avg)
 
         success_attempts.append(success_count)
-        total_fidelity_avg = np.average([fidelity for _, fidelity in result])
+        total_fidelity_avg = np.average([fidelity for _, fidelity, _simtime in result])
         total_fidelities.append(total_fidelity_avg)
         success_prob = success_count / total_runs
         success_probabilities.append(success_prob)
         print(
-            """Run: {i}
+            """Run: {i}, loss: {loss_prob}
         Depolar rate: {depolar_rate}
         Successful fidelity: {success_fidelity_avg}
         Total fidelity: {total_fidelity_avg}
@@ -164,6 +173,7 @@ def run_simulation(
         Success probability: {success_prob}
         """.format(
                 i=i,
+                loss_prob=loss_prob,
                 depolar_rate=fso_depolar_rates[i],
                 success_fidelity_avg=success_fidelity_avg,
                 total_fidelity_avg=total_fidelity_avg,
@@ -172,8 +182,9 @@ def run_simulation(
             )
         )
 
+    return success_fidelities, success_probabilities
     # Plot the distilled fidelity results
-    plot_fidelity(success_fidelities, fso_depolar_rates)
+    # plot_fidelity(success_fidelities, fso_depolar_rates)
 
 
 # TODO add some comments for the parameters
@@ -218,17 +229,25 @@ def main():
     ]
     switch_routing = {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}
 
-    fso_depolar_rates = np.linspace(0, 0.5, 100)
+    fso_depolar_rates = np.linspace(0, 0.5, 20)
+    loss_probabilities = np.linspace(0, 1, 20)
     qpu_depolar_rate = 0
-    total_runs = 5000
-    process_count = 10
-    run_simulation(
-        total_runs=total_runs,
-        switch_routing=switch_routing,
-        fso_depolar_rates=fso_depolar_rates,
-        qpu_depolar_rate=qpu_depolar_rate,
-        process_count=process_count,
-    )
+    total_runs = 500
+    process_count = 5
+    plot_data = {}
+    for loss_prob in loss_probabilities:
+        success_fidelities, success_probabilities = run_simulation(
+            total_runs=total_runs,
+            switch_routing=switch_routing,
+            fso_depolar_rates=fso_depolar_rates,
+            qpu_depolar_rate=qpu_depolar_rate,
+            process_count=process_count,
+            loss_prob=loss_prob,
+        )
+        plot_data[loss_prob] = success_fidelities, success_probabilities
+    print(plot_data)
+    plot_heatmap(plot_data, fso_depolar_rates, metric="fidelity")
+    plot_heatmap(plot_data, fso_depolar_rates, metric="success_prob")
 
 
 if __name__ == "__main__":
