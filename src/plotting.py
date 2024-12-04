@@ -73,6 +73,9 @@ def plot_ttf_3d(
         edgecolor="none",
     )
 
+    # Rotate the plot
+    ax.view_init(elev=30, azim=90)
+
     # Add color bar
     fig.colorbar(
         surf,
