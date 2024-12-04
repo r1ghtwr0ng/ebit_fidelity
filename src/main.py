@@ -1,3 +1,4 @@
+import pickle
 import logging
 import numpy as np
 import multiprocessing as mp
@@ -270,6 +271,12 @@ def main():
             threshold=threshold,
         )
     plot_fidelity(plot_data[0][0], fso_depolar_rates)
+
+    # Save data to file
+    with open("plotdata/data_file.pkl", "wb") as file:
+        pickle.dump(
+            (fso_depolar_rates, loss_probabilities, thresholds, plot_data), file
+        )
 
 
 if __name__ == "__main__":
