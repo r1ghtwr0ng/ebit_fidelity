@@ -1,38 +1,143 @@
+import math
 import numpy as np
 import matplotlib.pyplot as plt
-from utils import distilled_fidelity
+from matplotlib.colors import LogNorm
+from utils import distilled_fidelity, find_minimum_ebits, time_to_fidelity
 
 
-def plot_heatmap(plot_data, fso_depolar_rates, metric="fidelity"):
+def plot_ttf_3d(
+    fso_depolar_probs,
+    loss_probs,
+    plot_data,
+    threshold=0.95,
+):
     """
-    Generates a heatmap where one axis is the error probability (keys of plot_data),
-    the other axis is the FSO dephase rate, and the color intensity represents either
-    average fidelity or success probability.
+    Generate a 3D surface plot showing time to fidelity for different loss probabilities and FSO dephase probabilities.
 
-    Parameters:
-    - plot_data (dict): Keys are loss probabilities, values are tuples containing average fidelities and success probabilities.
-    - fso_depolar_rates (array): Array of FSO dephase rates.
-    - metric (str): "fidelity" or "success_prob" to choose what the color intensity represents.
+    Parameters
+    ----------
+    loss_probs : list or array
+        Array of loss probabilities.
+    fso_depolar_probs : list or array
+        Array of FSO depolarization probabilities.
+    plot_data : dictionary
+        Dictionary containing simulation datapoints.
+    threshold : float
+        Fidelity threshold for the heatmap.
     """
-    # Extract loss probabilities (keys) and organize data
-    loss_probs = list(plot_data.keys())
-    loss_probs.sort()  # Ensure the keys are sorted for a structured heatmap
+    # Create an empty data array
+    heatmap_data = np.zeros((len(fso_depolar_probs), len(loss_probs)))
 
-    # Initialize 2D arrays for the selected metric
-    heatmap_data = np.zeros((len(fso_depolar_rates), len(loss_probs)))
-
+    # Populate data array
     for j, loss_prob in enumerate(loss_probs):
-        avg_fidelity_arr, avg_success_arr = plot_data[loss_prob]
-        for i, fso_rate in enumerate(fso_depolar_rates):
-            # Extract average fidelity or success probability from the results
-            avg_fidelity = avg_fidelity_arr[i]
-            avg_success_prob = avg_success_arr[i]
-            if metric == "fidelity":
-                heatmap_data[i, j] = avg_fidelity
-            elif metric == "success_prob":
-                heatmap_data[i, j] = avg_success_prob
-            else:
-                raise ValueError("Invalid metric. Choose 'fidelity' or 'success_prob'.")
+        (fidelity_arr, success_probs, sim_timings) = plot_data[loss_prob]
+
+        for i, fso_rate in enumerate(fso_depolar_probs):
+            try:
+                # Calculate the number of ebits required
+                ebit_count = find_minimum_ebits(fidelity_arr[i], threshold)
+
+                # Compute the time to fidelity
+                ttf = time_to_fidelity(success_probs[i], sim_timings[i], ebit_count)
+
+                # Handle cases where ttf might be infinite or not defined
+                heatmap_data[i, j] = np.inf if np.isinf(ttf) else ttf
+            except Exception as _e:
+                # Assign np.inf in case of errors
+                heatmap_data[i, j] = np.inf
+
+    # Replace np.inf with a large value for visualization (optional)
+    max_finite_value = np.nanmax(heatmap_data[np.isfinite(heatmap_data)])
+    heatmap_data[~np.isfinite(heatmap_data)] = max_finite_value * 10
+    vmin, vmax = 4, 10**3
+    heatmap_data = np.clip(heatmap_data, vmin, vmax)
+
+    # Create a 3D plot
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection="3d")
+
+    # Create meshgrid for 3D plotting
+    X, Y = np.meshgrid(loss_probs, fso_depolar_probs)
+    Z = heatmap_data
+
+    # Invert Z-axis and apply logarithmic scale
+    Z = np.log10(Z)  # Take the logarithm of the values
+    ax.invert_zaxis()  # Invert the Z-axis
+
+    # Plot the surface
+    surf = ax.plot_surface(
+        X,
+        Y,
+        Z,
+        cmap="viridis_r",
+        edgecolor="none",
+    )
+
+    # Add color bar
+    fig.colorbar(
+        surf,
+        ax=ax,
+        shrink=0.5,
+        aspect=10,
+        label=f"log10(Time to fidelity {threshold}) (ns)",
+    )
+
+    # Label axes
+    ax.set_xlabel("Loss Probability")
+    ax.set_ylabel("FSO Depolarization Probability")
+    ax.set_zlabel(f"log10(Time to Fidelity {threshold}) (ns)")
+    ax.set_title(f"3D Surface Plot: Time to Fidelity {threshold} (Inverted Z-axis)")
+
+    # Show the plot
+    plt.savefig(f"plots/3d/ttf_3d_{threshold}_heatmap.png")
+
+
+def plot_ttf(
+    fso_depolar_probs,
+    loss_probs,
+    plot_data,
+    threshold=0.95,
+):
+    """
+    Generate a heatmap showing time to fidelity for different loss probabilities and FSO dephase probabilities.
+
+    Parameters
+    ----------
+    loss_probs : list or array
+        Array of loss probabilities.
+    fso_depolar_probs : list or array
+        Array of FSO depolarization probabilities.
+    plot_data : dictionary
+        Dictionary containing simulation datapoints.
+    threshold : float
+        Fidelity threshold for the heatmap.
+    """
+    # Create an empty heatmap data array
+    heatmap_data = np.zeros((len(fso_depolar_probs), len(loss_probs)))
+
+    # Populate heatmap data
+    for j, loss_prob in enumerate(loss_probs):
+        (fidelity_arr, success_probs, sim_timings) = plot_data[loss_prob]
+
+        for i, fso_rate in enumerate(fso_depolar_probs):
+            try:
+                # Calculate the number of ebits required
+                ebit_count = find_minimum_ebits(fidelity_arr[i], threshold)
+
+                # Compute the time to fidelity
+                ttf = time_to_fidelity(success_probs[i], sim_timings[i], ebit_count)
+
+                # Handle cases where ttf might be infinite or not defined
+                heatmap_data[i, j] = np.inf if np.isinf(ttf) else ttf
+            except Exception as _e:
+                # Assign np.inf in case of errors
+                heatmap_data[i, j] = np.inf
+
+    # Replace np.inf with a large value for visualization (optional)
+    max_finite_value = np.nanmax(heatmap_data[np.isfinite(heatmap_data)])
+    heatmap_data[~np.isfinite(heatmap_data)] = max_finite_value * 10
+    vmin, vmax = 4, 10**3
+    heatmap_data = np.clip(heatmap_data, vmin, vmax)
 
     # Create the heatmap
     plt.figure(figsize=(8, 6))
@@ -43,16 +148,17 @@ def plot_heatmap(plot_data, fso_depolar_rates, metric="fidelity"):
         extent=[
             min(loss_probs),
             max(loss_probs),
-            min(fso_depolar_rates),
-            max(fso_depolar_rates),
+            min(fso_depolar_probs),
+            max(fso_depolar_probs),
         ],
-        cmap="viridis",
+        cmap="viridis_r",
+        norm=LogNorm(vmin=vmin, vmax=vmax),  # Exponential color scale
     )
-    plt.colorbar(label=f"Average {metric.capitalize()}")
-    plt.xlabel("Loss Probability")
-    plt.ylabel("FSO Dephase Rate")
-    plt.title(f"Heatmap of Average {metric.capitalize()} vs. Loss and FSO Dephase Rate")
-    plt.savefig("plots/heatmap.png")
+    plt.colorbar(label=f"Time to fidelity {threshold} (ns)")
+    plt.xlabel("Loss probability")
+    plt.ylabel("FSO dephase probability")
+    plt.title(f"Time needed to establish ebit of fidelity: {threshold}")
+    plt.savefig(f"plots/heatmaps/ttf_{threshold}_heatmap.png")
 
 
 # Example usage:
@@ -95,4 +201,4 @@ def plot_fidelity(success_fidelities, fso_depolar_rates, n_values=[1, 2, 3, 4, 5
     plt.title("Distilled fidelity vs. dephase probability")
     plt.grid()
     plt.legend()
-    plt.savefig("plots/distilled.png")
+    plt.savefig("plots/2d/distilled.png")

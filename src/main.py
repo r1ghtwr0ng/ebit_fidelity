@@ -4,28 +4,28 @@ import multiprocessing as mp
 
 from utils import loss
 from simulation import batch_run
-from plotting import plot_fidelity, plot_heatmap
+from plotting import plot_fidelity, plot_ttf, plot_ttf_3d
 
 
 # TODO add doc comments
 def configure_parameters(depolar_rate, loss_prob=0):
     model_parameters = {
         "short": {
-            "init_loss": loss(loss_prob),  # loss(1.319)
+            "init_loss": loss_prob,  # loss(1.319)
             "len_loss": 0,  # 0.25,
             "init_depolar": depolar_rate,
             "len_depolar": 0,
             "channel_len": 0,  # 0.005,
         },
         "mid": {
-            "init_loss": loss(loss_prob),  # loss(2.12),
+            "init_loss": loss_prob,  # loss(2.12),
             "len_loss": 0,  # 0.25,
             "init_depolar": depolar_rate,
             "len_depolar": 0,
             "channel_len": 0,  # 0.00587,
         },
         "long": {
-            "init_loss": loss(loss_prob),  # loss(2.005)
+            "init_loss": loss_prob,  # loss(2.005)
             "len_loss": 0,  # 0.25,
             "init_depolar": depolar_rate,
             "len_depolar": 0,
@@ -148,11 +148,15 @@ def run_simulation(
     success_fidelities = []
     success_attempts = []
     success_probabilities = []
+    simulation_times = []
 
     for i, result in enumerate(results):
         success_run_fidelities = [
             fidelity for status, fidelity, _simtime in result if status
         ]
+        # Calculate the average time for a simulation (successful or not)
+        simulation_times.append(np.average([t for _, _, t in result]))
+
         success_count = len(success_run_fidelities)
         success_fidelity_avg = (
             np.average(success_run_fidelities) if success_count > 0 else 0
@@ -182,7 +186,7 @@ def run_simulation(
             )
         )
 
-    return success_fidelities, success_probabilities
+    return success_fidelities, success_probabilities, simulation_times
     # Plot the distilled fidelity results
     # plot_fidelity(success_fidelities, fso_depolar_rates)
 
@@ -232,11 +236,11 @@ def main():
     fso_depolar_rates = np.linspace(0, 0.5, 20)
     loss_probabilities = np.linspace(0, 1, 20)
     qpu_depolar_rate = 0
-    total_runs = 500
-    process_count = 5
+    total_runs = 100
+    process_count = 20
     plot_data = {}
     for loss_prob in loss_probabilities:
-        success_fidelities, success_probabilities = run_simulation(
+        success_fidelities, success_probabilities, simulation_times = run_simulation(
             total_runs=total_runs,
             switch_routing=switch_routing,
             fso_depolar_rates=fso_depolar_rates,
@@ -244,10 +248,28 @@ def main():
             process_count=process_count,
             loss_prob=loss_prob,
         )
-        plot_data[loss_prob] = success_fidelities, success_probabilities
+        plot_data[loss_prob] = (
+            success_fidelities,
+            success_probabilities,
+            simulation_times,
+        )
     print(plot_data)
-    plot_heatmap(plot_data, fso_depolar_rates, metric="fidelity")
-    plot_heatmap(plot_data, fso_depolar_rates, metric="success_prob")
+
+    thresholds = [0.9995, 0.995, 0.95, 0.9, 0.8, 0.7]
+    for threshold in thresholds:
+        plot_ttf(
+            fso_depolar_rates,
+            loss_probabilities,
+            plot_data,
+            threshold=threshold,
+        )
+        plot_ttf_3d(
+            fso_depolar_rates,
+            loss_probabilities,
+            plot_data,
+            threshold=threshold,
+        )
+    plot_fidelity(plot_data[0][0], fso_depolar_rates)
 
 
 if __name__ == "__main__":
