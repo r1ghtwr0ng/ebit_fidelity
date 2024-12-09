@@ -203,5 +203,7 @@ def plot_fidelity(success_fidelities, fso_depolar_rates, n_values=[1, 2, 3, 4, 5
     plt.ylabel("Distilled fidelity")
     plt.title("Distilled fidelity vs. dephase probability")
     plt.grid()
+
     plt.legend()
+    plt.xlim(0, 0.4)
     plt.savefig("plots/2d/distilled.png")
