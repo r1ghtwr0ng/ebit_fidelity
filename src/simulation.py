@@ -7,9 +7,6 @@ import netsquid.qubits.qubitapi as qapi
 from qpu_entity import QPUEntity
 from fso_switch import FSOSwitch
 
-# from netsquid.examples.repeater_chain import FibreDepolarizeModel
-# from netsquid.components.models import FibreDelayModel, FibreLossModel
-
 
 # Get two qubits at positions 0 for alice and bob and calculate their fidelities
 def get_fidelities(alice, bob):
