@@ -135,7 +135,8 @@ class QPUEntity(ns.pydynaa.Entity):
         """
         port = msg.meta.get("rx_port_name", "missing_port_metadata")
         event_id = msg.meta["put_event"].id
-        request_id = self.__request_id
+        # request_id = self.__request_id
+        request_id = 0
 
         header = {"event_id": event_id, "request_id": request_id}
         msg.meta["header"] = json.dumps(header)
