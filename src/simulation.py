@@ -3,11 +3,10 @@ import numpy as np
 import netsquid as ns
 import netsquid.qubits.ketstates as ks
 import netsquid.qubits.qubitapi as qapi
-from netsquid.nodes import Node
 
-from qpu_entity import QPUNode, QPUComponent
+from qpu_entity import QPUNode
 from fso_switch import FSOSwitch
-from test_protocol import SimulationProtocol
+from protocols import EntanglementProtocol
 
 
 # Get two qubits at positions 0 for alice and bob and calculate their fidelities
@@ -48,6 +47,24 @@ def get_fidelities(alice, bob):
 
 
 def single_run(model_parameters, qpu_depolar_rate, switch_routing):
+    """
+    Run a single quantum simulation with specified configurations and collect results.
+
+    Parameters
+    ----------
+    model_parameters : dict
+        Configuration parameters for the FSO switch model.
+    qpu_depolar_rate : float
+        Depolarization rate for the QPU entities.
+    switch_routing : dict
+        Routing table for the FSO switch, defining how quantum information is routed.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the simulation status, fidelity, and simulation time.
+        Example: (status, fidelity, simtime)
+    """
     ns.sim_reset()
 
     # Create nodes
@@ -62,7 +79,9 @@ def single_run(model_parameters, qpu_depolar_rate, switch_routing):
     fsoswitch_node.ports["cout1"].connect(bob_node.processor.ports["correction"])
 
     # Create and start the simulation protocol
-    protocol = SimulationProtocol(alice_node, bob_node, fsoswitch_node, switch_routing)
+    protocol = EntanglementProtocol(
+        alice_node, bob_node, fsoswitch_node, switch_routing
+    )
     protocol.start()
 
     # Run the simulation

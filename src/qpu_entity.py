@@ -1,24 +1,14 @@
 import json
 import logging
 import netsquid as ns
-
-from netsquid.nodes import Node
-from collections import deque
-from netsquid.components import Component
-from netsquid.components.component import Message
-from netsquid.components.qprocessor import QuantumProcessor
-from qpu_programs import EmitProgram, CorrectYProgram, CorrectXProgram
-
 import netsquid.qubits.qubitapi as qapi
 
+from collections import deque
+from netsquid.nodes import Node
+from netsquid.components.component import Message
+from netsquid.components.qprocessor import QuantumProcessor
 
-class QPUComponent(Component):
-    def __init__(self, name, correction=False, qbit_count=2, depolar_rate=0):
-        super().__init__(name=f"{name}_component")
-        self.qpu_entity = QPUNode(name, correction, qbit_count, depolar_rate)
-
-    def get_entity(self):
-        return self.qpu_entity
+from qpu_programs import EmitProgram, CorrectYProgram, CorrectXProgram
 
 
 class QPUNode(Node):

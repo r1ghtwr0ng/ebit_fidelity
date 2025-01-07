@@ -79,7 +79,7 @@ def run_simulation(
     switch_routing,
     fso_depolar_rates,
     qpu_depolar_rate=0,
-    process_count=1,
+    process_count=4,
     loss_prob=0,
 ):
     """
@@ -232,11 +232,11 @@ def main():
     ]
     switch_routing = {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}
 
-    fso_depolar_rates = np.linspace(0, 0.5, 5)
-    loss_probabilities = np.linspace(0, 1, 5)
+    fso_depolar_rates = np.linspace(0, 0.5, 25)
+    loss_probabilities = np.linspace(0, 1, 25)
     qpu_depolar_rate = 0
-    total_runs = 10
-    process_count = 1
+    total_runs = 1000
+    process_count = 16
     plot_data = {}
     for loss_prob in loss_probabilities:
         success_fidelities, success_probabilities, simulation_times = run_simulation(
