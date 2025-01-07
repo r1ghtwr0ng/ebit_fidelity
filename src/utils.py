@@ -1,5 +1,44 @@
+import logging
 import numpy as np
-from scipy.optimize import fsolve
+import netsquid.qubits.ketstates as ks
+import netsquid.qubits.qubitapi as qapi
+
+
+# Get two qubits at positions 0 for alice and bob and calculate their fidelities
+def get_fidelities(alice, bob):
+    """
+    Calculate the fidelities of entangled qubits for Alice and Bob.
+
+    Parameters
+    ----------
+    alice : QPUNode
+        The QPU entity representing Alice.
+    bob : QPUNode
+        The QPU entity representing Bob.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - status (bool): True if both Alice and Bob have valid qubits, False otherwise.
+        - fidelity (float): Fidelity of the Bell state |B00>.
+    """
+    status = alice.get_status() and bob.get_status()
+    qubit0 = alice.get_qubit(0)
+    qubit1 = bob.get_qubit(0)
+    fidelities = {
+        "|00>": qapi.fidelity([qubit0, qubit1], np.array([1, 0, 0, 0]), squared=True),
+        "|11>": qapi.fidelity([qubit0, qubit1], np.array([0, 0, 0, 1]), squared=True),
+        "B00": qapi.fidelity([qubit0, qubit1], ks.b00, squared=True),
+        "B01": qapi.fidelity([qubit0, qubit1], ks.b01, squared=True),
+        "B10": qapi.fidelity([qubit0, qubit1], ks.b10, squared=True),
+        "B11": qapi.fidelity([qubit0, qubit1], ks.b11, squared=True),
+    }
+
+    if status:
+        logging.debug(f"[GREPPABLE] Simulation output: {fidelities}")
+
+    return status, fidelities["B00"]
 
 
 # Function to calculate fidelity after entanglement distillation

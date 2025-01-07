@@ -1,13 +1,13 @@
 import json
 import logging
+from netsquid.nodes import Node
 from detectors import BSMDetector
-from netsquid.components import Component
 from netsquid.components import QuantumChannel
 from netsquid.examples.repeater_chain import FibreDepolarizeModel
 from netsquid.components.models import FibreDelayModel, FibreLossModel
 
 
-class FSOSwitch(Component):
+class FSOSwitch(Node):
     """
     A Free-Space Optical (FSO) switch component for routing quantum signals.
 

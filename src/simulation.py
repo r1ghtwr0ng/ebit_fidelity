@@ -3,9 +3,11 @@ import numpy as np
 import netsquid as ns
 import netsquid.qubits.ketstates as ks
 import netsquid.qubits.qubitapi as qapi
+from netsquid.nodes import Node
 
-from qpu_entity import QPUEntity
+from qpu_entity import QPUNode, QPUComponent
 from fso_switch import FSOSwitch
+from test_protocol import SimulationProtocol
 
 
 # Get two qubits at positions 0 for alice and bob and calculate their fidelities
@@ -15,9 +17,9 @@ def get_fidelities(alice, bob):
 
     Parameters
     ----------
-    alice : QPUEntity
+    alice : QPUNode
         The QPU entity representing Alice.
-    bob : QPUEntity
+    bob : QPUNode
         The QPU entity representing Bob.
 
     Returns
@@ -45,6 +47,31 @@ def get_fidelities(alice, bob):
     return status, fidelities["B00"]
 
 
+def single_run(model_parameters, qpu_depolar_rate, switch_routing):
+    ns.sim_reset()
+
+    # Create nodes
+    alice_node = QPUNode("AliceNode", correction=True)
+    bob_node = QPUNode("BobNode")
+    fsoswitch_node = FSOSwitch("bsm_fsoswitch", model_parameters)
+
+    # Connect node-level ports
+    alice_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin0"])
+    bob_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin1"])
+    fsoswitch_node.ports["cout0"].connect(alice_node.processor.ports["correction"])
+    fsoswitch_node.ports["cout1"].connect(bob_node.processor.ports["correction"])
+
+    # Create and start the simulation protocol
+    protocol = SimulationProtocol(alice_node, bob_node, fsoswitch_node, switch_routing)
+    protocol.start()
+
+    # Run the simulation
+    ns.sim_run()
+
+    # Return results
+    return protocol.results
+
+
 # Runs the simulation several times, determined by the batch size.
 def batch_run(model_parameters, qpu_depolar_rate, switch_routing, batch_size):
     """
@@ -68,42 +95,7 @@ def batch_run(model_parameters, qpu_depolar_rate, switch_routing, batch_size):
     """
     results = []
     for _ in range(batch_size):
-        # Reset the simulation to avoid state carryover between runs.
-        ns.sim_reset()
-
-        # Initialize QPU entities with their respective depolarization rates and correction settings.
-        alice = QPUEntity("AliceQPU", correction=False, depolar_rate=qpu_depolar_rate)
-        bob = QPUEntity("BobQPU", correction=True, depolar_rate=qpu_depolar_rate)
-        _charlie = QPUEntity("CharlieQPU", correction=True)
-
-        # Create and configure the FSO switch for routing quantum information.
-        fsoswitch = FSOSwitch("bsm_fsoswitch", model_parameters)
-        alice.processor.ports["qout_hdr"].connect(fsoswitch.ports["qin0"])
-        bob.processor.ports["qout_hdr"].connect(fsoswitch.ports["qin1"])
-
-        # Connect the FSO switch's correction outputs to the QPU correction inputs.
-        fsoswitch.ports["cout0"].connect(alice.processor.ports["correction"])
-        fsoswitch.ports["cout1"].connect(bob.processor.ports["correction"])
-
-        # TODO: Implement quantum fiber channels for enhanced realism.
-        # Configure the routing table of the FSO switch.
-        fsoswitch.switch(switch_routing)
-
-        # Start the emit programs for Alice and Bob QPUs.
-        alice_req = 1  # Unique identifier for Alice's request.
-        bob_req = 2  # Unique identifier for Bob's request.
-        alice.register_id(alice_req)
-        bob.register_id(bob_req)
-        alice.emit()
-        bob.emit()
-
-        # Run the simulation and log the process.
-        logging.debug("Starting simulation")
-        stats = ns.sim_run()
-        simtime = ns.sim_time()
-
-        # Extract and log simulation results for debugging purposes.
-        status, fidelity = get_fidelities(alice, bob)
-        results.append((status, fidelity, simtime))
+        res = single_run(model_parameters, qpu_depolar_rate, switch_routing)
+        results.append(res)
 
     return results

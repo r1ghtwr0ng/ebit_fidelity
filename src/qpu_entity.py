@@ -2,7 +2,9 @@ import json
 import logging
 import netsquid as ns
 
+from netsquid.nodes import Node
 from collections import deque
+from netsquid.components import Component
 from netsquid.components.component import Message
 from netsquid.components.qprocessor import QuantumProcessor
 from qpu_programs import EmitProgram, CorrectYProgram, CorrectXProgram
@@ -10,7 +12,16 @@ from qpu_programs import EmitProgram, CorrectYProgram, CorrectXProgram
 import netsquid.qubits.qubitapi as qapi
 
 
-class QPUEntity(ns.pydynaa.Entity):
+class QPUComponent(Component):
+    def __init__(self, name, correction=False, qbit_count=2, depolar_rate=0):
+        super().__init__(name=f"{name}_component")
+        self.qpu_entity = QPUNode(name, correction, qbit_count, depolar_rate)
+
+    def get_entity(self):
+        return self.qpu_entity
+
+
+class QPUNode(Node):
     """
     Represents an entity (i.e. the legendary Alice and Bob) with a quantum processing
     unit (QPU) with a program queue and callback functionality. If a program needs to be
@@ -29,9 +40,8 @@ class QPUEntity(ns.pydynaa.Entity):
     """
 
     def __init__(self, name, correction=False, qbit_count=2, depolar_rate=0):
-        super().__init__()
+        super().__init__(name)
         # The last qubit slot is used for photon emission into fibre
-        self.name = name
         self.processor = self.__create_processor(name, qbit_count, depolar_rate)
         self.__emission_idx = qbit_count - 1
         self.__correction = correction
@@ -135,32 +145,31 @@ class QPUEntity(ns.pydynaa.Entity):
         """
         port = msg.meta.get("rx_port_name", "missing_port_metadata")
         event_id = msg.meta["put_event"].id
-        request_id = self.__request_id
 
-        header = {"event_id": event_id, "request_id": request_id}
+        header = {"event_id": event_id, "request_id": "TODO"}
         msg.meta["header"] = json.dumps(header)
         self.processor.ports[f"{port}_hdr"].tx_output(msg)
 
     # Callback for when a QPU program finishes executing successfully
     def __on_program_done(self):
         """Handle completion of a program, and process the next one if queued."""
-        logging.debug(f"(QPUEntity | {self.name}) program complete")
+        logging.debug(f"(QPUNode | {self.name}) program complete")
         if len(self.__queue) > 0 and not self.processor.busy:
             if self.processor.peek(0, skip_noise=True)[0] is not None:
                 next_program = self.__queue.popleft()
                 logging.debug(
-                    f"(QPUEntity | {self.name}) queuing next program: {next_program}"
+                    f"(QPUNode | {self.name}) queuing next program: {next_program}"
                 )
                 self.add_program(next_program)
 
     # Callback for when a QPU program exits with a failure
     def __on_program_fail(self):
         """Callback that's run on QPU program failure."""
-        logging.debug(f"(QPUEntity | {self.name}) program resulted in a failure.")
+        logging.debug(f"(QPUNode | {self.name}) program resulted in a failure.")
         if len(self.__queue) > 0:
             (next_program, request_id) = self.__queue.popleft()
             logging.debug(
-                f"(QPUEntity | {self.name}) queuing next program: {next_program} with request ID: {request_id}"
+                f"(QPUNode | {self.name}) queuing next program: {next_program} with request ID: {request_id}"
             )
             self.add_program(next_program)
 
@@ -180,34 +189,35 @@ class QPUEntity(ns.pydynaa.Entity):
         self.__status = msg.items[0].success
         if self.__correction:
             logging.debug(
-                f"(QPUEntity | {self.name}) Fidelities output: Bell Index: {bell_idx}"
+                f"(QPUNode | {self.name}) Fidelities output: Bell Index: {bell_idx}"
             )
 
         if bell_idx == 1 and self.__correction:
             # This means the state is in state |01> + |10> and needs X correction to
             # become |00> + |11>
-            logging.debug(f"(QPUEntity | {self.name}) Performing X correction")
+            logging.debug(f"(QPUNode | {self.name}) Performing X correction")
             self.add_program(CorrectXProgram())
         elif bell_idx == 2 and self.__correction:
             # This means the state is in state |01> - |10> and needs X correction to
             # become |00> + |11>
-            logging.debug(f"(QPUEntity | {self.name}) Performing Y correction")
+            logging.debug(f"(QPUNode | {self.name}) Performing Y correction")
             self.add_program(CorrectYProgram())
         else:
-            logging.debug(f"(QPUEntity | {self.name}) No correction needed")
+            logging.debug(f"(QPUNode | {self.name}) No correction needed")
 
     # ======== PUBLIC METHODS ========
     # Register a current request ID to send over to the FSO switch
     def register_id(self, request_id):
         """
         Register the request ID which is expected by the FSO switch in the msg metadata.
+        TODO see if this is even useful.
 
         Parameters
         ----------
         request_id: str, required
             ID of the request being registered.
         """
-        self.__request_id = request_id
+        pass
 
     # Use this function to append programs to the object queue
     def add_program(self, program):
@@ -219,21 +229,21 @@ class QPUEntity(ns.pydynaa.Entity):
         program : QuantumProgram
             The quantum program to be added to the QPU's queue.
         """
-        logging.debug(f"(QPUEntity | {self.name}) Call to add_program with {program}")
+        logging.debug(f"(QPUNode | {self.name}) Call to add_program with {program}")
         if not self.processor.busy:
             if not self.__measuring:
-                logging.debug(f"(QPUEntity | {self.name}) executing program {program}")
+                logging.debug(f"(QPUNode | {self.name}) executing program {program}")
                 _event = self.processor.execute_program(program)  # TODO handle event
                 # TODO handle this event somehow
                 # event.wait(callback=lambda: logging.debug(f"Program done callback"))
             else:
                 logging.debug(
-                    f"(QPUEntity | {self.name}) appending program to queue (measuring qubit fidelity)"
+                    f"(QPUNode | {self.name}) appending program to queue (measuring qubit fidelity)"
                 )
                 self.__queue.append(program)
         else:
             logging.debug(
-                f"(QPUEntity | {self.name}) appending program to queue (QPU busy)"
+                f"(QPUNode | {self.name}) appending program to queue (QPU busy)"
             )
             self.__queue.append(program)
 
