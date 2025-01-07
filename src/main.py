@@ -62,18 +62,16 @@ def worker(
         Index of the job for logging purposes.
     """
     logging.info(f"Starting process {job_index} (PID: {mp.current_process().pid})")
-    try:
-        result = batch_run(
-            model_parameters, qpu_depolar_rate, switch_routing, total_runs
-        )
-        output_queue.put((job_index, result))
-    except Exception as e:
-        logging.error(
-            f"Process {job_index} (PID: {mp.current_process().pid}) failed: {e}"
-        )
-        output_queue.put((job_index, None))
-    finally:
-        logging.info(f"Process {job_index} (PID: {mp.current_process().pid}) finished.")
+    # try:
+    result = batch_run(model_parameters, qpu_depolar_rate, switch_routing, total_runs)
+    output_queue.put((job_index, result))
+    # except Exception as e:
+    #    logging.error(
+    #        f"Process {job_index} (PID: {mp.current_process().pid}) failed: {e}"
+    #    )
+    #    output_queue.put((job_index, None))
+    # finally:
+    #    logging.info(f"Process {job_index} (PID: {mp.current_process().pid}) finished.")
 
 
 def run_simulation(
@@ -81,7 +79,7 @@ def run_simulation(
     switch_routing,
     fso_depolar_rates,
     qpu_depolar_rate=0,
-    process_count=4,
+    process_count=1,
     loss_prob=0,
 ):
     """
@@ -234,11 +232,11 @@ def main():
     ]
     switch_routing = {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}
 
-    fso_depolar_rates = np.linspace(0, 0.5, 40)
-    loss_probabilities = np.linspace(0, 1, 40)
+    fso_depolar_rates = np.linspace(0, 0.5, 5)
+    loss_probabilities = np.linspace(0, 1, 5)
     qpu_depolar_rate = 0
-    total_runs = 18000
-    process_count = 20
+    total_runs = 10
+    process_count = 1
     plot_data = {}
     for loss_prob in loss_probabilities:
         success_fidelities, success_probabilities, simulation_times = run_simulation(
