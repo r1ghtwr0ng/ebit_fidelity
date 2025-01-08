@@ -232,10 +232,10 @@ def main():
     ]
     switch_routing = {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}
 
-    fso_depolar_rates = np.linspace(0, 0.5, 25)
-    loss_probabilities = np.linspace(0, 1, 25)
+    fso_depolar_rates = np.linspace(0, 0.5, 2)
+    loss_probabilities = np.linspace(0, 1, 2)
     qpu_depolar_rate = 0
-    total_runs = 1000
+    total_runs = 100
     process_count = 16
     plot_data = {}
     for loss_prob in loss_probabilities:
