@@ -46,6 +46,21 @@ def get_fidelities(alice, bob):
     return status, fidelities["B00"]
 
 
+def setup_network(model_parameters):
+    # Create nodes
+    alice_node = QPUNode("AliceNode", correction=True)
+    bob_node = QPUNode("BobNode")
+    fsoswitch_node = FSOSwitch("bsm_fsoswitch", model_parameters)
+
+    # Connect node-level ports
+    alice_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin0"])
+    bob_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin1"])
+    fsoswitch_node.ports["cout0"].connect(alice_node.processor.ports["correction"])
+    fsoswitch_node.ports["cout1"].connect(bob_node.processor.ports["correction"])
+
+    return alice_node, bob_node, fsoswitch_node
+
+
 def single_run(model_parameters, qpu_depolar_rate, switch_routing):
     """
     Run a single quantum simulation with specified configurations and collect results.
@@ -65,18 +80,9 @@ def single_run(model_parameters, qpu_depolar_rate, switch_routing):
         A tuple containing the simulation status, fidelity, and simulation time.
         Example: (status, fidelity, simtime)
     """
+    # Initialize simulation
     ns.sim_reset()
-
-    # Create nodes
-    alice_node = QPUNode("AliceNode", correction=True)
-    bob_node = QPUNode("BobNode")
-    fsoswitch_node = FSOSwitch("bsm_fsoswitch", model_parameters)
-
-    # Connect node-level ports
-    alice_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin0"])
-    bob_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin1"])
-    fsoswitch_node.ports["cout0"].connect(alice_node.processor.ports["correction"])
-    fsoswitch_node.ports["cout1"].connect(bob_node.processor.ports["correction"])
+    alice_node, bob_node, fsoswitch_node = setup_network(model_parameters)
 
     # Create and start the simulation protocol
     protocol = EntanglementProtocol(
@@ -86,6 +92,7 @@ def single_run(model_parameters, qpu_depolar_rate, switch_routing):
 
     # Run the simulation
     ns.sim_run()
+    protocol.reset()
 
     # Return results
     return protocol.results

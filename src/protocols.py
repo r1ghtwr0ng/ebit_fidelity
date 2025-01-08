@@ -80,5 +80,8 @@ class EntanglementProtocol(NodeProtocol):
             f"Simtime: {simtime} | Status: {status} | Fidelity: {fidelity:.3f}"
         )
 
-        # Signal completion
-        self.send_signal(Signals.SUCCESS)
+        # Signal outcome
+        if status:
+            self.send_signal(Signals.SUCCESS, result=self.results)
+        else:
+            self.send_signal(Signals.FAIL, result=self.results)
