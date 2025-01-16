@@ -4,6 +4,39 @@ import netsquid.qubits.ketstates as ks
 import netsquid.qubits.qubitapi as qapi
 
 
+# TODO get plotting data from results
+def extract_data(results):
+    return {}
+
+
+# TODO add doc comments
+def configure_parameters(depolar_rate, loss_prob=0):
+    model_parameters = {
+        "short": {
+            "init_loss": loss_prob,  # loss(1.319)
+            "len_loss": 0,  # 0.25,
+            "init_depolar": depolar_rate,
+            "len_depolar": 0,
+            "channel_len": 0,  # 0.005,
+        },
+        "mid": {
+            "init_loss": loss_prob,  # loss(2.12),
+            "len_loss": 0,  # 0.25,
+            "init_depolar": depolar_rate,
+            "len_depolar": 0,
+            "channel_len": 0,  # 0.00587,
+        },
+        "long": {
+            "init_loss": loss_prob,  # loss(2.005)
+            "len_loss": 0,  # 0.25,
+            "init_depolar": depolar_rate,
+            "len_depolar": 0,
+            "channel_len": 0,  # 0.00756,
+        },
+    }
+    return model_parameters
+
+
 # Get two qubits at positions 0 for alice and bob and calculate their fidelities
 def get_fidelities(alice, bob):
     """
