@@ -71,7 +71,7 @@ def get_fidelities(alice, bob):
     if status:
         logging.debug(f"[GREPPABLE] Simulation output: {fidelities}")
 
-    return status, fidelities["B00"]
+    return fidelities["B00"]
 
 
 # Function to calculate fidelity after entanglement distillation

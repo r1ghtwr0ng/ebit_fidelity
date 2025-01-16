@@ -4,47 +4,10 @@ import netsquid as ns
 import netsquid.qubits.ketstates as ks
 import netsquid.qubits.qubitapi as qapi
 
-from utils import configure_parameters
+from utils import configure_parameters, get_fidelities
 from qpu_entity import QPUNode
 from fso_switch import FSOSwitch
 from protocols import EntanglementProtocol
-
-
-# Get two qubits at positions 0 for alice and bob and calculate their fidelities
-def get_fidelities(alice, bob):
-    """
-    Calculate the fidelities of entangled qubits for Alice and Bob.
-
-    Parameters
-    ----------
-    alice : QPUNode
-        The QPU entity representing Alice.
-    bob : QPUNode
-        The QPU entity representing Bob.
-
-    Returns
-    -------
-    tuple
-        A tuple containing:
-        - status (bool): True if both Alice and Bob have valid qubits, False otherwise.
-        - fidelity (float): Fidelity of the Bell state |B00>.
-    """
-    status = alice.get_status() and bob.get_status()
-    qubit0 = alice.get_qubit(0)
-    qubit1 = bob.get_qubit(0)
-    fidelities = {
-        "|00>": qapi.fidelity([qubit0, qubit1], np.array([1, 0, 0, 0]), squared=True),
-        "|11>": qapi.fidelity([qubit0, qubit1], np.array([0, 0, 0, 1]), squared=True),
-        "B00": qapi.fidelity([qubit0, qubit1], ks.b00, squared=True),
-        "B01": qapi.fidelity([qubit0, qubit1], ks.b01, squared=True),
-        "B10": qapi.fidelity([qubit0, qubit1], ks.b10, squared=True),
-        "B11": qapi.fidelity([qubit0, qubit1], ks.b11, squared=True),
-    }
-
-    if status:
-        logging.debug(f"[GREPPABLE] Simulation output: {fidelities}")
-
-    return status, fidelities["B00"]
 
 
 def setup_network(model_parameters):
@@ -114,7 +77,7 @@ def single_run(model_parameters, qpu_depolar_rate, switch_routing):
     print(f"FIDELITY: {fidelity}")
 
     # Return results
-    return protocol.results
+    return (protocol.results, fidelity)
 
 
 # Runs the simulation several times, determined by the batch size.

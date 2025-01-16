@@ -24,7 +24,7 @@ def single_sim(
 # TODO add some comments for the parameters
 def main():
     # Set logging level
-    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.INFO)
 
     # Set switch routing configuration
     # All possible routing configurations, Alice and Bob bindings
@@ -64,11 +64,11 @@ def main():
     switch_routing = {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}
 
     fso_depolar_rates = np.linspace(0, 0.5, 2)
-    fso_depolar_rates = [0]
+    fso_depolar_rates = [0.1]
     loss_probabilities = np.linspace(0, 1, 1)
     loss_probabilities = [0]
     qpu_depolar_rate = 0
-    total_runs = 1000
+    total_runs = 100
     plot_data = {}
     results = single_sim(
         total_runs=total_runs,
@@ -77,6 +77,10 @@ def main():
         qpu_depolar_rate=qpu_depolar_rate,
         loss_probabilities=loss_probabilities,
     )
+
+    successful = [f for (success, f) in results[0] if success]
+
+    print(f"Average fidelity: {sum(successful)/len(successful)}")
 
     print("Early exit until I fix plot code")
     return  # Early break for now
