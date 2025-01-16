@@ -4,6 +4,7 @@ import netsquid as ns
 import netsquid.qubits.ketstates as ks
 import netsquid.qubits.qubitapi as qapi
 
+from utils import configure_parameters
 from qpu_entity import QPUNode
 from fso_switch import FSOSwitch
 from protocols import EntanglementProtocol
@@ -61,6 +62,20 @@ def setup_network(model_parameters):
     return alice_node, bob_node, fsoswitch_node
 
 
+def single_sim(
+    total_runs, switch_routing, fso_depolar_rates, qpu_depolar_rate, loss_probs
+):
+    results = []
+    for fso_drate in fso_depolar_rates:
+        for loss_prob in loss_probs:
+            model_params = configure_parameters(fso_drate, loss_prob)
+            result = batch_run(
+                model_params, qpu_depolar_rate, switch_routing, total_runs
+            )
+            results.append(result)
+    return results
+
+
 def single_run(model_parameters, qpu_depolar_rate, switch_routing):
     """
     Run a single quantum simulation with specified configurations and collect results.
@@ -92,7 +107,11 @@ def single_run(model_parameters, qpu_depolar_rate, switch_routing):
 
     # Run the simulation
     ns.sim_run()
-    protocol.reset()
+    print(
+        f"[QPU] Status: {alice_node.processor.status} | queue: {alice_node.get_queue()}"
+    )
+    fidelity = get_fidelities(alice_node, bob_node)
+    print(f"FIDELITY: {fidelity}")
 
     # Return results
     return protocol.results

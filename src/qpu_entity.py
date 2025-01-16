@@ -1,5 +1,6 @@
 import json
 import logging
+import pydynaa
 import netsquid as ns
 import netsquid.qubits.qubitapi as qapi
 
@@ -29,6 +30,10 @@ class QPUNode(Node):
         Depolarization rate for the noise model, by default 0.
     """
 
+    correction_done_evtype = pydynaa.EventType(
+        "CORRECTION_DONE", "Correction applied to qubit."
+    )
+
     def __init__(self, name, correction=False, qbit_count=2, depolar_rate=0):
         super().__init__(name)
         # The last qubit slot is used for photon emission into fibre
@@ -36,7 +41,6 @@ class QPUNode(Node):
         self.__emission_idx = qbit_count - 1
         self.__correction = correction
         self.__queue = deque()
-        self.__measuring = False
         self.__status = False
         self.__setup_callbacks()
         self.__requests = {}
@@ -195,6 +199,10 @@ class QPUNode(Node):
         else:
             logging.debug(f"(QPUNode | {self.name}) No correction needed")
 
+        # Emit an event indicating correction is complete
+        self._schedule_after(2000, QPUNode.correction_done_evtype)
+        logging.debug(f"(QPUNode | {self.name}) Emitted CORRECTION_DONE event.")
+
     # ======== PUBLIC METHODS ========
     # Register a current request ID to send over to the FSO switch
     def register_id(self, request_id):
@@ -221,21 +229,23 @@ class QPUNode(Node):
         """
         logging.debug(f"(QPUNode | {self.name}) Call to add_program with {program}")
         if not self.processor.busy:
-            if not self.__measuring:
-                logging.debug(f"(QPUNode | {self.name}) executing program {program}")
-                _event = self.processor.execute_program(program)  # TODO handle event
-                # TODO handle this event somehow
-                # event.wait(callback=lambda: logging.debug(f"Program done callback"))
-            else:
-                logging.debug(
-                    f"(QPUNode | {self.name}) appending program to queue (measuring qubit fidelity)"
+            logging.debug(f"(QPUNode | {self.name}) executing program {program}")
+            _event = self.processor.execute_program(program)  # TODO handle event
+            # Attach a callback to handle program completion
+            _event.wait(
+                callback=lambda: logging.debug(
+                    f"(QPUNode | {self.name}) Program {program} completed."
                 )
-                self.__queue.append(program)
+            )
         else:
             logging.debug(
-                f"(QPUNode | {self.name}) appending program to queue (QPU busy)"
+                f"(QPUNode | {self.name}) appending program to queue: {self.__queue} (QPU busy)"
             )
             self.__queue.append(program)
+            logging.debug(f"(QPUNode | {self.name}) queue status: {self.__queue}")
+
+    def get_queue(self):
+        return self.__queue
 
     # Get the status of the last exchange request
     def get_status(self):
@@ -268,7 +278,7 @@ class QPUNode(Node):
         header = {"request_id": request_id}
         qubit = self.processor.peek(position, skip_noise=True)[0]
         state = qubit.qstate.qrepr
-        print(f"State: {state}")
+        logging.debug(f"State: {state}")
         clone = qapi.create_qubits(1, no_state=True)[0]
         qapi.assign_qstate(clone, state)
         msg = Message(qubit)
