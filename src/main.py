@@ -2,7 +2,7 @@ import pickle
 import logging
 import numpy as np
 
-from utils import loss, extract_data, configure_parameters
+from utils import extract_data, configure_parameters
 from simulation import batch_run
 from plotting import plot_fidelity, plot_ttf, plot_ttf_3d
 
@@ -63,8 +63,7 @@ def main():
     ]
     switch_routing = {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}
 
-    fso_depolar_rates = np.linspace(0, 0.5, 2)
-    fso_depolar_rates = [0.1]
+    fso_depolar_rates = np.linspace(0, 0.5, 5)
     loss_probabilities = np.linspace(0, 1, 1)
     loss_probabilities = [0]
     qpu_depolar_rate = 0
@@ -78,14 +77,11 @@ def main():
         loss_probabilities=loss_probabilities,
     )
 
-    successful = [f for (success, f) in results[0] if success]
-
-    print(f"Average fidelity: {sum(successful)/len(successful)}")
-
+    avg_fidelities = extract_data(results)
+    print(f"Average fidelities: {avg_fidelities}")
     print("Early exit until I fix plot code")
     return  # Early break for now
     # Plotting code
-    plot_data = extract_data(results)
     thresholds = [0.9995, 0.995, 0.95, 0.9, 0.8, 0.7]
     for threshold in thresholds:
         plot_ttf(

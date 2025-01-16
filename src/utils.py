@@ -6,7 +6,12 @@ import netsquid.qubits.qubitapi as qapi
 
 # TODO get plotting data from results
 def extract_data(results):
-    return {}
+    avg_fidelities = []
+    for result in results:
+        successful = [f for (success, f) in result if success]
+        avg_fidelity = sum(successful) / len(successful)
+        avg_fidelities.append(avg_fidelity)
+    return avg_fidelities
 
 
 # TODO add doc comments
