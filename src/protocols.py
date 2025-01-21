@@ -45,26 +45,37 @@ class EntanglementRetryProto(Protocol):
         # Start attempting entanglement establishment
         for attempt in range(self.max_attempts):
             logging.info(f"[RETRYPROTO] Attempt {attempt + 1}.")
-            self.__single_run()
+
+            # Await signals from both subprotocol_alice and subprotocol_bob
+            yield from self.__single_run()
+
+            # Check results from both subprotocols
+            alice_result = self.subprotocol_alice.get_signal_result(Signals.SUCCESS)
+            bob_result = self.subprotocol_bob.get_signal_result(Signals.SUCCESS)
             logging.info(
-                f"FUCKING: {self.subprotocol_alice.get_signal_result(Signals.SUCCESS)}"
+                f"[RETRYPROTO] Subprotocol response (Alice): {alice_result} (Bob): {bob_result}"
             )
 
-            # Process subprotocol status codes
-            if True:  # Early return if successful ebit establishment
-                logging.info("Retry protocol succeeded.")
-                self.results = self.subprotocol_alice.get_signal_result(Signals.SUCCESS)
+            if alice_result and bob_result:
+                logging.info("[RETRYPROTO] Retry protocol succeeded.")
+                self.results = (alice_result, bob_result)  # Store results as a tuple
                 return True
-            else:  # Continue
-                logging.warning("EntanglementProtocol failed.")
-                self.results = self.subprotocol_alice.get_signal_result(Signals.FAIL)
+            else:
+                alice_fail = self.subprotocol_alice.get_signal_result(Signals.FAIL)
+                bob_fail = self.subprotocol_bob.get_signal_result(Signals.FAIL)
+                logging.warning(
+                    f"[RETRYPROTO] EntanglementProtocol failed. Alice: {alice_fail}, Bob: {bob_fail}"
+                )
+                self.results = (alice_fail, bob_fail)  # Store failure results
 
         # Send final signal based on success or failure
         if self.success:
-            logging.info("Entanglement established successfully.")
+            logging.info("[RETRYPROTO] Entanglement established successfully.")
             self.send_signal(Signals.SUCCESS, result=self.results)
         else:
-            logging.error("Failed to establish entanglement after maximum attempts.")
+            logging.error(
+                "[RETRYPROTO] Failed to establish entanglement after maximum attempts."
+            )
             self.send_signal(Signals.FAIL, result=self.results)
 
     def __single_run(self):
@@ -72,23 +83,24 @@ class EntanglementRetryProto(Protocol):
         self.subprotocol_alice.reset()
         self.subprotocol_bob.reset()
 
-        # Wait for the subprotocols to complete (SUCCESS or FAIL)
-        alice_evexpr = self.await_signal(
-            self.subprotocol_alice, signal_label=Signals.SUCCESS
-        ) | self.await_signal(self.subprotocol_alice, signal_label=Signals.FAIL)
-        bob_evexpr = self.await_signal(
-            self.subprotocol_bob, signal_label=Signals.SUCCESS
-        ) | self.await_signal(self.subprotocol_bob, signal_label=Signals.FAIL)
-
         # Start subprotocols
         self.start_subprotocols()
 
-        # Await for subprotocols
-        result = alice_evexpr & bob_evexpr
+        # Wait for the subprotocols to complete (SUCCESS or FAIL)
+        alice_event = self.await_signal(
+            self.subprotocol_alice, signal_label=Signals.FINISHED
+        )
+        bob_event = self.await_signal(
+            self.subprotocol_bob, signal_label=Signals.FINISHED
+        )
+        combined_event = alice_event & bob_event
 
-        # Return the result of the signal
-        result.wait()
-        logging.debug(f"AAAAAAAAAA: {type(result)} | {result.value} | ")
+        result = yield combined_event  # Wait for both signals
+
+        # Log and process the result after the signals are triggered
+        logging.debug(
+            f"[RETRYPROTO] Signals received: {type(result)} | Triggered Events: {result.triggered_events}"
+        )
         return result
 
 
@@ -105,7 +117,7 @@ class EntanglementProtocol(NodeProtocol):
 
     def run(self):
         node_name = self.node.name
-        logging.info(f"SUBPROTOCOL: {node_name} STARTED")
+        logging.info(f"[EBIT_SUBPROTOCOL]: {node_name} STARTED")
 
         # Emit qubits from the node
         self.node.emit()
@@ -125,19 +137,20 @@ class EntanglementProtocol(NodeProtocol):
         triggered_expression = yield expression
 
         logging.debug(
-            f"BBBB {type(triggered_expression)} | {triggered_expression.value} | {triggered_expression.first_term.value} | {triggered_expression.second_term.value}"
+            f"[EBIT_SUBPROTOCOL] Status: {triggered_expression.first_term.value} | Timeout: {triggered_expression.second_term.value}"
         )
 
         # Check what triggered the expression
         if triggered_expression.first_term.value:  # Alice and Bob responses arrived
-            logging.debug(f"Correction applied by: {node_name}.")
             status = self.node.get_status()
             logging.info(
-                f"({self.node.name}) Returned ebit establishment status: {status}"
+                f"[EBIT_SUBPROTOCOL] ({self.node.name}) Returned ebit establishment status: {status}"
             )
             self.results = status
         elif triggered_expression.second_term.value:  # Timeout occurred
-            logging.warning(f"({node_name}) Timeout occurred in ebit establishment.")
+            logging.warning(
+                f"[EBIT_SUBPROTOCOL] ({node_name}) Timeout occurred in ebit establishment."
+            )
             self.results = "Timeout"
 
         # Signal the results
@@ -146,4 +159,4 @@ class EntanglementProtocol(NodeProtocol):
         else:
             self.send_signal(Signals.SUCCESS, result=self.results)
 
-        logging.debug(f"Protocol results: {self.results}")
+        logging.debug(f"[EBIT_SUBPROTOCOL] ({node_name}) Results: {self.results}")

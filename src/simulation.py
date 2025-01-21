@@ -67,15 +67,11 @@ def single_run(model_parameters, qpu_depolar_rate, switch_routing):
         bob_node,
         fsoswitch_node,
         switch_routing,
-        max_attempts=2,
+        max_attempts=1,
         timeout=100,
     )
 
     # Test
-    fsoswitch_node.switch(switch_routing)
-    retry_protocol1 = EntanglementProtocol(alice_node)
-    retry_protocol = EntanglementProtocol(bob_node)
-    retry_protocol1.start()
     retry_protocol.start()
 
     # Run the simulation
