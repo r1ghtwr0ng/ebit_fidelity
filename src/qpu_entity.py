@@ -200,7 +200,7 @@ class QPUNode(Node):
             logging.debug(f"(QPUNode | {self.name}) No correction needed")
 
         # Emit an event indicating correction is complete
-        self._schedule_after(2000, QPUNode.correction_done_evtype)
+        self._schedule_now(QPUNode.correction_done_evtype)
         logging.debug(f"(QPUNode | {self.name}) Emitted CORRECTION_DONE event.")
 
     # ======== PUBLIC METHODS ========
