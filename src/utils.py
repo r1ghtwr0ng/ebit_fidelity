@@ -9,7 +9,13 @@ def extract_data(results):
     avg_fidelities = []
     for result in results:
         successful = [f for (success, f) in result if success]
-        avg_fidelity = sum(successful) / len(successful)
+
+        # Check to avoid zero division error
+        if len(successful) != 0:
+            avg_fidelity = sum(successful) / len(successful)
+        else:
+            avg_fidelity = 0
+
         avg_fidelities.append(avg_fidelity)
     return avg_fidelities
 

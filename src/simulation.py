@@ -1,13 +1,11 @@
 import logging
 import numpy as np
 import netsquid as ns
-import netsquid.qubits.ketstates as ks
-import netsquid.qubits.qubitapi as qapi
 
 from utils import configure_parameters, get_fidelities
 from qpu_entity import QPUNode
 from fso_switch import FSOSwitch
-from protocols import EntanglementProtocol
+from protocols import EntanglementRetryProto, EntanglementProtocol
 
 
 def setup_network(model_parameters):
@@ -63,21 +61,33 @@ def single_run(model_parameters, qpu_depolar_rate, switch_routing):
     alice_node, bob_node, fsoswitch_node = setup_network(model_parameters)
 
     # Create and start the simulation protocol
-    protocol = EntanglementProtocol(
-        alice_node, bob_node, fsoswitch_node, switch_routing
+
+    retry_protocol = EntanglementRetryProto(
+        alice_node,
+        bob_node,
+        fsoswitch_node,
+        switch_routing,
+        max_attempts=2,
+        timeout=100,
     )
-    protocol.start()
+
+    # Test
+    fsoswitch_node.switch(switch_routing)
+    retry_protocol1 = EntanglementProtocol(alice_node)
+    retry_protocol = EntanglementProtocol(bob_node)
+    retry_protocol1.start()
+    retry_protocol.start()
 
     # Run the simulation
     ns.sim_run()
-    print(
+    logging.info(
         f"[QPU] Status: {alice_node.processor.status} | queue: {alice_node.get_queue()}"
     )
     fidelity = get_fidelities(alice_node, bob_node)
-    print(f"FIDELITY: {fidelity}")
+    logging.debug(f"FIDELITY: {fidelity}")
 
     # Return results
-    return (protocol.results, fidelity)
+    return (retry_protocol.results, fidelity)
 
 
 # Runs the simulation several times, determined by the batch size.
