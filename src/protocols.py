@@ -29,6 +29,7 @@ class EntanglementRetryProto(Protocol):
         self.timeout = timeout
         self.success = False
         self.results = None  # Store results here
+        self.attempts = 0
 
         # Create a single instance of the EntanglementProtocol
         self.subprotocol_alice = EntanglementProtocol(alice, timeout=timeout)
@@ -44,7 +45,12 @@ class EntanglementRetryProto(Protocol):
         self.fsoswitch_node.switch(self.routing_table)
 
         for attempt in range(self.max_attempts):
+            # Register and log the attempt count
             logging.info(f"[RETRYPROTO] Attempt {attempt + 1}.")
+            self.attempts = attempt + 1
+
+            # Run the subprotocols and process the results.
+            # Yield the generator to the NetSquid scheduler.
             yield from self.__single_run()
 
             # Retrieve results from subprotocols
