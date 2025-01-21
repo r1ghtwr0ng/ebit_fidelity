@@ -67,7 +67,7 @@ def single_run(model_parameters, qpu_depolar_rate, switch_routing):
         bob_node,
         fsoswitch_node,
         switch_routing,
-        max_attempts=1,
+        max_attempts=10,
         timeout=100,
     )
 
@@ -83,7 +83,7 @@ def single_run(model_parameters, qpu_depolar_rate, switch_routing):
     logging.debug(f"FIDELITY: {fidelity}")
 
     # Return results
-    return (retry_protocol.results, fidelity)
+    return (retry_protocol.results, retry_protocol.attempts, fidelity)
 
 
 # Runs the simulation several times, determined by the batch size.

@@ -4,20 +4,32 @@ import netsquid.qubits.ketstates as ks
 import netsquid.qubits.qubitapi as qapi
 
 
-# TODO get plotting data from results
 def extract_data(results):
-    avg_fidelities = []
-    for result in results:
-        successful = [f for (success, f) in result if success]
+    """Extract average fidelities and attempts from results."""
+    avg_fidelities, avg_attempts = [], []
 
-        # Check to avoid zero division error
-        if len(successful) != 0:
-            avg_fidelity = sum(successful) / len(successful)
-        else:
-            avg_fidelity = 0
+    for result in results:
+        # Convert to a NumPy array for vectorized filtering
+        data = np.array(result, dtype=object)
+        success_mask = data[:, 0].astype(bool)  # Ensure the mask is a boolean array
+
+        successful_fidelities = data[success_mask, 2].astype(float)
+        successful_attempts = data[success_mask, 1].astype(float)
+
+        # Compute averages with default values for empty lists
+        avg_fidelity = (
+            np.mean(successful_fidelities) if successful_fidelities.size > 0 else 0
+        )
+        avg_attempt = (
+            np.mean(successful_attempts)
+            if successful_attempts.size > 0
+            else float("inf")
+        )
 
         avg_fidelities.append(avg_fidelity)
-    return avg_fidelities
+        avg_attempts.append(avg_attempt)
+
+    return avg_fidelities, avg_attempts
 
 
 # TODO add doc comments
