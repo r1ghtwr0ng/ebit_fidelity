@@ -4,17 +4,26 @@ import netsquid.qubits.ketstates as ks
 import netsquid.qubits.qubitapi as qapi
 
 
+def record_results(full_results, run_results, i, attempt_limit):
+    # Check the status of the run
+    status = run_results["status"]
+    full_results["status"][i] = status
+    full_results["attempts"][i] = run_results["attempts"] if status else attempt_limit
+    full_results["fidelity"][i] = run_results["fidelity"] if status else 0
+    full_results["simtime"][i] = run_results["simtime"]
+
+
 def extract_data(results):
     """Extract average fidelities and attempts from results."""
-    avg_fidelities, avg_attempts = [], []
+    avg_fidelities, avg_attempts, avg_simtime = [], [], []
 
     for result in results:
         # Convert to a NumPy array for vectorized filtering
         data = np.array(result, dtype=object)
         success_mask = data[:, 0].astype(bool)  # Ensure the mask is a boolean array
 
-        successful_fidelities = data[success_mask, 2].astype(float)
-        successful_attempts = data[success_mask, 1].astype(float)
+        successful_fidelities = data[success_mask, 3].astype(float)
+        successful_attempts = data[success_mask, 2].astype(float)
 
         # Compute averages with default values for empty lists
         avg_fidelity = (
@@ -29,7 +38,7 @@ def extract_data(results):
         avg_fidelities.append(avg_fidelity)
         avg_attempts.append(avg_attempt)
 
-    return avg_fidelities, avg_attempts
+    return avg_fidelities, avg_attempts, avg_simtime
 
 
 # TODO add doc comments

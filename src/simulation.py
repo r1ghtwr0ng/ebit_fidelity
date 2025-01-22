@@ -2,10 +2,10 @@ import logging
 import numpy as np
 import netsquid as ns
 
-from utils import configure_parameters, get_fidelities
+from utils import record_results, configure_parameters, get_fidelities
 from qpu_entity import QPUNode
 from fso_switch import FSOSwitch
-from protocols import EntanglementRetryProto, EntanglementProtocol
+from protocols import EntanglementRetryProto
 
 
 def setup_network(model_parameters):
@@ -37,7 +37,7 @@ def single_sim(
     return results
 
 
-def single_run(model_parameters, qpu_depolar_rate, switch_routing):
+def single_run(model_parameters, qpu_depolar_rate, switch_routing, max_attempts):
     """
     Run a single quantum simulation with specified configurations and collect results.
 
@@ -49,6 +49,9 @@ def single_run(model_parameters, qpu_depolar_rate, switch_routing):
         Depolarization rate for the QPU entities.
     switch_routing : dict
         Routing table for the FSO switch, defining how quantum information is routed.
+    max_attempts : int
+        The maximum number of attempts for establishing an entanglement link before the
+        protocol gives up.
 
     Returns
     -------
@@ -67,7 +70,7 @@ def single_run(model_parameters, qpu_depolar_rate, switch_routing):
         bob_node,
         fsoswitch_node,
         switch_routing,
-        max_attempts=10,
+        max_attempts=max_attempts,
         timeout=100,
     )
 
@@ -76,18 +79,26 @@ def single_run(model_parameters, qpu_depolar_rate, switch_routing):
 
     # Run the simulation
     ns.sim_run()
+    simtime = ns.sim_time()
     logging.info(
         f"[QPU] Status: {alice_node.processor.status} | queue: {alice_node.get_queue()}"
     )
-    fidelity = get_fidelities(alice_node, bob_node)
+    fidelity = get_fidelities(alice_node, bob_node) if retry_protocol.success else 0
     logging.debug(f"FIDELITY: {fidelity}")
 
     # Return results
-    return (retry_protocol.results, retry_protocol.attempts, fidelity)
+    return {
+        "status": retry_protocol.success,
+        "attempts": retry_protocol.attempts,
+        "fidelity": fidelity,
+        "simtime": simtime,
+    }
 
 
 # Runs the simulation several times, determined by the batch size.
-def batch_run(model_parameters, qpu_depolar_rate, switch_routing, batch_size):
+def batch_run(
+    model_parameters, qpu_depolar_rate, switch_routing, batch_size, max_attempts
+):
     """
     Run multiple quantum simulations with specified configurations and collect results.
 
@@ -101,15 +112,33 @@ def batch_run(model_parameters, qpu_depolar_rate, switch_routing, batch_size):
         Routing table for the FSO switch.
     batch_size : int
         Number of simulation runs in the batch.
+    max_attempts : int
+        The maximum number of attempts for establishing an entanglement link before the
+        protocol gives up.
 
     Returns
     -------
-    list[tuple]
-        A list of tuples containing the simulation status and fidelity for each run.
+    dictionary
+        A dictionary containing the simulation status, attempt count, fidelity and
+        simulation duration for each run.
     """
-    results = []
-    for _ in range(batch_size):
-        res = single_run(model_parameters, qpu_depolar_rate, switch_routing)
-        results.append(res)
+    ret_results = {"status": 0, "attempts": 0, "fidelity": 0, "simtime": 0}
+    full_results = {
+        "status": np.zeros(batch_size, dtype="bool"),
+        "attempts": np.zeros(batch_size, dtype="uint"),
+        "fidelity": np.zeros(batch_size, dtype="float"),
+        "simtime": np.zeros(batch_size, dtype="float"),
+    }
+    for i in range(batch_size):
+        # Perform single run of the simulation and record the results into the dict
+        run_results = single_run(
+            model_parameters, qpu_depolar_rate, switch_routing, max_attempts
+        )
+        record_results(full_results, run_results, i, max_attempts)
 
-    return results
+    # Average calculations and return
+    ret_results["status"] = np.average(full_results["status"])
+    ret_results["attempts"] = np.average(run_results["attempts"])
+    ret_results["fidelity"] = np.average(run_results["fidelity"])
+    ret_results["simtime"] = np.average(run_results["simtime"])
+    return ret_results

@@ -29,7 +29,7 @@ def plot_ttf_3d(
 
     # Populate data array
     for j, loss_prob in enumerate(loss_probs):
-        (fidelity_arr, success_probs, sim_timings) = plot_data[loss_prob]
+        (attempts, fidelity_arr, success_probs, sim_timings) = plot_data[loss_prob]
 
         for i, fso_rate in enumerate(fso_depolar_probs):
             try:
