@@ -125,7 +125,7 @@ class EntanglementRetryProto(Protocol):
 
     def _on_final_failure(self):
         """Handle failure after all attempts."""
-        logging.error(
+        logging.debug(
             "[RETRYPROTO] Failed to establish entanglement after maximum attempts."
         )
         self.send_signal(Signals.FAIL, result=self.results)

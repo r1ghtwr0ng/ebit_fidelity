@@ -4,7 +4,7 @@ import numpy as np
 
 from utils import configure_parameters
 from simulation import batch_run
-from plotting import plot_fidelity, plot_ttf, plot_ttf_3d
+from plotting import plot_success
 
 
 def single_sim(
@@ -45,7 +45,7 @@ def single_sim(
 # TODO add some comments for the parameters
 def main():
     # Set logging level
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.ERROR)
 
     # Simulation parameters
     switch_routing = {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}
@@ -65,9 +65,6 @@ def main():
         max_attempts=max_proto_attempts,
     )
 
-    print("Early exit until I fix plot code")
-    return  # Early break for now
-
     # Save data to file
     save_filename = "plotdata/data_file.pkl"
     logging.debug(f"Saving results data to file: {save_filename}")
@@ -75,6 +72,7 @@ def main():
         pickle.dump(results, file)
 
     # Plotting code
+    plot_success(fso_depolar_rates, loss_probabilities, results)
 
 
 if __name__ == "__main__":

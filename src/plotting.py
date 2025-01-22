@@ -94,14 +94,14 @@ def plot_ttf_3d(
     plt.savefig(f"plots/3d/ttf_3d_{threshold}_heatmap.png")
 
 
-def plot_ttf(
+def plot_success(
     fso_depolar_probs,
     loss_probs,
-    plot_data,
-    threshold=0.95,
+    results_arr,
 ):
     """
-    Generate a heatmap showing time to fidelity for different loss probabilities and FSO dephase probabilities.
+    Generate a heatmap showing time to fidelity for different loss probabilities and
+    FSO dephase probabilities.
 
     Parameters
     ----------
@@ -109,36 +109,16 @@ def plot_ttf(
         Array of loss probabilities.
     fso_depolar_probs : list or array
         Array of FSO depolarization probabilities.
-    plot_data : dictionary
+    results_arr : dictionary
         Dictionary containing simulation datapoints.
     threshold : float
         Fidelity threshold for the heatmap.
     """
     # Create an empty heatmap data array
-    heatmap_data = np.zeros((len(fso_depolar_probs), len(loss_probs)))
-
-    # Populate heatmap data
-    for j, loss_prob in enumerate(loss_probs):
-        (fidelity_arr, success_probs, sim_timings) = plot_data[loss_prob]
-
-        for i, fso_rate in enumerate(fso_depolar_probs):
-            try:
-                # Calculate the number of ebits required
-                ebit_count = find_minimum_ebits(fidelity_arr[i], threshold)
-
-                # Compute the time to fidelity
-                ttf = time_to_fidelity(success_probs[i], sim_timings[i], ebit_count)
-
-                # Handle cases where ttf might be infinite or not defined
-                heatmap_data[i, j] = np.inf if np.isinf(ttf) else ttf
-            except Exception as _e:
-                # Assign np.inf in case of errors
-                heatmap_data[i, j] = np.inf
+    heatmap_data = results_arr["status"]
 
     # Replace np.inf with a large value for visualization (optional)
-    max_finite_value = np.nanmax(heatmap_data[np.isfinite(heatmap_data)])
-    heatmap_data[~np.isfinite(heatmap_data)] = max_finite_value * 10
-    vmin, vmax = 4, 10**3
+    vmin, vmax = 0, 1
     heatmap_data = np.clip(heatmap_data, vmin, vmax)
 
     # Create the heatmap
@@ -154,13 +134,12 @@ def plot_ttf(
             max(fso_depolar_probs),
         ],
         cmap="viridis_r",
-        norm=LogNorm(vmin=vmin, vmax=vmax),  # Exponential color scale
     )
-    plt.colorbar(label=f"Time to fidelity {threshold} (ns)")
+    plt.colorbar(label="Success probability")
     plt.xlabel("Loss probability")
     plt.ylabel("FSO dephase probability")
-    plt.title(f"Time needed to establish ebit of fidelity: {threshold}")
-    plt.savefig(f"plots/heatmaps/ttf_{threshold}_heatmap.png")
+    plt.title("Success probability")
+    plt.savefig("plots/heatmaps/success_heatmap.png")
 
 
 # Example usage:
