@@ -1,8 +1,7 @@
 import logging
-import pydynaa
 from netsquid.protocols import NodeProtocol, Protocol, Signals
 
-from qpu_entity import QPUNode
+from qpu_node import QPUNode
 
 
 class EntanglementRetryProto(Protocol):
