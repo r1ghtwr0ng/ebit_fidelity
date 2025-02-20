@@ -40,16 +40,34 @@ class FSOSwitch(Node):
         self.__setup_bsm_detector()
         self.__setup_port_forwarding()
 
-    def __setup_bsm_detector(self):
+    def __setup_bsm_detector(self, p_dark=0, det_eff=1, visibility=1):
         """
         Creates a BSM detector component and adds it as a subcomponent to the FSO Switch
         Port bindings:  [FSO] qout0 -> qin0  [BSM]
                         [FSO] qout1 -> qin1  [BSM]
                         [FSO] cout0 <- cout0 [BSM]
                         [FSO] cout1 <- cout1 [BSM]
+
+        Parameters
+        ----------
+        p_dark : float, optional
+            Dark-count probability, i.e. probability of measuring a photon while
+            no photon was present, per detector.
+        det_eff : float, optional
+            Efficiency per detector, i.e. the probability of detecting an incoming
+            photon.
+        visibility : float, optional
+            Visibility of the Hong-Ou-Mandel dip, also referred to as the photon
+            indistinguishability.
         """
+
         # Create BSMDetector component
-        bsm_detector = BSMDetector(f"BSM[{self.name}]")
+        bsm_detector = BSMDetector(
+            name=f"BSM[{self.name}]",
+            p_dark=p_dark,
+            det_eff=det_eff,
+            visibility=visibility,
+        )
 
         # Add subcomponents
         self.add_subcomponent(bsm_detector)

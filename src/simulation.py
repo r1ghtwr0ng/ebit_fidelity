@@ -3,15 +3,15 @@ import numpy as np
 import netsquid as ns
 
 from utils import record_results, configure_parameters, get_fidelities
-from qpu_entity import QPUNode
+from qpu_node import QPUNode
 from fso_switch import FSOSwitch
 from protocols import EntanglementRetryProto
 
 
-def setup_network(model_parameters):
+def setup_network(model_parameters, qpu_dephase=0):
     # Create nodes
-    alice_node = QPUNode("AliceNode", correction=True)
-    bob_node = QPUNode("BobNode")
+    alice_node = QPUNode("AliceNode", correction=True, depolar_rate=qpu_dephase)
+    bob_node = QPUNode("BobNode", depolar_rate=qpu_dephase)
     fsoswitch_node = FSOSwitch("bsm_fsoswitch", model_parameters)
 
     # Connect node-level ports

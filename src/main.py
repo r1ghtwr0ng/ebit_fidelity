@@ -26,6 +26,7 @@ def single_sim(
 
     # For every depolarization configuration
     for i, fso_drate in enumerate(fso_depolar_rates):
+        print(f"Progress: {i}/{len(fso_depolar_rates)}", end="\r")
         # For every loss probability configuration
         for j, loss_prob in enumerate(loss_probabilities):
             # Generate a model parameter configuration and run simulation batch
@@ -49,8 +50,8 @@ def main():
 
     # Simulation parameters
     switch_routing = {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}
-    fso_depolar_rates = np.linspace(0, 0.5, 5)
-    loss_probabilities = np.linspace(0, 1, 5)
+    fso_depolar_rates = np.linspace(0, 0.5, 15)
+    loss_probabilities = np.linspace(0, 1, 15)
     qpu_depolar_rate = 0
     total_runs = 50
     max_proto_attempts = 10
