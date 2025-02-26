@@ -46,24 +46,24 @@ def configure_parameters(depolar_rate, loss_prob=0):
     model_parameters = {
         "short": {
             "init_loss": loss(1.319),
-            "len_loss": 0,  # 0.25,
-            "init_depolar": depolar_rate,
-            "len_depolar": 0,
-            "channel_len": 0,  # 0.005,
+            "len_loss": loss_prob,
+            "init_depolar": loss(1.319),
+            "len_depolar": depolar_rate,
+            "channel_len": 0.005,
         },
         "mid": {
             "init_loss": loss(2.12),
-            "len_loss": 0,  # 0.25,
-            "init_depolar": depolar_rate,
-            "len_depolar": 0,
-            "channel_len": 0,  # 0.00587,
+            "len_loss": loss_prob,
+            "init_depolar": loss(2.12),
+            "len_depolar": depolar_rate,
+            "channel_len": 0.00587,
         },
         "long": {
             "init_loss": loss(2.005),
-            "len_loss": 0,  # 0.25,
-            "init_depolar": depolar_rate,
-            "len_depolar": 0,
-            "channel_len": 0,  # 0.00756,
+            "len_loss": loss_prob,
+            "init_depolar": loss(2.005),
+            "len_depolar": depolar_rate,
+            "channel_len": 0.00756,
         },
     }
     return model_parameters
