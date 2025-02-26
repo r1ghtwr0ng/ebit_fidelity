@@ -1,6 +1,7 @@
 import pickle
 import logging
 import numpy as np
+import matplotlib.pyplot as plt
 
 from utils import configure_parameters
 from simulation import batch_run
@@ -32,7 +33,12 @@ def single_sim(
             # Generate a model parameter configuration and run simulation batch
             model_params = configure_parameters(fso_drate, loss_prob)
             run_results = batch_run(
-                model_params, qpu_depolar_rate, switch_routing, total_runs, max_attempts
+                model_params,
+                qpu_depolar_rate,
+                switch_routing,
+                total_runs,
+                loss_prob,
+                max_attempts,
             )
             # Populate the results arrays
             results["status"][i][j] = run_results["status"]
@@ -49,31 +55,60 @@ def main():
     logging.getLogger().setLevel(logging.ERROR)
 
     # Simulation parameters
-    switch_routing = {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}
-    fso_depolar_rates = np.linspace(0, 0.5, 15)
-    loss_probabilities = np.linspace(0, 1, 15)
-    qpu_depolar_rate = 0
-    total_runs = 50
-    max_proto_attempts = 10
+    switch_routings = [
+        {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"},  # Low, Low
+        {"qin0": "qout0", "qin1": "qout2", "qin2": "qout1"},  # Low, Mid
+        {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Low, High
+        {"qin0": "qout1", "qin1": "qout2", "qin2": "qout0"},  # Mid, Mid
+        {"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"},  # Mid, High
+        {"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"},  # High, High
+    ]
+    titles = [
+        "(Low, Low)",
+        "(Low, Mid)",
+        "(Low, High)",
+        "(Mid, Mid)",
+        "(Mid, High)",
+        "(High, High)",
+    ]
 
-    # Run single-threaded simulation, get results
-    results = single_sim(
-        total_runs=total_runs,
-        switch_routing=switch_routing,
-        fso_depolar_rates=fso_depolar_rates,
-        qpu_depolar_rate=qpu_depolar_rate,
-        loss_probabilities=loss_probabilities,
-        max_attempts=max_proto_attempts,
-    )
+    # Create a figure with 6 subplots (2 rows x 3 columns)
+    fig, axs = plt.subplots(2, 3, figsize=(15, 10))
 
-    # Save data to file
-    save_filename = "plotdata/data_file.pkl"
-    logging.debug(f"Saving results data to file: {save_filename}")
-    with open(save_filename, "wb") as file:
-        pickle.dump(results, file)
+    for i, switch_routing in enumerate(switch_routings):
+        print(f"Running routing config: {titles[i]}")
 
-    # Plotting code
-    plot_success(fso_depolar_rates, loss_probabilities, results)
+        fso_depolar_rates = np.linspace(0, 0.5, 15)
+        loss_probabilities = np.linspace(0, 1, 15)
+        qpu_depolar_rate = 0
+        total_runs = 50
+        max_proto_attempts = 10
+
+        # Run simulation and save data (if needed)
+        results = single_sim(
+            total_runs=total_runs,
+            switch_routing=switch_routing,
+            fso_depolar_rates=fso_depolar_rates,
+            qpu_depolar_rate=qpu_depolar_rate,
+            loss_probabilities=loss_probabilities,
+            max_attempts=max_proto_attempts,
+        )
+        with open("plotdata/data_file.pkl", "wb") as file:
+            pickle.dump(results, file)
+
+        # Select the appropriate subplot
+        ax = axs[i // 3, i % 3]
+        # Plot the heatmap on the current subplot and get the image object
+        im = plot_success(ax, fso_depolar_rates, loss_probabilities, results, titles[i])
+
+    # Option 1: If you prefer a single common colorbar:
+    fig.colorbar(im, ax=axs.ravel().tolist(), label="Success probability", shrink=0.6)
+
+    # Option 2: Alternatively, you could have individual colorbars for each subplot
+    # (not recommended if you want a cleaner look)
+
+    plt.tight_layout()
+    plt.savefig("plots/heatmaps/success_heatmap.png")
 
 
 if __name__ == "__main__":

@@ -23,7 +23,13 @@ class FSOSwitch(Node):
         Configuration for fiber loss, delay, and depolarization models.
     """
 
-    def __init__(self, name, model_parameters):
+    def __init__(
+        self,
+        name,
+        model_parameters,
+        detector_efficiency,
+        herald_ports=["qout0", "qout1"],
+    ):
         ports = [
             "qin0",
             "qin1",
@@ -37,10 +43,12 @@ class FSOSwitch(Node):
         ]
         super().__init__(name, port_names=ports)
         self.__setup_fibre_channels(model_parameters)
-        self.__setup_bsm_detector()
+        self.__setup_bsm_detector(
+            herald_ports=herald_ports, det_eff=detector_efficiency
+        )
         self.__setup_port_forwarding()
 
-    def __setup_bsm_detector(self, p_dark=0, det_eff=1, visibility=1):
+    def __setup_bsm_detector(self, herald_ports, p_dark=0, det_eff=1, visibility=1):
         """
         Creates a BSM detector component and adds it as a subcomponent to the FSO Switch
         Port bindings:  [FSO] qout0 -> qin0  [BSM]
@@ -72,8 +80,13 @@ class FSOSwitch(Node):
         # Add subcomponents
         self.add_subcomponent(bsm_detector)
 
-        self.ports["qout0"].bind_output_handler(bsm_detector.ports["qin0"].tx_input)
-        self.ports["qout1"].bind_output_handler(bsm_detector.ports["qin1"].tx_input)
+        # TODO fix the switch location config
+        self.ports[herald_ports[0]].bind_output_handler(
+            bsm_detector.ports["qin0"].tx_input
+        )
+        self.ports[herald_ports[1]].bind_output_handler(
+            bsm_detector.ports["qin1"].tx_input
+        )
         bsm_detector.ports["cout0"].bind_output_handler(self.ports["cout0"].tx_output)
         bsm_detector.ports["cout1"].bind_output_handler(self.ports["cout1"].tx_output)
 
@@ -230,8 +243,8 @@ class FSOSwitch(Node):
         ValueError
             If the provided routing table has invalid keys or values.
         """
-        valid_keys = list(routing_table.keys()) == ["qin0", "qin1", "qin2"]
-        valid_vals = list(routing_table.values()) == ["qout0", "qout1", "qout2"]
+        valid_keys = sorted(routing_table.keys()) == ["qin0", "qin1", "qin2"]
+        valid_vals = sorted(routing_table.values()) == ["qout0", "qout1", "qout2"]
         if not (valid_keys and valid_vals):
             logging.error(f"Invalid routing rable: {routing_table}")
 
