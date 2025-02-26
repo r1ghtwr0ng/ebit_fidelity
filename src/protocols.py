@@ -1,4 +1,5 @@
 import logging
+import pydynaa
 from netsquid.protocols import NodeProtocol, Protocol, Signals
 
 from qpu_node import QPUNode

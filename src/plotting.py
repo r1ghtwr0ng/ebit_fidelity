@@ -11,7 +11,8 @@ def plot_ttf_3d(
     threshold=0.95,
 ):
     """
-    Generate a 3D surface plot showing time to fidelity for different loss probabilities and FSO dephase probabilities.
+    Generate a 3D surface plot showing time to fidelity for different loss probabilities
+    and FSO dephase probabilities.
 
     Parameters
     ----------
@@ -94,36 +95,15 @@ def plot_ttf_3d(
     plt.savefig(f"plots/3d/ttf_3d_{threshold}_heatmap.png")
 
 
-def plot_success(
-    fso_depolar_probs,
-    loss_probs,
-    results_arr,
-):
+def plot_success(ax, fso_depolar_probs, loss_probs, results_arr, title):
     """
-    Generate a heatmap showing time to fidelity for different loss probabilities and
-    FSO dephase probabilities.
-
-    Parameters
-    ----------
-    loss_probs : list or array
-        Array of loss probabilities.
-    fso_depolar_probs : list or array
-        Array of FSO depolarization probabilities.
-    results_arr : dictionary
-        Dictionary containing simulation datapoints.
-    threshold : float
-        Fidelity threshold for the heatmap.
+    Plot a heatmap on the provided axis for the given simulation results.
     """
-    # Create an empty heatmap data array
-    heatmap_data = results_arr["status"]
+    # Extract and clip the heatmap data
+    heatmap_data = np.clip(results_arr["status"], 0, 1)
 
-    # Replace np.inf with a large value for visualization (optional)
-    vmin, vmax = 0, 1
-    heatmap_data = np.clip(heatmap_data, vmin, vmax)
-
-    # Create the heatmap
-    plt.figure(figsize=(8, 6))
-    plt.imshow(
+    # Create the heatmap on the provided axis
+    im = ax.imshow(
         heatmap_data,
         origin="lower",
         aspect="auto",
@@ -135,11 +115,10 @@ def plot_success(
         ],
         cmap="viridis_r",
     )
-    plt.colorbar(label="Success probability")
-    plt.xlabel("Loss probability")
-    plt.ylabel("FSO dephase probability")
-    plt.title("Success probability")
-    plt.savefig("plots/heatmaps/success_heatmap.png")
+    ax.set_xlabel("Loss probability")
+    ax.set_ylabel("FSO dephase probability")
+    ax.set_title(f"Loss profiles: {title}")
+    return im
 
 
 # Example usage:

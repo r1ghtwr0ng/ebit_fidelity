@@ -6,17 +6,30 @@ from utils import record_results, configure_parameters, get_fidelities
 from qpu_node import QPUNode
 from fso_switch import FSOSwitch
 from protocols import EntanglementRetryProto
+from netsquid.examples.purify import Distil
 
 
-def setup_network(model_parameters, qpu_dephase=0):
+def setup_network(
+    model_parameters,
+    loss_prob,
+    qpu_dephase=0,
+    long=False,
+    herald_ports=["qout0", "qout1"],
+):
+    # Testing detector induced losses
+    det_eff = 1 - loss_prob
+
     # Create nodes
     alice_node = QPUNode("AliceNode", correction=True, depolar_rate=qpu_dephase)
     bob_node = QPUNode("BobNode", depolar_rate=qpu_dephase)
-    fsoswitch_node = FSOSwitch("bsm_fsoswitch", model_parameters)
+    fsoswitch_node = FSOSwitch("bsm_fsoswitch", model_parameters, det_eff, herald_ports)
 
     # Connect node-level ports
     alice_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin0"])
-    bob_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin1"])
+    if long:
+        bob_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin2"])
+    else:
+        bob_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin1"])
     fsoswitch_node.ports["cout0"].connect(alice_node.processor.ports["correction"])
     fsoswitch_node.ports["cout1"].connect(bob_node.processor.ports["correction"])
 
@@ -29,15 +42,17 @@ def single_sim(
     results = []
     for fso_drate in fso_depolar_rates:
         for loss_prob in loss_probs:
-            model_params = configure_parameters(fso_drate, loss_prob)
+            model_params = configure_parameters(fso_drate)
             result = batch_run(
-                model_params, qpu_depolar_rate, switch_routing, total_runs
+                model_params, qpu_depolar_rate, switch_routing, loss_prob, total_runs
             )
             results.append(result)
     return results
 
 
-def single_run(model_parameters, qpu_depolar_rate, switch_routing, max_attempts):
+def single_run(
+    model_parameters, qpu_depolar_rate, switch_routing, loss_prob, max_attempts
+):
     """
     Run a single quantum simulation with specified configurations and collect results.
 
@@ -49,6 +64,8 @@ def single_run(model_parameters, qpu_depolar_rate, switch_routing, max_attempts)
         Depolarization rate for the QPU entities.
     switch_routing : dict
         Routing table for the FSO switch, defining how quantum information is routed.
+    loss_prob : float
+        The probability that any photon is lost in the fibre or detector
     max_attempts : int
         The maximum number of attempts for establishing an entanglement link before the
         protocol gives up.
@@ -61,7 +78,15 @@ def single_run(model_parameters, qpu_depolar_rate, switch_routing, max_attempts)
     """
     # Initialize simulation
     ns.sim_reset()
-    alice_node, bob_node, fsoswitch_node = setup_network(model_parameters)
+
+    # TODO fix and remove the long shit
+    long = switch_routing == {"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"}
+    herald_ports = (
+        ["qout0", "qout2"] if long else [switch_routing["qin0"], switch_routing["qin1"]]
+    )
+    alice_node, bob_node, fsoswitch_node = setup_network(
+        model_parameters, loss_prob, long=long, herald_ports=herald_ports
+    )
 
     # Create and start the simulation protocol
 
@@ -74,8 +99,11 @@ def single_run(model_parameters, qpu_depolar_rate, switch_routing, max_attempts)
         timeout=100,
     )
 
+    # TODO setup entanglement distillation protocol
+
     # Test
     retry_protocol.start()
+    # TODO run entanglement distillation if retry successfully establishes ebit
 
     # Run the simulation
     ns.sim_run()
@@ -97,7 +125,12 @@ def single_run(model_parameters, qpu_depolar_rate, switch_routing, max_attempts)
 
 # Runs the simulation several times, determined by the batch size.
 def batch_run(
-    model_parameters, qpu_depolar_rate, switch_routing, batch_size, max_attempts
+    model_parameters,
+    qpu_depolar_rate,
+    switch_routing,
+    batch_size,
+    loss_prob,
+    max_attempts,
 ):
     """
     Run multiple quantum simulations with specified configurations and collect results.
@@ -112,6 +145,8 @@ def batch_run(
         Routing table for the FSO switch.
     batch_size : int
         Number of simulation runs in the batch.
+    loss_prob : float
+        The probability that any photon is lost in the fibre or detector
     max_attempts : int
         The maximum number of attempts for establishing an entanglement link before the
         protocol gives up.
@@ -132,7 +167,7 @@ def batch_run(
     for i in range(batch_size):
         # Perform single run of the simulation and record the results into the dict
         run_results = single_run(
-            model_parameters, qpu_depolar_rate, switch_routing, max_attempts
+            model_parameters, qpu_depolar_rate, switch_routing, loss_prob, max_attempts
         )
         record_results(full_results, run_results, i, max_attempts)
 
