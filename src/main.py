@@ -78,8 +78,8 @@ def main():
     for i, switch_routing in enumerate(switch_routings):
         print(f"Running routing config: {titles[i]}")
 
-        fso_depolar_rates = np.linspace(0, 0.5, 15)
-        loss_probabilities = np.linspace(0, 1, 15)
+        fso_depolar_rates = np.linspace(0, 0.5, 5)
+        loss_probabilities = np.linspace(0, 0.5, 5)
         qpu_depolar_rate = 0
         total_runs = 50
         max_proto_attempts = 10
@@ -93,7 +93,7 @@ def main():
             loss_probabilities=loss_probabilities,
             max_attempts=max_proto_attempts,
         )
-        with open("plotdata/data_file.pkl", "wb") as file:
+        with open(f"plotdata/data_file_{i}.pkl", "wb") as file:
             pickle.dump(results, file)
 
         # Select the appropriate subplot
