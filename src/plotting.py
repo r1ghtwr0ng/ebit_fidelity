@@ -113,7 +113,9 @@ def plot_success(ax, fso_depolar_probs, loss_probs, results_arr, title):
             min(fso_depolar_probs),
             max(fso_depolar_probs),
         ],
-        cmap="viridis_r",
+        cmap="inferno",
+        vmin=0,  # explicitly set the minimum value
+        vmax=1,  # explicitly set the maximum value
     )
     ax.set_xlabel("Loss probability")
     ax.set_ylabel("FSO dephase probability")

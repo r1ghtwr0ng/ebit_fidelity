@@ -80,7 +80,7 @@ def single_run(
     ns.sim_reset()
 
     # TODO fix and remove the long shit
-    long = switch_routing == {"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"}
+    long = switch_routing == {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"}
     herald_ports = (
         ["qout0", "qout2"] if long else [switch_routing["qin0"], switch_routing["qin1"]]
     )
