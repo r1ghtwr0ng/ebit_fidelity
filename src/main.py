@@ -57,11 +57,11 @@ def main():
     # Simulation parameters
     switch_routings = [
         {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"},  # Low, Low
-        {"qin0": "qout0", "qin1": "qout2", "qin2": "qout1"},  # Low, Mid
-        {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Low, High
-        {"qin0": "qout1", "qin1": "qout2", "qin2": "qout0"},  # Mid, Mid
-        {"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"},  # Mid, High
-        {"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"},  # High, High
+        {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Low, Mid
+        {"qin0": "qout0", "qin1": "qout2", "qin2": "qout1"},  # Low, High
+        {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Mid, Mid
+        {"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"},  # High, Mid
+        {"qin0": "qout1", "qin1": "qout2", "qin2": "qout0"},  # High, High
     ]
     titles = [
         "(Low, Low)",
@@ -73,16 +73,16 @@ def main():
     ]
 
     # Create a figure with 6 subplots (2 rows x 3 columns)
-    fig, axs = plt.subplots(2, 3, figsize=(15, 10))
+    fig, axs = plt.subplots(2, 3, figsize=(15, 10), constrained_layout=True)
 
     for i, switch_routing in enumerate(switch_routings):
         print(f"Running routing config: {titles[i]}")
 
-        fso_depolar_rates = np.linspace(0, 0.5, 5)
-        loss_probabilities = np.linspace(0, 0.5, 5)
+        fso_depolar_rates = np.linspace(0, 0.8, 15)
+        loss_probabilities = np.linspace(0, 0.8, 15)
         qpu_depolar_rate = 0
         total_runs = 50
-        max_proto_attempts = 10
+        max_proto_attempts = 15
 
         # Run simulation and save data (if needed)
         results = single_sim(
@@ -93,22 +93,18 @@ def main():
             loss_probabilities=loss_probabilities,
             max_attempts=max_proto_attempts,
         )
-        with open(f"plotdata/data_file_{i}.pkl", "wb") as file:
-            pickle.dump(results, file)
+        # with open(f"plotdata/data_file_{i}.pkl", "wb") as file:
+        #    pickle.dump(results, file)
 
         # Select the appropriate subplot
         ax = axs[i // 3, i % 3]
         # Plot the heatmap on the current subplot and get the image object
         im = plot_success(ax, fso_depolar_rates, loss_probabilities, results, titles[i])
 
-    # Option 1: If you prefer a single common colorbar:
+    # Add colorbar
     fig.colorbar(im, ax=axs.ravel().tolist(), label="Success probability", shrink=0.6)
-
-    # Option 2: Alternatively, you could have individual colorbars for each subplot
-    # (not recommended if you want a cleaner look)
-
-    plt.tight_layout()
     plt.savefig("plots/heatmaps/success_heatmap.png")
+    print("\nPlot saved")
 
 
 if __name__ == "__main__":
