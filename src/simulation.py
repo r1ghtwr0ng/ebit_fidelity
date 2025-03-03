@@ -157,12 +157,19 @@ def batch_run(
         A dictionary containing the simulation status, attempt count, fidelity and
         simulation duration for each run.
     """
-    ret_results = {"status": 0, "attempts": 0, "fidelity": 0, "simtime": 0}
+    ret_results = {
+        "status": 0,
+        "attempts": 0,
+        "fidelity": 0,
+        "simtime": 0,
+        "entanglement_rate": 0,
+    }
     full_results = {
         "status": np.zeros(batch_size, dtype="bool"),
         "attempts": np.zeros(batch_size, dtype="uint"),
         "fidelity": np.zeros(batch_size, dtype="float"),
         "simtime": np.zeros(batch_size, dtype="float"),
+        "entanglement_rate": np.zeros(batch_size, dtype="float"),
     }
     for i in range(batch_size):
         # Perform single run of the simulation and record the results into the dict
@@ -173,7 +180,8 @@ def batch_run(
 
     # Average calculations and return
     ret_results["status"] = np.average(full_results["status"])
-    ret_results["attempts"] = np.average(run_results["attempts"])
-    ret_results["fidelity"] = np.average(run_results["fidelity"])
-    ret_results["simtime"] = np.average(run_results["simtime"])
+    ret_results["attempts"] = np.average(full_results["attempts"])
+    ret_results["fidelity"] = np.average(full_results["fidelity"])
+    ret_results["simtime"] = np.average(full_results["simtime"])
+    ret_results["entanglement_rate"] = np.average(full_results["entanglement_rate"])
     return ret_results

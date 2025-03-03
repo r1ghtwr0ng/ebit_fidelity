@@ -95,12 +95,12 @@ def plot_ttf_3d(
     plt.savefig(f"plots/3d/ttf_3d_{threshold}_heatmap.png")
 
 
-def plot_success(ax, fso_depolar_probs, loss_probs, results_arr, title):
+def plot_norm_success(ax, fso_depolar_probs, loss_probs, results_arr, title):
     """
     Plot a heatmap on the provided axis for the given simulation results.
     """
     # Extract and clip the heatmap data
-    heatmap_data = np.clip(results_arr["status"], 0, 1)
+    heatmap_data = np.clip(results_arr["entanglement_rate"], 0, 1)
 
     # Create the heatmap on the provided axis
     im = ax.imshow(

@@ -5,12 +5,20 @@ import netsquid.qubits.qubitapi as qapi
 
 
 def record_results(full_results, run_results, i, attempt_limit):
-    # Check the status of the run
+    # Check the status of the run and create local vars
     status = run_results["status"]
-    full_results["status"][i] = status
-    full_results["attempts"][i] = run_results["attempts"] if status else attempt_limit
-    full_results["fidelity"][i] = run_results["fidelity"] if status else 0
+    norm_fidelity = run_results["fidelity"] if status else 0
+    norm_attempts = run_results["attempts"] if status else attempt_limit
+
+    # TODO tweak the entanglement rate metric
+    entanglement_rate = status * norm_fidelity * (1 / norm_attempts)
+
+    # Record results in hashmap
+    full_results["entanglement_rate"][i] = entanglement_rate
     full_results["simtime"][i] = run_results["simtime"]
+    full_results["attempts"][i] = norm_attempts
+    full_results["fidelity"][i] = norm_fidelity
+    full_results["status"][i] = status
 
 
 def extract_data(results):
