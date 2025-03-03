@@ -1,11 +1,10 @@
-import pickle
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
 
 from utils import configure_parameters
 from simulation import batch_run
-from plotting import plot_success
+from plotting import plot_norm_success
 
 
 def single_sim(
@@ -23,6 +22,7 @@ def single_sim(
         "attempts": np.zeros(arr_dim, dtype="float"),
         "fidelity": np.zeros(arr_dim, dtype="float"),
         "simtime": np.zeros(arr_dim, dtype="float"),
+        "entanglement_rate": np.zeros(arr_dim, dtype="float"),
     }
 
     # For every depolarization configuration
@@ -45,6 +45,7 @@ def single_sim(
             results["attempts"][i][j] = run_results["attempts"]
             results["fidelity"][i][j] = run_results["fidelity"]
             results["simtime"][i][j] = run_results["simtime"]
+            results["entanglement_rate"][i][j] = run_results["entanglement_rate"]
 
     return results
 
@@ -99,7 +100,9 @@ def main():
         # Select the appropriate subplot
         ax = axs[i // 3, i % 3]
         # Plot the heatmap on the current subplot and get the image object
-        im = plot_success(ax, fso_depolar_rates, loss_probabilities, results, titles[i])
+        im = plot_norm_success(
+            ax, fso_depolar_rates, loss_probabilities, results, titles[i]
+        )
 
     # Add colorbar
     fig.colorbar(im, ax=axs.ravel().tolist(), label="Success probability", shrink=0.6)
