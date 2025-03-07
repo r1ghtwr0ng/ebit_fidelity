@@ -204,3 +204,116 @@ class EntanglementProtocol(NodeProtocol):
         else:
             self.send_signal(Signals.SUCCESS, result=self.results)
         logging.debug(f"[EBIT_SUBPROTOCOL] ({self.node.name}) Results: {self.results}")
+
+
+class ContinuousEntanglementDistillationProto(NodeProtocol):
+    """
+    A protocol that first performs an initial entanglement generation (using
+    EntanglementRetryProto) and swaps the communication qubits to memory. Then,
+    it enters a loop where fresh entanglement is established and a distillation
+    (purification) operation is performed. The loop continues until either a Bell pair
+    is consumed (i.e. a distillation attempt fails) or a maximum number of distillations
+    is reached.
+
+    Assumptions:
+      - QPUNode implements:
+          * swap_comm_to_memory(): swaps the communication qubit to a memory qubit.
+          * apply_epl_gates_and_measurement(): performs the local two-qubit gate (e.g. CNOT)
+            and measurement needed for the EPL distillation.
+          * update_memory_from_fresh(): updates the memory qubit with the distilled state
+            when the distillation is successful.
+    """
+
+    def __init__(
+        self,
+        alice,
+        bob,
+        fsoswitch,
+        routing_table,
+        max_attempts=10,
+        timeout=100,
+        max_distillations=5,
+    ):
+        # Pass a node (here, alice) to properly connect this NodeProtocol.
+        super().__init__(alice)
+        self.alice_node = alice
+        self.bob_node = bob
+        self.fsoswitch_node = fsoswitch
+        self.routing_table = routing_table
+        self.max_attempts = max_attempts
+        self.timeout = timeout
+        self.max_distillations = max_distillations
+        self.success = False
+        self.distillations = 0
+
+        # Create subprotocol instances.
+        self.initial_entanglement = EntanglementRetryProto(
+            alice, bob, fsoswitch, routing_table, max_attempts, timeout
+        )
+        self.fresh_entanglement = EntanglementRetryProto(
+            alice, bob, fsoswitch, routing_table, max_attempts, timeout
+        )
+
+        # Add the subprotocols so they're fully connected.
+        self.add_subprotocol(self.initial_entanglement, name="initial_entanglement")
+        self.add_subprotocol(self.fresh_entanglement, name="fresh_entanglement")
+
+    def run(self):
+        # --- Initial Setup ---
+        logging.info("[DISTILLATION] Starting initial entanglement establishment.")
+        yield from self.initial_entanglement.run()
+        if not self.initial_entanglement.success:
+            logging.error("[DISTILLATION] Initial entanglement establishment failed.")
+            self.send_signal(Signals.FAIL, result="Initial entanglement failed")
+            return
+
+        logging.info("[DISTILLATION] Swapping entangled qubits to memory.")
+        self.alice_node.swap_comm_to_memory()
+        self.bob_node.swap_comm_to_memory()
+
+        # --- Distillation Loop ---
+        distill_count = 0
+        while distill_count < self.max_distillations:
+            logging.info(
+                f"[DISTILLATION] Starting distillation iteration {distill_count + 1}."
+            )
+
+            # Establish a fresh entanglement pair on the communication qubit.
+            yield from self.fresh_entanglement.run()
+            if not self.fresh_entanglement.success:
+                logging.error(
+                    "[DISTILLATION] Fresh entanglement generation failed. Stopping distillation."
+                )
+                self.send_signal(Signals.FAIL, result="Fresh entanglement failed")
+                return
+
+            # Apply local distillation operations on each node.
+            a_measurement = self.alice_node.apply_epl_gates_and_measurement()
+            b_measurement = self.bob_node.apply_epl_gates_and_measurement()
+            logging.info(
+                f"[DISTILLATION] Measurement outcomes: Alice={a_measurement}, Bob={b_measurement}"
+            )
+
+            # Check if the distillation round was successful.
+            if (a_measurement, b_measurement) == (1, 1):
+                logging.info(
+                    "[DISTILLATION] Distillation round successful. Updating memory state."
+                )
+                # Update the memory qubit with the distilled state.
+                self.alice_node.update_memory_from_fresh()
+                self.bob_node.update_memory_from_fresh()
+                distill_count += 1
+                self.distillations += 1
+            else:
+                logging.warning(
+                    "[DISTILLATION] Distillation round failed. Bell pair consumed."
+                )
+                self.send_signal(
+                    Signals.FAIL, result="Distillation failed - Bell pair consumed"
+                )
+                return
+
+        # If loop completes successfully:
+        logging.info("[DISTILLATION] Continuous entanglement distillation succeeded.")
+        self.success = True
+        self.send_signal(Signals.SUCCESS, result="Continuous distillation succeeded")
