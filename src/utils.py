@@ -53,16 +53,16 @@ def extract_data(results):
 def configure_parameters(depolar_rate, loss_prob=0):
     model_parameters = {
         "short": {
-            "init_loss": loss(1.319),
-            "len_loss": loss_prob,
-            "init_depolar": depolar_rate,
-            "len_depolar": depolar_rate,
+            "init_loss": 0,  # loss(1.319),
+            "len_loss": 0,  # loss_prob,
+            "init_depolar": 0,  # loss(1.319),
+            "len_depolar": 0,  # depolar_rate,
             "channel_len": 0,  # 0.005,
         },
         "mid": {
             "init_loss": loss(2.12),
             "len_loss": loss_prob,
-            "init_depolar": depolar_rate,  # loss(2.12),
+            "init_depolar": loss(2.12),
             "len_depolar": depolar_rate,  # depolar_rate,
             "channel_len": 0,  # 0.00587,
         },

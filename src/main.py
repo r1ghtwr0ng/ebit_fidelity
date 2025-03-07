@@ -53,38 +53,40 @@ def single_sim(
 # TODO add some comments for the parameters
 def main():
     # Set logging level
-    logging.getLogger().setLevel(logging.ERROR)
+    logging.getLogger().setLevel(logging.DEBUG)
 
     # Simulation parameters
     switch_routings = [
         {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"},  # Low, Low
-        {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Low, Mid
-        {"qin0": "qout0", "qin1": "qout2", "qin2": "qout1"},  # Low, High
-        {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Mid, Mid
-        {"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"},  # High, Mid
-        {"qin0": "qout1", "qin1": "qout2", "qin2": "qout0"},  # High, High
+        #        {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Low, Mid
+        #        {"qin0": "qout0", "qin1": "qout2", "qin2": "qout1"},  # Low, High
+        #        {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Mid, Mid
+        #        {"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"},  # High, Mid
+        #        {"qin0": "qout1", "qin1": "qout2", "qin2": "qout0"},  # High, High
     ]
     titles = [
         "(Low, Low)",
-        "(Low, Mid)",
-        "(Low, High)",
-        "(Mid, Mid)",
-        "(Mid, High)",
-        "(High, High)",
+        #        "(Low, Mid)",
+        #        "(Low, High)",
+        #        "(Mid, Mid)",
+        #        "(Mid, High)",
+        #        "(High, High)",
     ]
+
+    # Simulation parameters
+    fso_depolar_rates = np.linspace(0, 0, 1)
+    loss_probabilities = np.linspace(0, 0, 1)
+    qpu_depolar_rate = 0
+    total_runs = 1
+    max_proto_attempts = 5
 
     # Create a figure with 6 subplots (2 rows x 3 columns)
     fig, axs = plt.subplots(2, 3, figsize=(15, 10), constrained_layout=True)
 
+    res_arr = []
+
     for i, switch_routing in enumerate(switch_routings):
         print(f"Running routing config: {titles[i]}")
-
-        fso_depolar_rates = np.linspace(0, 0.8, 15)
-        loss_probabilities = np.linspace(0, 0.8, 15)
-        qpu_depolar_rate = 0
-        total_runs = 50
-        max_proto_attempts = 15
-
         # Run simulation and save data (if needed)
         results = single_sim(
             total_runs=total_runs,
@@ -104,8 +106,12 @@ def main():
             ax, fso_depolar_rates, loss_probabilities, results, titles[i]
         )
 
+        res_arr.append(np.clip(results["entanglement_rate"], 0, 1))
+
     # Add colorbar
-    fig.colorbar(im, ax=axs.ravel().tolist(), label="Success probability", shrink=0.6)
+    fig.colorbar(
+        im, ax=axs.ravel().tolist(), label="Entanglement establishment", shrink=0.6
+    )
     plt.savefig("plots/heatmaps/success_heatmap.png")
     print("\nPlot saved")
 

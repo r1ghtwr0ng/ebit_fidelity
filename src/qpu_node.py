@@ -9,7 +9,13 @@ from netsquid.nodes import Node
 from netsquid.components.component import Message
 from netsquid.components.qprocessor import QuantumProcessor
 
-from qpu_programs import EmitProgram, CorrectYProgram, CorrectXProgram
+from qpu_programs import (
+    EmitProgram,
+    CorrectYProgram,
+    CorrectXProgram,
+    SwapCommToMemoryProgram,
+    EPLDistillationProgram,
+)
 
 
 class QPUNode(Node):
@@ -93,6 +99,9 @@ class QPUNode(Node):
                 ns.components.instructions.INSTR_EMIT, duration=1, parallel=True
             ),
             ns.components.qprocessor.PhysicalInstruction(
+                ns.components.instructions.INSTR_SWAP, duration=7, parallel=False
+            ),
+            ns.components.qprocessor.PhysicalInstruction(
                 ns.components.instructions.INSTR_MEASURE, duration=7, parallel=False
             ),
         ]
@@ -161,9 +170,9 @@ class QPUNode(Node):
         """Callback that's run on QPU program failure."""
         logging.debug(f"(QPUNode | {self.name}) program resulted in a failure.")
         if len(self.__queue) > 0:
-            (next_program, request_id) = self.__queue.popleft()
+            next_program = self.__queue.popleft()
             logging.debug(
-                f"(QPUNode | {self.name}) queuing next program: {next_program} with request ID: {request_id}"
+                f"(QPUNode | {self.name}) queuing next program: {next_program} with request ID: {'TODO'}"
             )
             self.add_program(next_program)
 
@@ -217,7 +226,44 @@ class QPUNode(Node):
         """
         pass
 
-    # Use this function to append programs to the object queue
+    def swap_comm_to_memory(self):
+        """
+        Swap the entangled state from the communication qubit (index 0)
+        to the memory qubit (index 1). This frees up the communication qubit
+        for new entanglement generation.
+        """
+        logging.info(f"(QPUNode | {self.name}) Swapping qubit 0 to memory qubit 1.")
+        # Here we assume that a custom quantum processor program called
+        # SwapCommToMemoryProgram exists and takes the source and target indices.
+        swap_prog = SwapCommToMemoryProgram(source_index=0, target_index=1)
+        self.add_program(swap_prog)
+        # Optionally, you might want to wait (or register a callback) until the swap is complete.
+        # For example, set a flag or update a status variable.
+        # Use this function to append programs to the object queue
+
+    def apply_epl_gates_and_measurement(self):
+        """
+        Apply the local operations for EPL entanglement distillation.
+        Uses the memory qubit (shielded qubit, index 1) as control and
+        the fresh entanglement qubit (communication qubit, index 0) as target.
+        This method performs the necessary gates (e.g. CNOT) and then measures the target.
+
+        Returns:
+            The measurement result (0 or 1) as set by the custom program.
+        """
+        logging.info(
+            f"(QPUNode | {self.name}) Applying EPL distillation gates on qubit 1 (control) and qubit 0 (target)."
+        )
+        # We assume a custom quantum processor program (EPLDistillationProgram) exists.
+        epl_prog = EPLDistillationProgram(control_index=1, target_index=0)
+        self.add_program(epl_prog)
+
+        # In a full implementation you might need to wait for the program to finish.
+        # For now, we assume that once the program completes it sets an attribute:
+        # self._last_epl_measurement with the measurement result.
+        # Depending on your simulation framework, you might instead yield an event or wait on a callback.
+        return getattr(self, "_last_epl_measurement", None)
+
     def add_program(self, program):
         """
         Add a program to the queue and execute if the processor is available.
