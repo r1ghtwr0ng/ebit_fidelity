@@ -5,9 +5,9 @@ import netsquid as ns
 from utils import record_results, configure_parameters, get_fidelities
 from qpu_node import QPUNode
 from fso_switch import FSOSwitch
-from protocols import EntanglementRetryProto, ContinuousEntanglementDistillationProto
+from protocols import EntanglementRetryProto
+from netsquid.protocols import Signals
 from netsquid.nodes.network import Network
-from netsquid.examples.purify import Distil
 from netsquid.components import ClassicalChannel
 from netsquid.nodes.connections import DirectConnection
 from netsquid.components.models.delaymodels import FibreDelayModel
@@ -25,18 +25,19 @@ def setup_network(
     det_eff = 1 - loss_prob
 
     # Create nodes
-    alice_node = QPUNode("AliceNode", correction=True, depolar_rate=qpu_dephase)
+    alice_node = QPUNode("AliceNode", depolar_rate=qpu_dephase)
     bob_node = QPUNode("BobNode", depolar_rate=qpu_dephase)
     fsoswitch_node = FSOSwitch("bsm_fsoswitch", model_parameters, det_eff, herald_ports)
 
     # Connect node-level ports
+    # TODO add connection class wrappers
     alice_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin0"])
     if long:
         bob_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin2"])
     else:
         bob_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin1"])
-    fsoswitch_node.ports["cout0"].connect(alice_node.processor.ports["correction"])
-    fsoswitch_node.ports["cout1"].connect(bob_node.processor.ports["correction"])
+    fsoswitch_node.ports["cout0"].connect(alice_node.ports["corrections"])
+    fsoswitch_node.ports["cout1"].connect(bob_node.ports["corrections"])
 
     # Add nodes to network
     network.add_nodes(nodes=[alice_node, bob_node, fsoswitch_node])
@@ -59,6 +60,7 @@ def setup_network(
     # Add connection to network
     network.add_connection(alice_node, bob_node, connection=conn_cchannel)
     # TODO add quantum channel connections instead of direct port forwards
+    # TODO add DataCollector object
 
     return alice_node, bob_node, fsoswitch_node
 
@@ -116,35 +118,37 @@ def single_run(
     )
 
     # Create and start the simulation protocol
-    distil_protocol = ContinuousEntanglementDistillationProto(
+    retry_proto = EntanglementRetryProto(
         alice_node,
         bob_node,
         fsoswitch_node,
         switch_routing,
         max_attempts=max_attempts,
         timeout=100,
-        max_distillations=5,
     )
 
     # TODO setup entanglement distillation protocol
 
     # Test
-    distil_protocol.start()
-    # TODO run entanglement distillation if retry successfully establishes ebit
+    retry_proto.reset()
+    retry_proto.start()
 
     # Run the simulation
     ns.sim_run()
     simtime = ns.sim_time()
-    logging.info(
-        f"[QPU] Status: {alice_node.processor.status} | queue: {alice_node.get_queue()}"
-    )
-    fidelity = get_fidelities(alice_node, bob_node) if distil_protocol.success else 0
+
+    # Get the protocol status
+    protocol_status = retry_proto.get_signal_result(Signals.FINISHED)
+    logging.info(f"[Simulation] Retry protocol returned: {protocol_status}")
+
+    # Calculate ebit fidelity
+    fidelity = get_fidelities(alice_node, bob_node) if protocol_status else 0
     logging.debug(f"FIDELITY: {fidelity}")
 
     # Return results
     return {
-        "status": distil_protocol.success,
-        "attempts": distil_protocol.distillations,
+        "status": protocol_status,
+        "attempts": retry_proto.attempts,
         "fidelity": fidelity,
         "simtime": simtime,
     }

@@ -78,7 +78,7 @@ def configure_parameters(depolar_rate, loss_prob=0):
 
 
 # Get two qubits at positions 0 for alice and bob and calculate their fidelities
-def get_fidelities(alice, bob):
+def get_fidelities(alice, bob, qid_1=1, qid_2=1):
     """
     Calculate the fidelities of entangled qubits for Alice and Bob.
 
@@ -96,9 +96,9 @@ def get_fidelities(alice, bob):
         - status (bool): True if both Alice and Bob have valid qubits, False otherwise.
         - fidelity (float): Fidelity of the Bell state |B00>.
     """
-    status = alice.get_status() and bob.get_status()
-    qubit0 = alice.get_qubit(0)
-    qubit1 = bob.get_qubit(0)
+
+    [qubit0] = alice.processor.peek(qid_1)
+    [qubit1] = bob.processor.peek(qid_2)
     fidelities = {
         "|00>": qapi.fidelity([qubit0, qubit1], np.array([1, 0, 0, 0]), squared=True),
         "|11>": qapi.fidelity([qubit0, qubit1], np.array([0, 0, 0, 1]), squared=True),
@@ -108,9 +108,7 @@ def get_fidelities(alice, bob):
         "B11": qapi.fidelity([qubit0, qubit1], ks.b11, squared=True),
     }
 
-    if status:
-        logging.debug(f"[GREPPABLE] Simulation output: {fidelities}")
-
+    logging.debug(f"[GREPPABLE] Simulation output: {fidelities}")
     return fidelities["B00"]
 
 
