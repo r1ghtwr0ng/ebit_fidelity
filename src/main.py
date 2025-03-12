@@ -53,66 +53,61 @@ def single_sim(
 # TODO add some comments for the parameters
 def main():
     # Set logging level
-    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.ERROR)
 
     # Simulation parameters
     switch_routings = [
         {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"},  # Low, Low
-        #        {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Low, Mid
-        #        {"qin0": "qout0", "qin1": "qout2", "qin2": "qout1"},  # Low, High
-        #        {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Mid, Mid
-        #        {"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"},  # High, Mid
-        #        {"qin0": "qout1", "qin1": "qout2", "qin2": "qout0"},  # High, High
+        #    {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Low, Mid
+        #    {"qin0": "qout0", "qin1": "qout2", "qin2": "qout1"},  # Low, High
+        #    {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Mid, Mid
+        #    {"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"},  # High, Mid
+        #    {"qin0": "qout1", "qin1": "qout2", "qin2": "qout0"},  # High, High
     ]
+    switch_routing = {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}
+
     titles = [
         "(Low, Low)",
-        #        "(Low, Mid)",
-        #        "(Low, High)",
-        #        "(Mid, Mid)",
-        #        "(Mid, High)",
-        #        "(High, High)",
+        #    "(Low, Mid)",
+        #    "(Low, High)",
+        #    "(Mid, Mid)",
+        #    "(Mid, High)",
+        #    "(High, High)",
     ]
 
     # Simulation parameters
-    fso_depolar_rates = np.linspace(0, 0, 1)
-    loss_probabilities = np.linspace(0, 0, 1)
+    fso_depolar_rates = np.linspace(0, 0.4, 15)
+    loss_probabilities = np.linspace(0, 0.4, 15)
     qpu_depolar_rate = 0
-    total_runs = 1
+    total_runs = 50
     max_proto_attempts = 5
 
     # Create a figure with 6 subplots (2 rows x 3 columns)
     fig, axs = plt.subplots(2, 3, figsize=(15, 10), constrained_layout=True)
 
-    res_arr = []
+    # Run simulation and save data (if needed)
+    results = single_sim(
+        total_runs=total_runs,
+        switch_routing=switch_routing,
+        fso_depolar_rates=fso_depolar_rates,
+        qpu_depolar_rate=qpu_depolar_rate,
+        loss_probabilities=loss_probabilities,
+        max_attempts=max_proto_attempts,
+    )
+    # with open(f"plotdata/data_file_{i}.pkl", "wb") as file:
+    #    pickle.dump(results, file)
 
-    for i, switch_routing in enumerate(switch_routings):
-        print(f"Running routing config: {titles[i]}")
-        # Run simulation and save data (if needed)
-        results = single_sim(
-            total_runs=total_runs,
-            switch_routing=switch_routing,
-            fso_depolar_rates=fso_depolar_rates,
-            qpu_depolar_rate=qpu_depolar_rate,
-            loss_probabilities=loss_probabilities,
-            max_attempts=max_proto_attempts,
-        )
-        # with open(f"plotdata/data_file_{i}.pkl", "wb") as file:
-        #    pickle.dump(results, file)
-
-        # Select the appropriate subplot
-        # ax = axs[i // 3, i % 3]
-        # Plot the heatmap on the current subplot and get the image object
-        # im = plot_norm_success(
-        #    ax, fso_depolar_rates, loss_probabilities, results, titles[i]
-        # )
-
-        res_arr.append(np.clip(results["entanglement_rate"], 0, 1))
+    # Assuming fso_depolar_rates, loss_probabilities, results, and title are defined
+    fig, ax = plt.subplots(figsize=(8, 6))
+    im = plot_norm_success(
+        ax, fso_depolar_rates, loss_probabilities, results, "Loss/Dephase plot"
+    )
+    fig.colorbar(im, ax=ax, label="Entanglement establishment", shrink=0.6)
+    plt.savefig("plots/heatmaps/single_heatmap.png")
+    plt.show()
 
     # Add colorbar
-    # fig.colorbar(
-    #    im, ax=axs.ravel().tolist(), label="Entanglement establishment", shrink=0.6
-    # )
-    # plt.savefig("plots/heatmaps/success_heatmap.png")
+    plt.savefig("plots/heatmaps/success_heatmap.png")
     print("\nPlot saved")
 
 
