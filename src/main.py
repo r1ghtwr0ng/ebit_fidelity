@@ -100,19 +100,19 @@ def main():
         #    pickle.dump(results, file)
 
         # Select the appropriate subplot
-        ax = axs[i // 3, i % 3]
+        # ax = axs[i // 3, i % 3]
         # Plot the heatmap on the current subplot and get the image object
-        im = plot_norm_success(
-            ax, fso_depolar_rates, loss_probabilities, results, titles[i]
-        )
+        # im = plot_norm_success(
+        #    ax, fso_depolar_rates, loss_probabilities, results, titles[i]
+        # )
 
         res_arr.append(np.clip(results["entanglement_rate"], 0, 1))
 
     # Add colorbar
-    fig.colorbar(
-        im, ax=axs.ravel().tolist(), label="Entanglement establishment", shrink=0.6
-    )
-    plt.savefig("plots/heatmaps/success_heatmap.png")
+    # fig.colorbar(
+    #    im, ax=axs.ravel().tolist(), label="Entanglement establishment", shrink=0.6
+    # )
+    # plt.savefig("plots/heatmaps/success_heatmap.png")
     print("\nPlot saved")
 
 

@@ -1,19 +1,13 @@
 import json
 import logging
-import pydynaa
 import netsquid as ns
 import netsquid.qubits.qubitapi as qapi
 
-from collections import deque
 from netsquid.nodes import Node
 from netsquid.components.component import Message
 from netsquid.components.qprocessor import QuantumProcessor
 
 from qpu_programs import (
-    EmitProgram,
-    CorrectYProgram,
-    CorrectXProgram,
-    SwapCommToMemoryProgram,
     EPLDistillationProgram,
 )
 
@@ -24,40 +18,37 @@ class QPUNode(Node):
     unit (QPU) with a program queue and callback functionality. If a program needs to be
     executed it should be added to the queue using the add_program method.
 
+    Qubit mapping:
+    0 - Emission qubit
+    1 - Communications qubit, entangled with emission qubit
+    2 - Shielded qubit, used for storing & distilling entanglement
+
     Parameters
     ----------
     name : str
         The name of the QPU entity.
-    correction : bool, optional
-        Whether to apply correction based on received measurements, by default False.
     qbit_count : int, optional
         Number of qubits in the processor, by default 2.
     depolar_rate : float, optional
         Depolarization rate for the noise model, by default 0.
     """
 
-    correction_done_evtype = pydynaa.EventType(
-        "CORRECTION_DONE", "Correction applied to qubit."
-    )
-
-    def __init__(self, name, correction=False, qbit_count=2, depolar_rate=0):
-        super().__init__(name)
+    def __init__(self, name, qbit_count=3, depolar_rate=0):
+        super().__init__(name, port_names=["corrections"])
         # The last qubit slot is used for photon emission into fibre
         self.processor = self.__create_processor(name, qbit_count, depolar_rate)
-        self.__emission_idx = qbit_count - 1
-        self.__correction = correction
-        self.__queue = deque()
-        self.__status = False
         self.__setup_callbacks()
-        self.__requests = {}
-        self.__events = {}
-        self.__calc_fideltiy = False
+        # Keep track of qubit mappings
+        self.emit_idx = 0
+        self.comm_idx = 1
+        self.shielded_idx = 2
 
     # ======== PRIVATE METHODS ========
     # Helper function to create a simple QPU with a few useful instructions
     def __create_processor(self, name, qbit_count, depolar_rate):
         """
         Private helper method used to initialize the quantum processor for the entity.
+        We have nonphysical instructions as we use an abstract QPU architecture.
 
         Parameters
         ----------
@@ -71,40 +62,8 @@ class QPUNode(Node):
         Returns
         -------
         QuantumProcessor
-            A configured quantum processor with specified characteristics.
+            A configured quantum processor with fallback to nonphysical instructions.
         """
-        physical_instructions = [
-            ns.components.qprocessor.PhysicalInstruction(
-                ns.components.instructions.INSTR_INIT, duration=3, parallel=True
-            ),
-            ns.components.qprocessor.PhysicalInstruction(
-                ns.components.instructions.INSTR_H, duration=1, parallel=True
-            ),
-            ns.components.qprocessor.PhysicalInstruction(
-                ns.components.instructions.INSTR_X, duration=1, parallel=True
-            ),
-            ns.components.qprocessor.PhysicalInstruction(
-                ns.components.instructions.INSTR_Y, duration=1, parallel=True
-            ),
-            ns.components.qprocessor.PhysicalInstruction(
-                ns.components.instructions.INSTR_Z, duration=1, parallel=True
-            ),
-            ns.components.qprocessor.PhysicalInstruction(
-                ns.components.instructions.INSTR_CNOT,
-                duration=4,
-                parallel=True,
-                topology=[(0, 1)],
-            ),
-            ns.components.qprocessor.PhysicalInstruction(
-                ns.components.instructions.INSTR_EMIT, duration=1, parallel=True
-            ),
-            ns.components.qprocessor.PhysicalInstruction(
-                ns.components.instructions.INSTR_SWAP, duration=7, parallel=False
-            ),
-            ns.components.qprocessor.PhysicalInstruction(
-                ns.components.instructions.INSTR_MEASURE, duration=7, parallel=False
-            ),
-        ]
         memory_noise_model = ns.components.models.DepolarNoiseModel(
             depolar_rate=depolar_rate
         )
@@ -112,24 +71,21 @@ class QPUNode(Node):
             name,
             num_positions=qbit_count,
             memory_noise_models=[memory_noise_model] * qbit_count,
-            phys_instructions=physical_instructions,
+            phys_instructions=None,
+            fallback_to_nonphysical=True,  # Execute instructions as nonphysical
         )
-        processor.add_ports(["correction", "qout_hdr", "qout0_hdr"])
+        # TODO fix this to not be in the processor
+        processor.add_ports(["qout_hdr", "qout0_hdr"])
         return processor
 
     # Helper for setting up the callbacks and handlers
     def __setup_callbacks(self):
         """Set up callback handling for when programs complete."""
-        self.processor.set_program_done_callback(self.__on_program_done, once=False)
-        self.processor.set_program_fail_callback(self.__on_program_fail, once=False)
         self.processor.ports["qout"].bind_output_handler(
             self.__setup_header_wrapper, tag_meta=True
         )
         self.processor.ports["qout0"].bind_output_handler(
             self.__setup_header_wrapper, tag_meta=True
-        )
-        self.processor.ports["correction"].bind_input_handler(
-            self.__correction_callback
         )
 
     def __setup_header_wrapper(self, msg):
@@ -153,94 +109,8 @@ class QPUNode(Node):
         msg.meta["header"] = json.dumps(header)
         self.processor.ports[f"{port}_hdr"].tx_output(msg)
 
-    # Callback for when a QPU program finishes executing successfully
-    def __on_program_done(self):
-        """Handle completion of a program, and process the next one if queued."""
-        logging.debug(f"(QPUNode | {self.name}) program complete")
-        if len(self.__queue) > 0 and not self.processor.busy:
-            if self.processor.peek(0, skip_noise=True)[0] is not None:
-                next_program = self.__queue.popleft()
-                logging.debug(
-                    f"(QPUNode | {self.name}) queuing next program: {next_program}"
-                )
-                self.add_program(next_program)
-
-    # Callback for when a QPU program exits with a failure
-    def __on_program_fail(self):
-        """Callback that's run on QPU program failure."""
-        logging.debug(f"(QPUNode | {self.name}) program resulted in a failure.")
-        if len(self.__queue) > 0:
-            next_program = self.__queue.popleft()
-            logging.debug(
-                f"(QPUNode | {self.name}) queuing next program: {next_program} with request ID: {'TODO'}"
-            )
-            self.add_program(next_program)
-
-    # Callback function for applying qubit corrections based on BSMDetector output
-    def __correction_callback(self, msg):
-        """
-        Callback function, this runs whenever a Bell state measurement is received for
-        the emitted photons. Used to apply qubit correction and get the ebit pair to
-        the |00> + |11> Bell state.
-
-        Parameters
-        ----------
-        msg : Message
-            The message containing BSM results for corrections.
-        """
-        bell_idx = msg.items[0].bell_index
-        self.__status = msg.items[0].success
-        if self.__correction:
-            logging.debug(
-                f"(QPUNode | {self.name}) Fidelities output: Bell Index: {bell_idx}"
-            )
-
-        if bell_idx == 1 and self.__correction:
-            # This means the state is in state |01> + |10> and needs X correction to
-            # become |00> + |11>
-            logging.debug(f"(QPUNode | {self.name}) Performing X correction")
-            self.add_program(CorrectXProgram())
-        elif bell_idx == 2 and self.__correction:
-            # This means the state is in state |01> - |10> and needs X correction to
-            # become |00> + |11>
-            logging.debug(f"(QPUNode | {self.name}) Performing Y correction")
-            self.add_program(CorrectYProgram())
-        else:
-            logging.debug(f"(QPUNode | {self.name}) No correction needed")
-
-        # Emit an event indicating correction is complete
-        self._schedule_now(QPUNode.correction_done_evtype)
-        logging.debug(f"(QPUNode | {self.name}) Emitted CORRECTION_DONE event.")
-
     # ======== PUBLIC METHODS ========
-    # Register a current request ID to send over to the FSO switch
-    def register_id(self, request_id):
-        """
-        Register the request ID which is expected by the FSO switch in the msg metadata.
-        TODO see if this is even useful.
-
-        Parameters
-        ----------
-        request_id: str, required
-            ID of the request being registered.
-        """
-        pass
-
-    def swap_comm_to_memory(self):
-        """
-        Swap the entangled state from the communication qubit (index 0)
-        to the memory qubit (index 1). This frees up the communication qubit
-        for new entanglement generation.
-        """
-        logging.info(f"(QPUNode | {self.name}) Swapping qubit 0 to memory qubit 1.")
-        # Here we assume that a custom quantum processor program called
-        # SwapCommToMemoryProgram exists and takes the source and target indices.
-        swap_prog = SwapCommToMemoryProgram(source_index=0, target_index=1)
-        self.add_program(swap_prog)
-        # Optionally, you might want to wait (or register a callback) until the swap is complete.
-        # For example, set a flag or update a status variable.
-        # Use this function to append programs to the object queue
-
+    # TODO move into protocol
     def apply_epl_gates_and_measurement(self):
         """
         Apply the local operations for EPL entanglement distillation.
@@ -261,55 +131,9 @@ class QPUNode(Node):
         # In a full implementation you might need to wait for the program to finish.
         # For now, we assume that once the program completes it sets an attribute:
         # self._last_epl_measurement with the measurement result.
-        # Depending on your simulation framework, you might instead yield an event or wait on a callback.
         return getattr(self, "_last_epl_measurement", None)
 
-    def add_program(self, program):
-        """
-        Add a program to the queue and execute if the processor is available.
-
-        Parameters
-        ----------
-        program : QuantumProgram
-            The quantum program to be added to the QPU's queue.
-        """
-        logging.debug(f"(QPUNode | {self.name}) Call to add_program with {program}")
-        if not self.processor.busy:
-            logging.debug(f"(QPUNode | {self.name}) executing program {program}")
-            _event = self.processor.execute_program(program)  # TODO handle event
-            # Attach a callback to handle program completion
-            _event.wait(
-                callback=lambda: logging.debug(
-                    f"(QPUNode | {self.name}) Program {program} completed."
-                )
-            )
-        else:
-            logging.debug(
-                f"(QPUNode | {self.name}) appending program to queue: {self.__queue} (QPU busy)"
-            )
-            self.__queue.append(program)
-            logging.debug(f"(QPUNode | {self.name}) queue status: {self.__queue}")
-
-    def get_queue(self):
-        return self.__queue
-
-    # Get the status of the last exchange request
-    def get_status(self):
-        """
-        Getter function to retrieve the status outcome of a given request.
-
-        Parameters
-        ----------
-        request_id: str, required
-            ID of the request whose status you want to check.
-        """
-        # TODO search by request ID
-        return self.__status
-
-    def get_qubit(self, position=0):
-        qubit = self.processor.peek(position, skip_noise=True)[0]
-        return qubit
-
+    # TODO move into DataCollector callback
     def start_fidelity_calculation(self, request_id, position=0):
         """
         Emit a qubit from memory for fidelity calculation.
@@ -330,16 +154,3 @@ class QPUNode(Node):
         msg = Message(qubit)
         msg.meta["header"] = json.dumps(header)
         self.ports["fidelity_out"].tx_output(msg)
-
-    def emit(self, position=0):
-        """
-        Trigger the emission of a photon entangled with the memory qubit at the
-        specified position.
-
-        Parameters
-        ----------
-        position : int
-            The memory position of the qubit to emit and entangle with a photon.
-        """
-
-        self.add_program(EmitProgram(position, self.__emission_idx))
