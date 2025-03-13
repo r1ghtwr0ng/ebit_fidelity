@@ -2,7 +2,7 @@ import logging
 import numpy as np
 import netsquid as ns
 
-from utils import record_results, configure_parameters, get_fidelities
+from utils import record_results, switch_parameters, get_fidelities
 from qpu_node import QPUNode
 from fso_switch import FSOSwitch
 from protocols import EntanglementRetryProto
@@ -16,13 +16,19 @@ from netsquid.components.models.delaymodels import FibreDelayModel
 def setup_network(
     model_parameters,
     loss_prob,
+    routing,
     qpu_dephase=0,
-    long=False,
-    herald_ports=["qout0", "qout1"],
 ):
     network = Network("switch_test_network")
     # Testing detector induced losses
     det_eff = 1 - loss_prob
+
+    # Determine herald ports depending on switch configuration
+    long_paths = routing == {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"}
+    if long_paths:
+        herald_ports = ["qout0", "qout2"]
+    else:
+        herald_ports = [routing["qin0"], routing["qin1"]]
 
     # Create nodes
     alice_node = QPUNode("AliceNode", depolar_rate=qpu_dephase)
@@ -30,9 +36,8 @@ def setup_network(
     fsoswitch_node = FSOSwitch("bsm_fsoswitch", model_parameters, det_eff, herald_ports)
 
     # Connect node-level ports
-    # TODO add connection class wrappers
     alice_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin0"])
-    if long:
+    if long_paths:
         bob_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin2"])
     else:
         bob_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin1"])
@@ -65,56 +70,17 @@ def setup_network(
     return alice_node, bob_node, fsoswitch_node
 
 
-def single_sim(
-    total_runs, switch_routing, fso_depolar_rates, qpu_depolar_rate, loss_probs
-):
-    results = []
-    for fso_drate in fso_depolar_rates:
-        for loss_prob in loss_probs:
-            model_params = configure_parameters(fso_drate)
-            result = batch_run(
-                model_params, qpu_depolar_rate, switch_routing, loss_prob, total_runs
-            )
-            results.append(result)
-    return results
-
-
 def single_run(
     model_parameters, qpu_depolar_rate, switch_routing, loss_prob, max_attempts
 ):
-    """
-    Run a single quantum simulation with specified configurations and collect results.
-
-    Parameters
-    ----------
-    model_parameters : dict
-        Configuration parameters for the FSO switch model.
-    qpu_depolar_rate : float
-        Depolarization rate for the QPU entities.
-    switch_routing : dict
-        Routing table for the FSO switch, defining how quantum information is routed.
-    loss_prob : float
-        The probability that any photon is lost in the fibre or detector
-    max_attempts : int
-        The maximum number of attempts for establishing an entanglement link before the
-        protocol gives up.
-
-    Returns
-    -------
-    tuple
-        A tuple containing the simulation status, fidelity, and simulation time.
-        Example: (status, fidelity, simtime)
-    """
     # Initialize simulation
     ns.sim_reset()
 
-    # TODO fix and remove the long shit
-    long = switch_routing == {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"}
-    herald_ports = (
-        ["qout0", "qout2"] if long else [switch_routing["qin0"], switch_routing["qin1"]]
-    )
+    # Setup network connections
     alice_node, bob_node, fsoswitch_node = setup_network(
-        model_parameters, loss_prob, long=long, herald_ports=herald_ports
+        model_parameters,
+        loss_prob,
+        routing=switch_routing,
     )
 
     # Create and start the simulation protocol
@@ -124,7 +90,6 @@ def single_run(
         fsoswitch_node,
         switch_routing,
         max_attempts=max_attempts,
-        timeout=100,
     )
 
     # TODO setup entanglement distillation protocol
@@ -134,15 +99,21 @@ def single_run(
     retry_proto.start()
 
     # Run the simulation
-    ns.sim_run()
+    stats = ns.sim_run()
+    quantum_ops = stats.data["quantum_ops_total"]
+    # print(f"SIMULATION STATISTICS: {stats}")
     simtime = ns.sim_time()
 
     # Get the protocol status
     protocol_status = retry_proto.get_signal_result(Signals.FINISHED)
     logging.info(f"[Simulation] Retry protocol returned: {protocol_status}")
 
-    # Calculate ebit fidelity
-    fidelity = get_fidelities(alice_node, bob_node) if protocol_status else 0
+    # Calculate ebit fidelity or set to 0.5 if attempt failed
+    fidelity = (
+        get_fidelities(alice_node, bob_node, qid_1=1, qid_2=1)
+        if protocol_status
+        else 0.5
+    )
     logging.debug(f"FIDELITY: {fidelity}")
 
     # Return results
@@ -151,6 +122,7 @@ def single_run(
         "attempts": retry_proto.attempts,
         "fidelity": fidelity,
         "simtime": simtime,
+        "quantum_ops": quantum_ops,
     }
 
 
@@ -163,36 +135,12 @@ def batch_run(
     loss_prob,
     max_attempts,
 ):
-    """
-    Run multiple quantum simulations with specified configurations and collect results.
-
-    Parameters
-    ----------
-    model_parameters : dict
-        Configuration parameters for the FSO switch model.
-    qpu_depolar_rate : float
-        Depolarization rate for the QPU entities.
-    switch_routing : dict
-        Routing table for the FSO switch.
-    batch_size : int
-        Number of simulation runs in the batch.
-    loss_prob : float
-        The probability that any photon is lost in the fibre or detector
-    max_attempts : int
-        The maximum number of attempts for establishing an entanglement link before the
-        protocol gives up.
-
-    Returns
-    -------
-    dictionary
-        A dictionary containing the simulation status, attempt count, fidelity and
-        simulation duration for each run.
-    """
     ret_results = {
         "status": 0,
         "attempts": 0,
         "fidelity": 0,
         "simtime": 0,
+        "quantum_ops": 0,
         "entanglement_rate": 0,
     }
     full_results = {
@@ -200,6 +148,7 @@ def batch_run(
         "attempts": np.zeros(batch_size, dtype="uint"),
         "fidelity": np.zeros(batch_size, dtype="float"),
         "simtime": np.zeros(batch_size, dtype="float"),
+        "quantum_ops": np.zeros(batch_size, dtype="uint"),
         "entanglement_rate": np.zeros(batch_size, dtype="float"),
     }
     for i in range(batch_size):
@@ -214,5 +163,6 @@ def batch_run(
     ret_results["attempts"] = np.average(full_results["attempts"])
     ret_results["fidelity"] = np.average(full_results["fidelity"])
     ret_results["simtime"] = np.average(full_results["simtime"])
+    ret_results["quantum_ops"] = np.average(full_results["quantum_ops"])
     ret_results["entanglement_rate"] = np.average(full_results["entanglement_rate"])
     return ret_results

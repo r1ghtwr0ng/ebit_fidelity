@@ -87,6 +87,11 @@ class QPUNode(Node):
         self.processor.ports["qout0"].bind_output_handler(
             self.__setup_header_wrapper, tag_meta=True
         )
+        # self.ports["corrections"].bind_input_handler(self.__debug, tag_meta=True)
+
+    def __debug(self, msg):
+        port = msg.meta.get("rx_port_name", "missing_port_metadata")
+        logging.debug(f"Received message on port: {port}, MSG: {msg}")
 
     def __setup_header_wrapper(self, msg):
         """
@@ -108,49 +113,3 @@ class QPUNode(Node):
         header = {"event_id": event_id, "request_id": "TODO"}
         msg.meta["header"] = json.dumps(header)
         self.processor.ports[f"{port}_hdr"].tx_output(msg)
-
-    # ======== PUBLIC METHODS ========
-    # TODO move into protocol
-    def apply_epl_gates_and_measurement(self):
-        """
-        Apply the local operations for EPL entanglement distillation.
-        Uses the memory qubit (shielded qubit, index 1) as control and
-        the fresh entanglement qubit (communication qubit, index 0) as target.
-        This method performs the necessary gates (e.g. CNOT) and then measures the target.
-
-        Returns:
-            The measurement result (0 or 1) as set by the custom program.
-        """
-        logging.info(
-            f"(QPUNode | {self.name}) Applying EPL distillation gates on qubit 1 (control) and qubit 0 (target)."
-        )
-        # We assume a custom quantum processor program (EPLDistillationProgram) exists.
-        epl_prog = EPLDistillationProgram(control_index=1, target_index=0)
-        self.add_program(epl_prog)
-
-        # In a full implementation you might need to wait for the program to finish.
-        # For now, we assume that once the program completes it sets an attribute:
-        # self._last_epl_measurement with the measurement result.
-        return getattr(self, "_last_epl_measurement", None)
-
-    # TODO move into DataCollector callback
-    def start_fidelity_calculation(self, request_id, position=0):
-        """
-        Emit a qubit from memory for fidelity calculation.
-
-        Parameters
-        ----------
-        request_id: str, required
-            The ID associated with the fidelity measurement request.
-        position : int, optional
-            The memory position of the qubit to emit, by default 0.
-        """
-        header = {"request_id": request_id}
-        qubit = self.processor.peek(position, skip_noise=True)[0]
-        state = qubit.qstate.qrepr
-        logging.debug(f"State: {state}")
-        clone = qapi.create_qubits(1, no_state=True)[0]
-        qapi.assign_qstate(clone, state)
-        msg = Message(qubit)
-        msg.meta["header"] = json.dumps(header)
-        self.ports["fidelity_out"].tx_output(msg)

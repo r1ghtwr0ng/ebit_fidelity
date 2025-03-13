@@ -39,7 +39,6 @@ class FSOSwitch(Node):
             "qout2",
             "cout0",
             "cout1",
-            "cout2",
         ]
         super().__init__(name, port_names=ports)
         self.__setup_fibre_channels(model_parameters)
