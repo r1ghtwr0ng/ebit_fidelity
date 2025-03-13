@@ -108,5 +108,5 @@ class EPLDistillationProgram(QuantumProgram):
         # Apply CNOT from the control to the target
         self.apply(instr.INSTR_CNOT, [control, target])
         # Then measure the target qubit.
-        self.apply(instr.INSTR_MEASURE, target)
+        self.apply(instr.INSTR_MEASURE, target, output_key="m_target")
         yield self.run()

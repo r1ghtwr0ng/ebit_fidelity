@@ -2,7 +2,7 @@ import logging
 import numpy as np
 import matplotlib.pyplot as plt
 
-from utils import configure_parameters
+from utils import switch_parameters, ideal_parameters
 from simulation import batch_run
 from plotting import plot_norm_success
 
@@ -22,6 +22,7 @@ def single_sim(
         "attempts": np.zeros(arr_dim, dtype="float"),
         "fidelity": np.zeros(arr_dim, dtype="float"),
         "simtime": np.zeros(arr_dim, dtype="float"),
+        "quantum_ops": np.zeros(arr_dim, dtype="float"),
         "entanglement_rate": np.zeros(arr_dim, dtype="float"),
     }
 
@@ -31,7 +32,8 @@ def single_sim(
         # For every loss probability configuration
         for j, loss_prob in enumerate(loss_probabilities):
             # Generate a model parameter configuration and run simulation batch
-            model_params = configure_parameters(fso_drate, loss_prob)
+            # TODO change back to non-ideal
+            model_params = switch_parameters(fso_drate, loss_prob)
             run_results = batch_run(
                 model_params,
                 qpu_depolar_rate,
@@ -45,45 +47,26 @@ def single_sim(
             results["attempts"][i][j] = run_results["attempts"]
             results["fidelity"][i][j] = run_results["fidelity"]
             results["simtime"][i][j] = run_results["simtime"]
+            results["quantum_ops"][i][j] = run_results["quantum_ops"]
             results["entanglement_rate"][i][j] = run_results["entanglement_rate"]
 
     return results
 
 
 # TODO add some comments for the parameters
-def main():
+def main_single():
     # Set logging level
     logging.getLogger().setLevel(logging.ERROR)
 
     # Simulation parameters
-    switch_routings = [
-        {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"},  # Low, Low
-        #    {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Low, Mid
-        #    {"qin0": "qout0", "qin1": "qout2", "qin2": "qout1"},  # Low, High
-        #    {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Mid, Mid
-        #    {"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"},  # High, Mid
-        #    {"qin0": "qout1", "qin1": "qout2", "qin2": "qout0"},  # High, High
-    ]
     switch_routing = {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}
-
-    titles = [
-        "(Low, Low)",
-        #    "(Low, Mid)",
-        #    "(Low, High)",
-        #    "(Mid, Mid)",
-        #    "(Mid, High)",
-        #    "(High, High)",
-    ]
 
     # Simulation parameters
     fso_depolar_rates = np.linspace(0, 0.4, 15)
     loss_probabilities = np.linspace(0, 0.4, 15)
     qpu_depolar_rate = 0
-    total_runs = 50
+    total_runs = 100
     max_proto_attempts = 5
-
-    # Create a figure with 6 subplots (2 rows x 3 columns)
-    fig, axs = plt.subplots(2, 3, figsize=(15, 10), constrained_layout=True)
 
     # Run simulation and save data (if needed)
     results = single_sim(
@@ -107,9 +90,75 @@ def main():
     plt.show()
 
     # Add colorbar
-    plt.savefig("plots/heatmaps/success_heatmap.png")
+    plt.savefig("plots/heatmaps/single_heatmap.png")
+    print("\nPlot saved")
+
+
+def main_switching():
+    # Set logging level
+    logging.getLogger().setLevel(logging.ERROR)
+
+    # Simulation parameters
+    switch_routings = [
+        {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"},  # Low, Low
+        {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Low, Mid
+        {"qin0": "qout0", "qin1": "qout2", "qin2": "qout1"},  # Low, High
+        {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Mid, Mid
+        {"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"},  # High, Mid
+        {"qin0": "qout1", "qin1": "qout2", "qin2": "qout0"},  # High, High
+    ]
+
+    titles = [
+        "(Low, Low)",
+        "(Low, Mid)",
+        "(Low, High)",
+        "(Mid, Mid)",
+        "(Mid, High)",
+        "(High, High)",
+    ]
+
+    # Simulation parameters
+    fso_depolar_rates = np.linspace(0, 0.4, 5)
+    loss_probabilities = np.linspace(0, 0.4, 5)
+    qpu_depolar_rate = 0
+    total_runs = 25
+    max_proto_attempts = 5
+
+    # Create a figure with 6 subplots (2 rows x 3 columns)
+    fig, axs = plt.subplots(2, 3, figsize=(15, 10), constrained_layout=True)
+    res_arr = []
+
+    for i, switch_routing in enumerate(switch_routings):
+        print(f"Running routing config: {titles[i]}")
+        # Run simulation and save data (if needed)
+        results = single_sim(
+            total_runs=total_runs,
+            switch_routing=switch_routing,
+            fso_depolar_rates=fso_depolar_rates,
+            qpu_depolar_rate=qpu_depolar_rate,
+            loss_probabilities=loss_probabilities,
+            max_attempts=max_proto_attempts,
+        )
+
+        # Select the appropriate subplot
+        ax = axs[i // 3, i % 3]
+
+        # Plot the heatmap on the current subplot and get the image object
+        im = plot_norm_success(
+            ax, fso_depolar_rates, loss_probabilities, results, titles[i]
+        )
+        res_arr.append(np.clip(results["entanglement_rate"], 0, 1))
+
+    # Add colorbar
+    fig.colorbar(
+        im, ax=axs.ravel().tolist(), label="Entanglement establishment", shrink=0.6
+    )
+
+    plt.savefig("plots/heatmaps/switch_heatmap.png")
+
+    # plt.savefig("plots/heatmaps/success_heatmap.png")
     print("\nPlot saved")
 
 
 if __name__ == "__main__":
-    main()
+    main_switching()
