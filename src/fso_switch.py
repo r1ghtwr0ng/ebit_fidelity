@@ -4,7 +4,11 @@ from netsquid.nodes import Node
 from detectors import BSMDetector
 from netsquid.components import QuantumChannel
 from netsquid.examples.repeater_chain import FibreDepolarizeModel
-from netsquid.components.models import FibreDelayModel, FibreLossModel
+from netsquid.components.models import (
+    FibreDelayModel,
+    FibreLossModel,
+    DephaseNoiseModel,
+)
 
 
 class FSOSwitch(Node):
@@ -115,10 +119,9 @@ class FSOSwitch(Node):
             depolarization, loss, and delay parameters.
         """
         model_map_short = {
-            "delay_model": FibreDelayModel(),
-            "quantum_noise_model": FibreDepolarizeModel(
-                p_depol_init=model_parameters["short"]["init_depolar"],
-                p_depol_length=model_parameters["short"]["len_depolar"],
+            "quantum_noise_model": DephaseNoiseModel(
+                dephase_rate=model_parameters["short"]["init_depolar"],
+                time_independent=True,
             ),
             "quantum_loss_model": FibreLossModel(
                 p_loss_init=model_parameters["short"]["init_loss"],
@@ -127,10 +130,14 @@ class FSOSwitch(Node):
             ),
         }
         model_map_mid = {
-            "quantum_noise_model": FibreDepolarizeModel(
-                p_depol_init=model_parameters["mid"]["init_depolar"],
-                p_depol_length=model_parameters["mid"]["len_depolar"],
+            "quantum_noise_model": DephaseNoiseModel(
+                dephase_rate=model_parameters["mid"]["init_depolar"],
+                time_independent=True,
             ),
+            # "quantum_noise_model": FibreDepolarizeModel(
+            #    p_depol_init=model_parameters["mid"]["init_depolar"],
+            #    p_depol_length=model_parameters["mid"]["len_depolar"],
+            # ),
             "quantum_loss_model": FibreLossModel(
                 p_loss_init=model_parameters["mid"]["init_loss"],
                 p_loss_length=model_parameters["mid"]["len_loss"],
@@ -138,11 +145,14 @@ class FSOSwitch(Node):
             ),
         }
         model_map_long = {
-            "delay_model": FibreDelayModel(),
-            "quantum_noise_model": FibreDepolarizeModel(
-                p_depol_init=model_parameters["long"]["init_depolar"],
-                p_depol_length=model_parameters["long"]["len_depolar"],
+            "quantum_noise_model": DephaseNoiseModel(
+                dephase_rate=model_parameters["long"]["init_depolar"],
+                time_independent=True,
             ),
+            # "quantum_noise_model": FibreDepolarizeModel(
+            #    p_depol_init=model_parameters["long"]["init_depolar"],
+            #    p_depol_length=model_parameters["long"]["len_depolar"],
+            # ),
             "quantum_loss_model": FibreLossModel(
                 p_loss_init=model_parameters["long"]["init_loss"],
                 p_loss_length=model_parameters["long"]["len_loss"],
