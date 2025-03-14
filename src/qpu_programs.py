@@ -4,39 +4,9 @@ from netsquid.components.qprogram import QuantumProgram
 
 
 class EmitProgram(QuantumProgram):
-    """
-    Program to initialize a qubit at a specified position and emit an entangled photon.
-
-    Parameters
-    ----------
-    qubit1 : int
-        The memory position of the qubit to initialize and entangle with a photon.
-    qubit2 : int
-        The memory position or virtual index of the qubit that represents the photon
-        output.
-    """
-
-    def __init__(self, qubit1, qubit2):
-        # Initialize with two program qubits, mapped to the specified indices
-        super().__init__(num_qubits=2, qubit_mapping=[qubit1, qubit2])
-
-    def program(self, **_):
-        """
-        Run the emit program, initializing `qubit1` and emitting a photon entangled with
-        it.
-
-        Uses
-        ----
-        INSTR_INIT : Initialize the qubit at `qubit1`.
-        INSTR_EMIT : Emit a photon entangled with the qubit at `qubit1`.
-
-        Yields
-        ------
-        Generator
-            The program execution flow control.
-        """
+    def program(self):
         logging.debug("Entry point for the Emit program")
-        q1, q2 = self.get_qubit_indices(self.num_qubits)
+        q1, q2 = self.get_qubit_indices(2)
 
         # Initialize and emit using specified qubits
         self.apply(instr.INSTR_INIT, q1)
@@ -44,67 +14,43 @@ class EmitProgram(QuantumProgram):
         yield self.run()
 
 
-class CorrectYProgram(QuantumProgram):
-    """
-    Program to apply a Pauli Y correction to a specified qubit in a shared Bell state.
+class XCorrection(QuantumProgram):
+    default_num_qubits = 1
 
-    Parameters
-    ----------
-    position : int
-        The memory position of the qubit to apply the Pauli Y correction.
-    """
-
-    def __init__(self, position=0):
-        super().__init__(num_qubits=1)
-        self.position = position
-
-    def program(self, **_):
-        """
-        Apply a Pauli Y correction to the qubit at the specified position.
-
-        Uses
-        ----
-        INSTR_Y : Pauli Y correction on the qubit.
-
-        Yields
-        ------
-        Generator
-            The program execution flow control.
-        """
-        logging.debug("Entry point for the Correct Y program")
-        q1 = self.get_qubit_indices(self.num_qubits)[0]
-        self.apply(instr.INSTR_Y, q1)
+    def program(self):
+        logging.debug("Entry point for X correct")
+        (q,) = self.get_qubit_indices(1)
+        self.apply(instr.INSTR_X, q)
         yield self.run()
 
 
-class CorrectXProgram(QuantumProgram):
-    """
-    Program to apply a Pauli X correction to a specified qubit in a shared Bell state.
+class YCorrection(QuantumProgram):
+    default_num_qubits = 1
 
-    Parameters
-    ----------
-    position : int
-        The memory position of the qubit to apply the Pauli X correction.
-    """
+    def program(self):
+        logging.debug("Entry point for Y correct")
+        (q,) = self.get_qubit_indices(1)
+        self.apply(instr.INSTR_Y, q)
+        yield self.run()
 
-    def __init__(self, position=0):
-        super().__init__(num_qubits=1)
-        self.position = position
 
-    def program(self, **_):
-        """
-        Apply a Pauli X correction to the qubit at the specified position.
+class SwapProgram(QuantumProgram):
+    default_num_qubits = 2
 
-        Uses
-        ----
-        INSTR_X : Pauli X correction on the qubit.
+    def program(self):
+        logging.debug("Entry point for SWAP")
+        q1, q2 = self.get_qubit_indices(2)
+        self.apply(instr.INSTR_SWAP, [q1, q2])
+        yield self.run()
 
-        Yields
-        ------
-        Generator
-            The program execution flow control.
-        """
-        logging.debug("Entry point for the Correct X program")
-        q1 = self.get_qubit_indices(self.num_qubits)[0]
-        self.apply(instr.INSTR_X, q1)
+
+class EPLDistillationProgram(QuantumProgram):
+    default_num_qubits = 2
+
+    def program(self):
+        logging.debug("Entry point for EPLDistillation")
+        target, control = self.get_qubit_indices(2)
+        # Apply CNOT and measure the target
+        self.apply(instr.INSTR_CNOT, [control, target])
+        self.apply(instr.INSTR_MEASURE, target, output_key="m_target")
         yield self.run()

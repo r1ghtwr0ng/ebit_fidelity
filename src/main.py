@@ -1,283 +1,204 @@
-import pickle
 import logging
 import numpy as np
-import multiprocessing as mp
+import matplotlib.pyplot as plt
 
-from utils import loss
+from utils import switch_parameters, ideal_parameters
 from simulation import batch_run
-from plotting import plot_fidelity, plot_ttf, plot_ttf_3d
+from plotting import plot_norm_success
 
 
-# TODO add doc comments
-def configure_parameters(depolar_rate, loss_prob=0):
-    model_parameters = {
-        "short": {
-            "init_loss": loss_prob,  # loss(1.319)
-            "len_loss": 0,  # 0.25,
-            "init_depolar": depolar_rate,
-            "len_depolar": 0,
-            "channel_len": 0,  # 0.005,
-        },
-        "mid": {
-            "init_loss": loss_prob,  # loss(2.12),
-            "len_loss": 0,  # 0.25,
-            "init_depolar": depolar_rate,
-            "len_depolar": 0,
-            "channel_len": 0,  # 0.00587,
-        },
-        "long": {
-            "init_loss": loss_prob,  # loss(2.005)
-            "len_loss": 0,  # 0.25,
-            "init_depolar": depolar_rate,
-            "len_depolar": 0,
-            "channel_len": 0,  # 0.00756,
-        },
-    }
-    return model_parameters
-
-
-def worker(
-    model_parameters,
-    qpu_depolar_rate,
-    switch_routing,
-    total_runs,
-    output_queue,
-    job_index,
-):
-    """
-    Worker function to run the simulation in a separate process.
-    Logs the start of the process and sends results via output_queue.
-
-    Parameters:
-    ----------
-    model_parameters : dict
-        Simulation parameters.
-    qpu_depolar_rate : float
-        QPU depolarization rate.
-    total_runs : int
-        Number of runs.
-    output_queue : multiprocessing.Queue
-        Queue to store results.
-    job_index : int
-        Index of the job for logging purposes.
-    """
-    logging.info(f"Starting process {job_index} (PID: {mp.current_process().pid})")
-    try:
-        result = batch_run(
-            model_parameters, qpu_depolar_rate, switch_routing, total_runs
-        )
-        output_queue.put((job_index, result))
-    except Exception as e:
-        logging.error(
-            f"Process {job_index} (PID: {mp.current_process().pid}) failed: {e}"
-        )
-        output_queue.put((job_index, None))
-    finally:
-        logging.info(f"Process {job_index} (PID: {mp.current_process().pid}) finished.")
-
-
-def run_simulation(
+def single_sim(
     total_runs,
     switch_routing,
     fso_depolar_rates,
-    qpu_depolar_rate=0,
-    process_count=4,
-    loss_prob=0,
+    loss_probabilities,
+    max_attempts,
+    max_distillations,
 ):
-    """
-    Run simulations for given depolarization rates using multiple processes.
+    # Use a 2D numpy array for each element
+    arr_dim = (len(fso_depolar_rates), len(loss_probabilities))
+    results = {
+        "status": np.zeros(arr_dim, dtype="float"),
+        "status_std": np.zeros(arr_dim, dtype="float"),
+        "attempts": np.zeros(arr_dim, dtype="float"),
+        "attempts_std": np.zeros(arr_dim, dtype="float"),
+        "fidelity": np.zeros(arr_dim, dtype="float"),
+        "fidelity_std": np.zeros(arr_dim, dtype="float"),
+        "simtime": np.zeros(arr_dim, dtype="float"),
+        "simtime_std": np.zeros(arr_dim, dtype="float"),
+        "quantum_ops": np.zeros(arr_dim, dtype="float"),
+        "quantum_ops_std": np.zeros(arr_dim, dtype="float"),
+        "entanglement_rate": np.zeros(arr_dim, dtype="float"),
+        "entanglement_rate_std": np.zeros(arr_dim, dtype="float"),
+    }
 
-    Parameters
-    ----------
-    total_runs : int
-        Number of runs per depolarization rate.
-    fso_depolar_rates : list
-        List of depolarization rates.
-    qpu_depolar_rate : float
-        Depolarization rate for QPU.
-    process_count : int
-        Number of concurrent processes.
-    """
-    model_parameters_list = [
-        configure_parameters(rate, loss_prob) for rate in fso_depolar_rates
-    ]
-
-    # Initialize process management
-    active_processes = []
-    output_queue = mp.Queue()
-    results = [None] * len(model_parameters_list)  # To store results in order
-    next_job_index = 0  # Index of the next job to be started
-
-    # Process scheduling loop
-    while next_job_index < len(model_parameters_list) or active_processes:
-        # Start new processes if the pool isn't full
-        while len(active_processes) < process_count and next_job_index < len(
-            model_parameters_list
-        ):
-            process = mp.Process(
-                target=worker,
-                args=(
-                    model_parameters_list[next_job_index],
-                    qpu_depolar_rate,
-                    switch_routing,
-                    total_runs,
-                    output_queue,
-                    next_job_index,
-                ),
-            )
-            process.start()
-            active_processes.append((process, next_job_index))
-            logging.debug(f"Scheduled process {next_job_index} (PID: {process.pid}).")
-            next_job_index += 1
-
-        # Check for completed processes
-        for process, job_index in active_processes:
-            if not process.is_alive():
-                process.join()
-                logging.debug(f"Process {job_index} (PID: {process.pid}) terminated.")
-                active_processes.remove((process, job_index))
-
-        # Collect results
-        while not output_queue.empty():
-            job_index, result = output_queue.get()
-            results[job_index] = result  # Store result in the correct order
-
-    logging.info("All processes completed.")
-
-    # Results formatting
-    total_fidelities = []
-    success_fidelities = []
-    success_attempts = []
-    success_probabilities = []
-    simulation_times = []
-
-    for i, result in enumerate(results):
-        success_run_fidelities = [
-            fidelity for status, fidelity, _simtime in result if status
-        ]
-        # Calculate the average time for a simulation (successful or not)
-        simulation_times.append(np.average([t for _, _, t in result]))
-
-        success_count = len(success_run_fidelities)
-        success_fidelity_avg = (
-            np.average(success_run_fidelities) if success_count > 0 else 0
-        )
-        success_fidelities.append(success_fidelity_avg)
-
-        success_attempts.append(success_count)
-        total_fidelity_avg = np.average([fidelity for _, fidelity, _simtime in result])
-        total_fidelities.append(total_fidelity_avg)
-        success_prob = success_count / total_runs
-        success_probabilities.append(success_prob)
-        print(
-            """Run: {i}, loss: {loss_prob}
-        Depolar rate: {depolar_rate}
-        Successful fidelity: {success_fidelity_avg}
-        Total fidelity: {total_fidelity_avg}
-        Successful attempts: {success_count}
-        Success probability: {success_prob}
-        """.format(
-                i=i,
+    # For every loss probability configuration
+    for j, loss_prob in enumerate(loss_probabilities):
+        # For every depolarization configuration
+        for i, fso_drate in enumerate(fso_depolar_rates):
+            print(f"Progress: {i}/{len(fso_depolar_rates)}", end="\r")
+            # Generate a model parameter configuration and run simulation batch
+            # TODO change back to non-ideal
+            model_params = switch_parameters(fso_drate, loss_prob)
+            run_results = batch_run(
+                model_parameters=model_params,
+                switch_routing=switch_routing,
+                batch_size=total_runs,
                 loss_prob=loss_prob,
-                depolar_rate=fso_depolar_rates[i],
-                success_fidelity_avg=success_fidelity_avg,
-                total_fidelity_avg=total_fidelity_avg,
-                success_count=success_count,
-                success_prob=success_prob,
+                max_attempts=max_attempts,
+                max_distillations=max_distillations,
             )
-        )
 
-    return success_fidelities, success_probabilities, simulation_times
-    # Plot the distilled fidelity results
-    # plot_fidelity(success_fidelities, fso_depolar_rates)
+            # Populate the results arrays
+            results["status"][i][j] = run_results["status"]
+            results["status_std"][i][j] = run_results["status_std"]
+            results["attempts"][i][j] = run_results["attempts"]
+            results["attempts_std"][i][j] = run_results["attempts_std"]
+            results["fidelity"][i][j] = run_results["fidelity"]
+            results["fidelity_std"][i][j] = run_results["fidelity_std"]
+            results["simtime"][i][j] = run_results["simtime"]
+            results["simtime_std"][i][j] = run_results["simtime_std"]
+            results["quantum_ops"][i][j] = run_results["quantum_ops"]
+            results["quantum_ops_std"][i][j] = run_results["quantum_ops_std"]
+            results["entanglement_rate"][i][j] = run_results["entanglement_rate"]
+            results["entanglement_rate_std"][i][j] = run_results[
+                "entanglement_rate_std"
+            ]
+
+    return results
 
 
 # TODO add some comments for the parameters
-def main():
+def main_single():
     # Set logging level
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.ERROR)
 
-    # Set switch routing configuration
-    # All possible routing configurations, Alice and Bob bindings
-    # and route lengths for the 3x3
-    # 0: 2, 1: 1, 2: 0 (A: 1, B: 2) 1 1
-    # 0: 2, 1: 0, 2: 1 (A: 1, B: 2) 0 2
-    # 0: 0, 1: 2, 2: 1 (A: 0, B: 2) 0 1
-    # 0: 1, 1: 2, 2: 0 (A: 0, B: 2) 1 2
-    # 0: 0, 1: 1, 2: 2 (A: 0, B: 1) 0 0
-    # 0: 2, 1: 1, 2: 2 (A: 0, B: 2) 2 2
-    _switch_routings = [
-        (
-            {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},
-            {"Alice": "qin1", "Bob": "qin2"},
-        ),
-        (
-            {"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"},
-            {"Alice": "qin1", "Bob": "qin2"},
-        ),
-        (
-            {"qin0": "qout0", "qin1": "qout2", "qin2": "qout1"},
-            {"Alice": "qin0", "Bob": "qin2"},
-        ),
-        (
-            {"qin0": "qout1", "qin1": "qout2", "qin2": "qout0"},
-            {"Alice": "qin0", "Bob": "qin2"},
-        ),
-        (
-            {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"},
-            {"Alice": "qin0", "Bob": "qin1"},
-        ),
-        (
-            {"qin0": "qout2", "qin1": "qout1", "qin2": "qout2"},
-            {"Alice": "qin0", "Bob": "qin2"},
-        ),
-    ]
+    # Simulation parameters
     switch_routing = {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}
 
-    fso_depolar_rates = np.linspace(0, 0.5, 40)
-    loss_probabilities = np.linspace(0, 1, 40)
-    qpu_depolar_rate = 0
-    total_runs = 18000
-    process_count = 20
-    plot_data = {}
-    for loss_prob in loss_probabilities:
-        success_fidelities, success_probabilities, simulation_times = run_simulation(
+    # Simulation parameters
+    fso_depolar_rates = np.linspace(0, 0.15, 25)
+    loss_probabilities = np.linspace(0, 0, 1)
+    total_runs = 200
+    max_proto_attempts = 10
+    max_distillations = 3
+
+    # Create a single figure and axes for the plot
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    for max_distill in range(0, max_distillations):
+        # Run simulation and save data (if needed)
+        results = single_sim(
             total_runs=total_runs,
             switch_routing=switch_routing,
             fso_depolar_rates=fso_depolar_rates,
-            qpu_depolar_rate=qpu_depolar_rate,
-            process_count=process_count,
-            loss_prob=loss_prob,
+            loss_probabilities=loss_probabilities,
+            max_attempts=max_proto_attempts,
+            max_distillations=max_distill,
         )
-        plot_data[loss_prob] = (
-            success_fidelities,
-            success_probabilities,
-            simulation_times,
-        )
-    print(plot_data)
 
-    thresholds = [0.9995, 0.995, 0.95, 0.9, 0.8, 0.7]
-    for threshold in thresholds:
-        plot_ttf(
-            fso_depolar_rates,
-            loss_probabilities,
-            plot_data,
-            threshold=threshold,
-        )
-        plot_ttf_3d(
-            fso_depolar_rates,
-            loss_probabilities,
-            plot_data,
-            threshold=threshold,
-        )
-    plot_fidelity(plot_data[0][0], fso_depolar_rates)
+        # Extract plot metric (assumed to be a 1D array with length matching loss_probabilities)
+        print(f"DEBUG: {results}")
+        plot_metric = results["fidelity"].reshape(-1)
+        main_metric = fso_depolar_rates
+        print(f"DEBUG: plot_metric = {plot_metric}")
 
-    # Save data to file
-    with open("plotdata/data_file.pkl", "wb") as file:
-        pickle.dump(
-            (fso_depolar_rates, loss_probabilities, thresholds, plot_data), file
+        # Plot scatter points
+        ax.scatter(
+            main_metric,
+            plot_metric,
+            marker="o",
+            label=f"{max_distill} distillations",
         )
+
+        # Compute a best fit line for the current iteration
+        coeffs = np.polyfit(main_metric, plot_metric, deg=1)
+        best_fit = np.poly1d(coeffs)
+        # Generate x-values for the best fit line
+        x_fit = np.linspace(np.min(main_metric), np.max(main_metric), 100)
+        y_fit = best_fit(x_fit)
+        # Plot the best fit line
+        ax.plot(x_fit, y_fit, linestyle="-")
+
+        logging.info("========================================================\n\n\n\n")
+
+    # Set plot labels and legend
+    ax.set_xlabel("Dephase probability")
+    ax.set_ylabel("Average ebit fidelity")
+    ax.set_title("Affect of EPL distillation on ebit fiedelity")
+    ax.legend()
+
+    # Save the figure
+    plt.savefig("plots/2d/distill_plot_fidelity_depol.png")
+    print("\nPlot saved")
+
+
+def main_switching():
+    # Set logging level
+    logging.getLogger().setLevel(logging.ERROR)
+
+    # Simulation parameters
+    switch_routings = [
+        {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"},  # Low, Low
+        {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Low, Mid
+        # {"qin0": "qout0", "qin1": "qout2", "qin2": "qout1"},  # Low, High
+        {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Mid, Mid
+        # {"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"},  # High, Mid
+        # {"qin0": "qout1", "qin1": "qout2", "qin2": "qout0"},  # High, High
+    ]
+    titles = ["(Low, Low)", "(Low, Mid)", "(Mid, Mid)"]
+
+    # Simulation parameters
+    # fso_depolar_rates not needed for line plot
+    loss_probabilities = np.linspace(0, 0.4, 10)
+    total_runs = 20
+    max_proto_attempts = 7
+
+    # Create a single figure and axes for the line plot
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    for i, switch_routing in enumerate(switch_routings):
+        print(f"Running routing config: {titles[i]}")
+        # Run simulation and save data (if needed)
+        results = single_sim(
+            total_runs=total_runs,
+            switch_routing=switch_routing,
+            fso_depolar_rates=np.array([0]),  # Dummy value since it's not used
+            loss_probabilities=loss_probabilities,
+            max_attempts=max_proto_attempts,
+            max_distillations=0,
+        )
+
+        # Extract plot metric (assumed to be a 1D array with length matching loss_probabilities)
+        print(f"DEBUG: {results}")
+        plot_metric = results["simtime"][0]
+        metric_std_err_mean = results["simtime_std"][0] / np.sqrt(total_runs)
+
+        # Plot the line on the same axes
+        ax.errorbar(
+            loss_probabilities,
+            plot_metric,
+            yerr=metric_std_err_mean,
+            label=titles[i],
+            capsize=5,
+            marker="o",
+            linestyle="-",
+        )
+
+        logging.info("========================================================\n\n\n\n")
+
+    # Set plot labels and legend
+    ax.set_xlabel("Loss Probability")
+    ax.set_ylabel("Average Simulation Time (ns)")
+    ax.set_title(
+        "Simulation Time vs Loss Probability for Different Routing Configurations"
+    )
+    ax.legend()
+
+    # Save the figure
+    plt.savefig("plots/2d/errbar_plot_simtime.png")
+    print("\nPlot saved")
 
 
 if __name__ == "__main__":
-    main()
+    main_single()
