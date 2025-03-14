@@ -31,8 +31,8 @@ class EntanglementProtocol(NodeProtocol):
         flush_port(self.node.ports["corrections"])
 
         # Execute the emit program
-        emit_photon = EmitProgram()
-        node_proc.execute_program(emit_photon, qubit_mapping=[emit_idx, comm_idx])
+        emit_photon = EmitProgram(comm_idx=comm_idx, emit_idx=emit_idx)
+        node_proc.execute_program(emit_photon)
 
         # Prepare to wait for the emit program to finish AND a port input, OR a timeout
         emit_done = self.await_program(node_proc)
@@ -53,6 +53,12 @@ class EntanglementProtocol(NodeProtocol):
 
         # Process the Bell state from the received message
         msg = self.node.ports["corrections"].rx_input()
+        if msg is None:
+            logging.info(
+                f"[{self.protocol_log}] {node_name} FUCKING MISSING MESSAGE ERROR WTFFFFFF."
+            )
+            return {"log": "no_msg", "success": False}
+
         bell_state = msg.items[0].bell_index
 
         if bell_state == -1:
@@ -311,3 +317,99 @@ class ContinuousDistillationProtocol(Protocol):
         logging.info("[ContinuousDistillation] All distillation iterations succeeded")
         self.success = True
         return True
+
+
+# class ContinuousDistillationProtocol(Protocol):
+#    def __init__(
+#        self,
+#        alice,
+#        bob,
+#        fsoswitch,
+#        routing_table,
+#        max_attempts=10,
+#        timeout=100,
+#        max_distillation=3,
+#    ):
+#        super().__init__()
+#        self.alice = alice
+#        self.bob = bob
+#        self.fsoswitch = fsoswitch
+#        self.routing_table = routing_table
+#        self.max_attempts = max_attempts
+#        self.timeout = timeout
+#        self.max_distillation = max_distillation
+#        self.attempts = 0
+#
+#    def run(self):
+#        logging.info(
+#            "ContinuousDistillation: Running initial entanglement establishment."
+#        )
+#        retry_proto = EntanglementRetryProto(
+#            self.alice,
+#            self.bob,
+#            self.fsoswitch,
+#            self.routing_table,
+#            max_attempts=self.max_attempts,
+#            timeout=self.timeout,
+#        )
+#        retry_proto.start()
+#        yield self.await_signal(retry_proto, signal_label=Signals.FINISHED)
+#        init_result = retry_proto.get_signal_result(Signals.FINISHED)
+#        if not init_result:
+#            logging.error("ContinuousDistillation: Initial entanglement failed.")
+#            return False
+#
+#        logging.info(
+#            "ContinuousDistillation: Swapping qubits (positions 1->2) on both nodes."
+#        )
+#        swap_prog = SwapProgram()
+#        self.alice.processor.execute_program(swap_prog, qubit_mapping=[1, 2])
+#        yield self.await_program(self.alice.processor)
+#        swap_prog = SwapProgram()
+#        self.bob.processor.execute_program(swap_prog, qubit_mapping=[1, 2])
+#        yield self.await_program(self.bob.processor)
+#
+#        for i in range(self.max_distillation):
+#            logging.info(f"ContinuousDistillation: Distillation iteration {i + 1}.")
+#            retry_proto = EntanglementRetryProto(
+#                self.alice,
+#                self.bob,
+#                self.fsoswitch,
+#                self.routing_table,
+#                max_attempts=self.max_attempts,
+#                timeout=self.timeout,
+#            )
+#            retry_proto.start()
+#            yield self.await_signal(retry_proto, signal_label=Signals.FINISHED)
+#            iter_result = retry_proto.get_signal_result(Signals.FINISHED)
+#            if not iter_result:
+#                logging.error(
+#                    f"ContinuousDistillation: Entanglement failed at iteration {i + 1}."
+#                )
+#                return False
+#
+#            logging.info(
+#                f"ContinuousDistillation: Running distillation at iteration {i + 1}."
+#            )
+#            alice_distill = EPLDistillationProgram()
+#            bob_distill = EPLDistillationProgram()
+#            self.alice.processor.execute_program(alice_distill, qubit_mapping=[1, 2])
+#            self.bob.processor.execute_program(bob_distill, qubit_mapping=[1, 2])
+#            yield self.await_program(self.alice.processor) & self.await_program(
+#                self.bob.processor
+#            )
+#            # Retrieve measurement outcomes from the EPL distillation program.
+#            alice_result = alice_distill.output["m_target"][0]
+#            bob_result = bob_distill.output["m_target"][0]
+#            logging.info(
+#                f"ContinuousDistillation: Iteration {i + 1} results - Alice: {alice_result}, Bob: {bob_result}"
+#            )
+#            # Check if the distillation was successful (e.g. success condition: both outcomes equal 1)
+#            if (alice_result, bob_result) != (1, 1):
+#                logging.debug(
+#                    f"ContinuousDistillation: Distillation iteration {i + 1} failed with results: {alice_result}, {bob_result}"
+#                )
+#                return False
+#
+#        logging.info("ContinuousDistillation: All distillation iterations succeeded.")
+#        return True
