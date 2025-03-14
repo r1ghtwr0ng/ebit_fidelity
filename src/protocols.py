@@ -31,8 +31,8 @@ class EntanglementProtocol(NodeProtocol):
         flush_port(self.node.ports["corrections"])
 
         # Execute the emit program
-        emit_photon = EmitProgram(comm_idx=comm_idx, emit_idx=emit_idx)
-        node_proc.execute_program(emit_photon)
+        emit_photon = EmitProgram()
+        node_proc.execute_program(emit_photon, qubit_mapping=[comm_idx, emit_idx])
 
         # Prepare to wait for the emit program to finish AND a port input, OR a timeout
         emit_done = self.await_program(node_proc)
@@ -171,7 +171,7 @@ class ContinuousDistillationProtocol(Protocol):
         routing_table,
         max_attempts=10,
         timeout=100,
-        max_distillation=3,
+        max_distillations=3,
     ):
         super().__init__()
         self.alice = alice
@@ -180,7 +180,7 @@ class ContinuousDistillationProtocol(Protocol):
         self.routing_table = routing_table
         self.max_attempts = max_attempts
         self.timeout = timeout
-        self.max_distillation = max_distillation
+        self.max_distillations = max_distillations
         self.attempts = 0
         self.success = False
 
@@ -229,7 +229,7 @@ class ContinuousDistillationProtocol(Protocol):
                 )
 
         if not init_success:
-            logging.error(
+            logging.debug(
                 "ContinuousDistillation: Initial entanglement failed after maximum attempts."
             )
             return False
@@ -247,7 +247,7 @@ class ContinuousDistillationProtocol(Protocol):
         )
 
         # --- Distillation iterations ---
-        for i in range(self.max_distillation):
+        for i in range(self.max_distillations):
             logging.info(f"ContinuousDistillation: Distillation iteration {i + 1}")
             # Reattempt entanglement for this iteration.
             iteration_success = False
@@ -284,7 +284,7 @@ class ContinuousDistillationProtocol(Protocol):
                     )
 
             if not iteration_success:
-                logging.error(
+                logging.debug(
                     f"[ContinuousDistillation] Entanglement failed at iteration {i + 1}"
                 )
                 return False
@@ -309,7 +309,7 @@ class ContinuousDistillationProtocol(Protocol):
             )
             # Check if the distillation was successful (success condition: both outcomes equal 1).
             if (alice_meas, bob_meas) != (1, 1):
-                logging.error(
+                logging.debug(
                     f"[ContinuousDistillation] Distillation iteration {i + 1} failed."
                 )
                 return False

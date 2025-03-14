@@ -4,39 +4,9 @@ from netsquid.components.qprogram import QuantumProgram
 
 
 class EmitProgram(QuantumProgram):
-    """
-    Program to initialize a qubit at a specified position and emit an entangled photon.
-
-    Parameters
-    ----------
-    qubit1 : int
-        The memory position of the qubit to initialize and entangle with a photon.
-    qubit2 : int
-        The memory position or virtual index of the qubit that represents the photon
-        output.
-    """
-
-    def __init__(self, comm_idx=1, emit_idx=0):
-        # Initialize with two program qubits, mapped to the specified indices
-        super().__init__(num_qubits=2, qubit_mapping=[comm_idx, emit_idx])
-
-    def program(self, **kwargs):
-        """
-        Run the emit program, initializing `qubit1` and emitting a photon entangled with
-        it.
-
-        Uses
-        ----
-        INSTR_INIT : Initialize the qubit at `qubit1`.
-        INSTR_EMIT : Emit a photon entangled with the qubit at `qubit1`.
-
-        Yields
-        ------
-        Generator
-            The program execution flow control.
-        """
+    def program(self):
         logging.debug("Entry point for the Emit program")
-        q1, q2 = self.get_qubit_indices(self.num_qubits)
+        q1, q2 = self.get_qubit_indices(2)
 
         # Initialize and emit using specified qubits
         self.apply(instr.INSTR_INIT, q1)

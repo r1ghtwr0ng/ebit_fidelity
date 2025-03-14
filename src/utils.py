@@ -28,22 +28,22 @@ def switch_parameters(depolar_prob, loss_prob=0):
         "short": {
             "init_loss": loss(1.319) + loss_prob,
             "len_loss": 0,
-            "init_depolar": loss(1.319) + depolar_prob,
-            "len_depolar": 0.01,
+            "init_depolar": depolar_prob,
+            "len_depolar": 0,
             "channel_len": 0.005,
         },
         "mid": {
             "init_loss": loss(2.12) + loss_prob,
             "len_loss": 0,
-            "init_depolar": loss(2.12) + depolar_prob,
+            "init_depolar": depolar_prob,
             "len_depolar": 0,
             "channel_len": 0.00587,
         },
         "long": {
             "init_loss": loss(2.005) + loss_prob,
             "len_loss": 0,
-            "init_depolar": loss(2.005) + depolar_prob,
-            "len_depolar": 0.01,
+            "init_depolar": depolar_prob,
+            "len_depolar": 0,
             "channel_len": 0.00756,
         },
     }

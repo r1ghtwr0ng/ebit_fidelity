@@ -5,7 +5,7 @@ import netsquid as ns
 from utils import record_results, switch_parameters, get_fidelities
 from qpu_node import QPUNode
 from fso_switch import FSOSwitch
-from protocols import EntanglementRetryProto
+from protocols import EntanglementRetryProto, ContinuousDistillationProtocol
 from netsquid.protocols import Signals
 from netsquid.nodes.network import Network
 from netsquid.components import ClassicalChannel
@@ -69,7 +69,9 @@ def setup_network(
     return alice_node, bob_node, fsoswitch_node
 
 
-def single_run(model_parameters, switch_routing, loss_prob, max_attempts):
+def single_run(
+    model_parameters, switch_routing, loss_prob, max_attempts, max_distillations
+):
     # Initialize simulatio
     ns.sim_reset()
 
@@ -81,18 +83,20 @@ def single_run(model_parameters, switch_routing, loss_prob, max_attempts):
     )
 
     # Create and start the simulation protocol
-    retry_proto = EntanglementRetryProto(
+    # retry_proto = EntanglementRetryProto(
+    distill_proto = ContinuousDistillationProtocol(
         alice_node,
         bob_node,
         fsoswitch_node,
         switch_routing,
         max_attempts=max_attempts,
+        max_distillations=max_distillations,
     )
 
     # TODO setup entanglement distillation protocol
 
     # Test
-    retry_proto.start()
+    distill_proto.start()
 
     # Run the simulation
     stats = ns.sim_run()
@@ -100,22 +104,22 @@ def single_run(model_parameters, switch_routing, loss_prob, max_attempts):
     simtime = ns.sim_time()
 
     # Get the protocol status
-    protocol_status = retry_proto.get_signal_result(Signals.FINISHED)
+    protocol_status = distill_proto.get_signal_result(Signals.FINISHED)
     logging.info(f"[Simulation] Retry protocol returned: {protocol_status}")
 
     # Calculate ebit fidelity or set to 0 if attempt failed
     fidelity = (
-        get_fidelities(alice_node, bob_node, qid_1=1, qid_2=1) if protocol_status else 0
+        get_fidelities(alice_node, bob_node, qid_1=2, qid_2=2) if protocol_status else 0
     )
     logging.debug(f"FIDELITY: {fidelity}")
 
     # Make sure to reset the protocol
-    retry_proto.reset()
+    distill_proto.reset()
 
     # Return results
     return {
         "status": protocol_status,
-        "attempts": retry_proto.attempts,
+        "attempts": distill_proto.attempts,
         "fidelity": fidelity,
         "simtime": simtime,
         "quantum_ops": quantum_ops,
@@ -143,17 +147,25 @@ def batch_run(
     for i in range(batch_size):
         # Perform single run of the simulation and record the results into the dict
         run_results = single_run(
-            model_parameters, switch_routing, loss_prob, max_attempts
+            model_parameters,
+            switch_routing,
+            loss_prob,
+            max_attempts,
+            max_distillations,
         )
         record_results(full_results, run_results, i, max_attempts)
 
+    # Successful fidelities
+    status_mask = full_results["status"]
+    fidelities = full_results["fidelity"][status_mask]
+
     # Average calculations and return
-    ret_results["status"] = np.average(full_results["status"])
-    ret_results["status_std"] = np.std(full_results["status"], axis=0)
+    ret_results["status"] = np.average(status_mask)
+    ret_results["status_std"] = np.std(status_mask, axis=0)
     ret_results["attempts"] = np.average(full_results["attempts"])
     ret_results["attempts_std"] = np.std(full_results["attempts"], axis=0)
-    ret_results["fidelity"] = np.average(full_results["fidelity"])
-    ret_results["fidelity_std"] = np.std(full_results["fidelity"], axis=0)
+    ret_results["fidelity"] = np.average(fidelities)
+    ret_results["fidelity_std"] = np.std(fidelities, axis=0)
     ret_results["simtime"] = np.average(full_results["simtime"])
     ret_results["simtime_std"] = np.std(full_results["simtime"], axis=0)
     ret_results["quantum_ops"] = np.average(full_results["quantum_ops"])
