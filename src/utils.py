@@ -19,58 +19,31 @@ def record_results(full_results, run_results, i, attempt_limit):
     full_results["attempts"][i] = norm_attempts
     full_results["fidelity"][i] = norm_fidelity
     full_results["status"][i] = status
-
-
-def extract_data(results):
-    """Extract average fidelities and attempts from results."""
-    avg_fidelities, avg_attempts, avg_simtime = [], [], []
-
-    for result in results:
-        # Convert to a NumPy array for vectorized filtering
-        data = np.array(result, dtype=object)
-        success_mask = data[:, 0].astype(bool)  # Ensure the mask is a boolean array
-
-        successful_fidelities = data[success_mask, 3].astype(float)
-        successful_attempts = data[success_mask, 2].astype(float)
-
-        # Compute averages with default values for empty lists
-        avg_fidelity = (
-            np.mean(successful_fidelities) if successful_fidelities.size > 0 else 0.5
-        )
-        avg_attempt = (
-            np.mean(successful_attempts)
-            if successful_attempts.size > 0
-            else float("inf")
-        )
-
-        avg_fidelities.append(avg_fidelity)
-        avg_attempts.append(avg_attempt)
-
-    return avg_fidelities, avg_attempts, avg_simtime
+    full_results["quantum_ops"][i] = run_results["quantum_ops"]
 
 
 # TODO add doc comments
-def switch_parameters(depolar_rate, loss_prob=0):
+def switch_parameters(depolar_prob, loss_prob=0):
     model_parameters = {
         "short": {
-            "init_loss": loss(1.319),
-            "len_loss": loss_prob,
-            "init_depolar": loss(1.319),
-            "len_depolar": depolar_rate,
+            "init_loss": loss(1.319) + loss_prob,
+            "len_loss": 0,
+            "init_depolar": loss(1.319) + depolar_prob,
+            "len_depolar": 0.01,
             "channel_len": 0.005,
         },
         "mid": {
-            "init_loss": loss(2.12),
-            "len_loss": loss_prob,
-            "init_depolar": loss(2.12),
-            "len_depolar": depolar_rate,
+            "init_loss": loss(2.12) + loss_prob,
+            "len_loss": 0,
+            "init_depolar": loss(2.12) + depolar_prob,
+            "len_depolar": 0,
             "channel_len": 0.00587,
         },
         "long": {
-            "init_loss": loss(2.005),
-            "len_loss": loss_prob,
-            "init_depolar": loss(2.005),
-            "len_depolar": depolar_rate,
+            "init_loss": loss(2.005) + loss_prob,
+            "len_loss": 0,
+            "init_depolar": loss(2.005) + depolar_prob,
+            "len_depolar": 0.01,
             "channel_len": 0.00756,
         },
     }

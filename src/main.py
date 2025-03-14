@@ -11,44 +11,59 @@ def single_sim(
     total_runs,
     switch_routing,
     fso_depolar_rates,
-    qpu_depolar_rate,
     loss_probabilities,
     max_attempts,
+    max_distillations,
 ):
     # Use a 2D numpy array for each element
     arr_dim = (len(fso_depolar_rates), len(loss_probabilities))
     results = {
         "status": np.zeros(arr_dim, dtype="float"),
+        "status_std": np.zeros(arr_dim, dtype="float"),
         "attempts": np.zeros(arr_dim, dtype="float"),
+        "attempts_std": np.zeros(arr_dim, dtype="float"),
         "fidelity": np.zeros(arr_dim, dtype="float"),
+        "fidelity_std": np.zeros(arr_dim, dtype="float"),
         "simtime": np.zeros(arr_dim, dtype="float"),
+        "simtime_std": np.zeros(arr_dim, dtype="float"),
         "quantum_ops": np.zeros(arr_dim, dtype="float"),
+        "quantum_ops_std": np.zeros(arr_dim, dtype="float"),
         "entanglement_rate": np.zeros(arr_dim, dtype="float"),
+        "entanglement_rate_std": np.zeros(arr_dim, dtype="float"),
     }
 
     # For every depolarization configuration
     for i, fso_drate in enumerate(fso_depolar_rates):
-        print(f"Progress: {i}/{len(fso_depolar_rates)}", end="\r")
         # For every loss probability configuration
         for j, loss_prob in enumerate(loss_probabilities):
+            print(f"Progress: {j}/{len(loss_probabilities)}", end="\r")
             # Generate a model parameter configuration and run simulation batch
             # TODO change back to non-ideal
-            model_params = switch_parameters(fso_drate, loss_prob)
+            model_params = ideal_parameters(fso_drate, loss_prob)
             run_results = batch_run(
-                model_params,
-                qpu_depolar_rate,
-                switch_routing,
-                total_runs,
-                loss_prob,
-                max_attempts,
+                model_parameters=model_params,
+                switch_routing=switch_routing,
+                batch_size=total_runs,
+                loss_prob=loss_prob,
+                max_attempts=max_attempts,
+                max_distillations=max_distillations,
             )
+
             # Populate the results arrays
             results["status"][i][j] = run_results["status"]
+            results["status_std"][i][j] = run_results["status_std"]
             results["attempts"][i][j] = run_results["attempts"]
+            results["attempts_std"][i][j] = run_results["attempts_std"]
             results["fidelity"][i][j] = run_results["fidelity"]
+            results["fidelity_std"][i][j] = run_results["fidelity_std"]
             results["simtime"][i][j] = run_results["simtime"]
+            results["simtime_std"][i][j] = run_results["simtime_std"]
             results["quantum_ops"][i][j] = run_results["quantum_ops"]
+            results["quantum_ops_std"][i][j] = run_results["quantum_ops_std"]
             results["entanglement_rate"][i][j] = run_results["entanglement_rate"]
+            results["entanglement_rate_std"][i][j] = run_results[
+                "entanglement_rate_std"
+            ]
 
     return results
 
@@ -56,41 +71,59 @@ def single_sim(
 # TODO add some comments for the parameters
 def main_single():
     # Set logging level
-    logging.getLogger().setLevel(logging.ERROR)
+    logging.getLogger().setLevel(logging.DEBUG)
 
     # Simulation parameters
     switch_routing = {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}
 
     # Simulation parameters
-    fso_depolar_rates = np.linspace(0, 0.4, 15)
-    loss_probabilities = np.linspace(0, 0.4, 15)
-    qpu_depolar_rate = 0
-    total_runs = 100
+    fso_depolar_rates = np.linspace(0, 0, 1)
+    loss_probabilities = np.linspace(0, 0.2, 2)
+    total_runs = 10
     max_proto_attempts = 5
+    max_distillations = 3
 
-    # Run simulation and save data (if needed)
-    results = single_sim(
-        total_runs=total_runs,
-        switch_routing=switch_routing,
-        fso_depolar_rates=fso_depolar_rates,
-        qpu_depolar_rate=qpu_depolar_rate,
-        loss_probabilities=loss_probabilities,
-        max_attempts=max_proto_attempts,
+    # Create a single figure and axes for the line plot
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    for max_distill in range(1, max_distillations):
+        # Run simulation and save data (if needed)
+        results = single_sim(
+            total_runs=total_runs,
+            switch_routing=switch_routing,
+            fso_depolar_rates=fso_depolar_rates,
+            loss_probabilities=loss_probabilities,
+            max_attempts=max_proto_attempts,
+            max_distillations=max_distill,
+        )
+
+        # Extract plot metric (assumed to be a 1D array with length matching loss_probabilities)
+        print(f"DEBUG: {results}")
+        plot_metric = results["fidelity"][0]
+        metric_std_err_mean = results["fidelity_std"][0] / np.sqrt(total_runs)
+
+        # Plot the line on the same axes
+        ax.errorbar(
+            loss_probabilities,
+            plot_metric,
+            yerr=metric_std_err_mean,
+            label=f"{max_distill} distillations",
+            capsize=5,
+            marker="o",
+            linestyle="-",
+        )
+        logging.info("========================================================\n\n\n\n")
+
+    # Set plot labels and legend
+    ax.set_xlabel("Loss Probability")
+    ax.set_ylabel("Average ebit fidelity")
+    ax.set_title(
+        "Simulation Time vs Loss Probability for Different Routing Configurations"
     )
-    # with open(f"plotdata/data_file_{i}.pkl", "wb") as file:
-    #    pickle.dump(results, file)
+    ax.legend()
 
-    # Assuming fso_depolar_rates, loss_probabilities, results, and title are defined
-    fig, ax = plt.subplots(figsize=(8, 6))
-    im = plot_norm_success(
-        ax, fso_depolar_rates, loss_probabilities, results, "Loss/Dephase plot"
-    )
-    fig.colorbar(im, ax=ax, label="Entanglement establishment", shrink=0.6)
-    plt.savefig("plots/heatmaps/single_heatmap.png")
-    plt.show()
-
-    # Add colorbar
-    plt.savefig("plots/heatmaps/single_heatmap.png")
+    # Save the figure
+    plt.savefig("plots/2d/distill_plot_fidelity.png")
     print("\nPlot saved")
 
 
@@ -102,31 +135,21 @@ def main_switching():
     switch_routings = [
         {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"},  # Low, Low
         {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Low, Mid
-        {"qin0": "qout0", "qin1": "qout2", "qin2": "qout1"},  # Low, High
+        # {"qin0": "qout0", "qin1": "qout2", "qin2": "qout1"},  # Low, High
         {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"},  # Mid, Mid
-        {"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"},  # High, Mid
-        {"qin0": "qout1", "qin1": "qout2", "qin2": "qout0"},  # High, High
+        # {"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"},  # High, Mid
+        # {"qin0": "qout1", "qin1": "qout2", "qin2": "qout0"},  # High, High
     ]
-
-    titles = [
-        "(Low, Low)",
-        "(Low, Mid)",
-        "(Low, High)",
-        "(Mid, Mid)",
-        "(Mid, High)",
-        "(High, High)",
-    ]
+    titles = ["(Low, Low)", "(Low, Mid)", "(Mid, Mid)"]
 
     # Simulation parameters
-    fso_depolar_rates = np.linspace(0, 0.4, 5)
-    loss_probabilities = np.linspace(0, 0.4, 5)
-    qpu_depolar_rate = 0
-    total_runs = 25
-    max_proto_attempts = 5
+    # fso_depolar_rates not needed for line plot
+    loss_probabilities = np.linspace(0, 0.4, 40)
+    total_runs = 200
+    max_proto_attempts = 7
 
-    # Create a figure with 6 subplots (2 rows x 3 columns)
-    fig, axs = plt.subplots(2, 3, figsize=(15, 10), constrained_layout=True)
-    res_arr = []
+    # Create a single figure and axes for the line plot
+    fig, ax = plt.subplots(figsize=(10, 6))
 
     for i, switch_routing in enumerate(switch_routings):
         print(f"Running routing config: {titles[i]}")
@@ -134,31 +157,41 @@ def main_switching():
         results = single_sim(
             total_runs=total_runs,
             switch_routing=switch_routing,
-            fso_depolar_rates=fso_depolar_rates,
-            qpu_depolar_rate=qpu_depolar_rate,
+            fso_depolar_rates=np.array([0]),  # Dummy value since it's not used
             loss_probabilities=loss_probabilities,
             max_attempts=max_proto_attempts,
         )
 
-        # Select the appropriate subplot
-        ax = axs[i // 3, i % 3]
+        # Extract plot metric (assumed to be a 1D array with length matching loss_probabilities)
+        print(f"DEBUG: {results}")
+        plot_metric = results["simtime"][0]
+        metric_std_err_mean = results["simtime_std"][0] / np.sqrt(total_runs)
 
-        # Plot the heatmap on the current subplot and get the image object
-        im = plot_norm_success(
-            ax, fso_depolar_rates, loss_probabilities, results, titles[i]
+        # Plot the line on the same axes
+        ax.errorbar(
+            loss_probabilities,
+            plot_metric,
+            yerr=metric_std_err_mean,
+            label=titles[i],
+            capsize=5,
+            marker="o",
+            linestyle="-",
         )
-        res_arr.append(np.clip(results["entanglement_rate"], 0, 1))
 
-    # Add colorbar
-    fig.colorbar(
-        im, ax=axs.ravel().tolist(), label="Entanglement establishment", shrink=0.6
+        logging.info("========================================================\n\n\n\n")
+
+    # Set plot labels and legend
+    ax.set_xlabel("Loss Probability")
+    ax.set_ylabel("Average Simulation Time (ns)")
+    ax.set_title(
+        "Simulation Time vs Loss Probability for Different Routing Configurations"
     )
+    ax.legend()
 
-    plt.savefig("plots/heatmaps/switch_heatmap.png")
-
-    # plt.savefig("plots/heatmaps/success_heatmap.png")
+    # Save the figure
+    plt.savefig("plots/2d/errbar_plot_simtime.png")
     print("\nPlot saved")
 
 
 if __name__ == "__main__":
-    main_switching()
+    main_single()
