@@ -1,15 +1,11 @@
 import json
 import logging
 import netsquid as ns
-import netsquid.qubits.qubitapi as qapi
 
 from netsquid.nodes import Node
-from netsquid.components.component import Message
-from netsquid.components.qprocessor import QuantumProcessor
-
-from qpu_programs import (
-    EPLDistillationProgram,
-)
+import netsquid.components.instructions as instr
+from netsquid.components.models.qerrormodels import T1T2NoiseModel, DepolarNoiseModel
+from netsquid.components.qprocessor import QuantumProcessor, PhysicalInstruction
 
 
 class QPUNode(Node):
@@ -33,10 +29,10 @@ class QPUNode(Node):
         Depolarization rate for the noise model, by default 0.
     """
 
-    def __init__(self, name, qbit_count=3, depolar_rate=0):
+    def __init__(self, name, qbit_count=3):
         super().__init__(name, port_names=["corrections"])
         # The last qubit slot is used for photon emission into fibre
-        self.processor = self.__create_processor(name, qbit_count, depolar_rate)
+        self.processor = self.__create_processor(name, qbit_count)
         self.__setup_callbacks()
         # Keep track of qubit mappings
         self.emit_idx = 0
@@ -45,7 +41,7 @@ class QPUNode(Node):
 
     # ======== PRIVATE METHODS ========
     # Helper function to create a simple QPU with a few useful instructions
-    def __create_processor(self, name, qbit_count, depolar_rate):
+    def __create_processor(self, name, qbit_count):
         """
         Private helper method used to initialize the quantum processor for the entity.
         We have nonphysical instructions as we use an abstract QPU architecture.
@@ -64,18 +60,61 @@ class QPUNode(Node):
         QuantumProcessor
             A configured quantum processor with fallback to nonphysical instructions.
         """
-        memory_noise_model = ns.components.models.DepolarNoiseModel(
-            depolar_rate=depolar_rate
-        )
+        memory_noise_models = [
+            None,  # Utility qubit: no noise applied
+            T1T2NoiseModel(
+                T1=20, T2=10
+            ),  # Communication qubit: high error (short coherence times)
+            T1T2NoiseModel(
+                T1=200, T2=180
+            ),  # Shielded qubit: low error (long coherence times)
+        ]
         processor = QuantumProcessor(
             name,
             num_positions=qbit_count,
-            memory_noise_models=[memory_noise_model] * qbit_count,
+            memory_noise_models=memory_noise_models,
             phys_instructions=None,
             fallback_to_nonphysical=True,  # Execute instructions as nonphysical
         )
         # TODO fix this to not be in the processor
         processor.add_ports(["qout_hdr", "qout0_hdr"])
+        # processor.add_physical_instruction(
+        #    PhysicalInstruction(instruction=instr.INSTR_INIT, duration=1.0)
+        # )
+        # processor.add_physical_instruction(
+        #    PhysicalInstruction(
+        #        instruction=instr.INSTR_X,
+        #        duration=1.0,
+        #        quantum_noise_model=T1T2NoiseModel(T1=0.5, T2=0.3),
+        #    )
+        # )
+        # processor.add_physical_instruction(
+        #    PhysicalInstruction(
+        #        instruction=instr.INSTR_Y,
+        #        duration=1.0,
+        #        quantum_noise_model=T1T2NoiseModel(T1=0.5, T2=0.3),
+        #    )
+        # )
+        # processor.add_physical_instruction(
+        #    PhysicalInstruction(instruction=instr.INSTR_EMIT, duration=10.0)
+        # )
+        # processor.add_physical_instruction(
+        #    PhysicalInstruction(instruction=instr.INSTR_SWAP, duration=2.0)
+        # )
+        # processor.add_physical_instruction(
+        #    PhysicalInstruction(
+        #        instruction=instr.INSTR_CNOT,
+        #        duration=2.0,
+        #        quantum_noise_model=DepolarNoiseModel(
+        #            depolar_rate=1e6, time_independent=False
+        #        ),
+        #    )
+        # )
+        # processor.add_physical_instruction(
+        #    PhysicalInstruction(
+        #        instruction=instr.INSTR_MEASURE, duration=3.0, parallel=True
+        #    )
+        # )
         return processor
 
     # Helper for setting up the callbacks and handlers
@@ -87,7 +126,6 @@ class QPUNode(Node):
         self.processor.ports["qout0"].bind_output_handler(
             self.__setup_header_wrapper, tag_meta=True
         )
-        # self.ports["corrections"].bind_input_handler(self.__debug, tag_meta=True)
 
     def __debug(self, msg):
         port = msg.meta.get("rx_port_name", "missing_port_metadata")

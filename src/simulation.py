@@ -5,7 +5,7 @@ import netsquid as ns
 from utils import record_results, switch_parameters, get_fidelities
 from qpu_node import QPUNode
 from fso_switch import FSOSwitch
-from protocols import EntanglementRetryProto
+from protocols import EntanglementRetryProto, ContinuousDistillationProtocol
 from netsquid.protocols import Signals
 from netsquid.nodes.network import Network
 from netsquid.components import ClassicalChannel
@@ -17,7 +17,6 @@ def setup_network(
     model_parameters,
     loss_prob,
     routing,
-    qpu_dephase=0,
 ):
     network = Network("switch_test_network")
     # Testing detector induced losses
@@ -31,8 +30,8 @@ def setup_network(
         herald_ports = [routing["qin0"], routing["qin1"]]
 
     # Create nodes
-    alice_node = QPUNode("AliceNode", depolar_rate=qpu_dephase)
-    bob_node = QPUNode("BobNode", depolar_rate=qpu_dephase)
+    alice_node = QPUNode("AliceNode")
+    bob_node = QPUNode("BobNode")
     fsoswitch_node = FSOSwitch("bsm_fsoswitch", model_parameters, det_eff, herald_ports)
 
     # Connect node-level ports
@@ -71,9 +70,9 @@ def setup_network(
 
 
 def single_run(
-    model_parameters, qpu_depolar_rate, switch_routing, loss_prob, max_attempts
+    model_parameters, switch_routing, loss_prob, max_attempts, max_distillations
 ):
-    # Initialize simulation
+    # Initialize simulatio
     ns.sim_reset()
 
     # Setup network connections
@@ -84,42 +83,45 @@ def single_run(
     )
 
     # Create and start the simulation protocol
-    retry_proto = EntanglementRetryProto(
+    # distill_proto = ContinuousDistillationProtocol(
+    distill_proto = EntanglementRetryProto(
         alice_node,
         bob_node,
         fsoswitch_node,
         switch_routing,
         max_attempts=max_attempts,
+        # max_distillation=max_distillations,
     )
 
     # TODO setup entanglement distillation protocol
 
     # Test
-    retry_proto.reset()
-    retry_proto.start()
+    distill_proto.start()
 
     # Run the simulation
     stats = ns.sim_run()
     quantum_ops = stats.data["quantum_ops_total"]
-    # print(f"SIMULATION STATISTICS: {stats}")
+    print(stats.data)
     simtime = ns.sim_time()
 
     # Get the protocol status
-    protocol_status = retry_proto.get_signal_result(Signals.FINISHED)
-    logging.info(f"[Simulation] Retry protocol returned: {protocol_status}")
+    protocol_status = distill_proto.get_signal_result(Signals.FINISHED)
+    protocol_status = distill_proto.success
+    logging.info(f"[Simulation] Distill protocol returned: {protocol_status}")
 
-    # Calculate ebit fidelity or set to 0.5 if attempt failed
+    # Calculate ebit fidelity or set to 0 if attempt failed
     fidelity = (
-        get_fidelities(alice_node, bob_node, qid_1=1, qid_2=1)
-        if protocol_status
-        else 0.5
+        get_fidelities(alice_node, bob_node, qid_1=2, qid_2=2) if protocol_status else 0
     )
     logging.debug(f"FIDELITY: {fidelity}")
+
+    # Make sure to reset the protocol
+    distill_proto.reset()
 
     # Return results
     return {
         "status": protocol_status,
-        "attempts": retry_proto.attempts,
+        "attempts": distill_proto.attempts,
         "fidelity": fidelity,
         "simtime": simtime,
         "quantum_ops": quantum_ops,
@@ -129,20 +131,13 @@ def single_run(
 # Runs the simulation several times, determined by the batch size.
 def batch_run(
     model_parameters,
-    qpu_depolar_rate,
     switch_routing,
     batch_size,
     loss_prob,
     max_attempts,
+    max_distillations,
 ):
-    ret_results = {
-        "status": 0,
-        "attempts": 0,
-        "fidelity": 0,
-        "simtime": 0,
-        "quantum_ops": 0,
-        "entanglement_rate": 0,
-    }
+    ret_results = {}
     full_results = {
         "status": np.zeros(batch_size, dtype="bool"),
         "attempts": np.zeros(batch_size, dtype="uint"),
@@ -154,15 +149,28 @@ def batch_run(
     for i in range(batch_size):
         # Perform single run of the simulation and record the results into the dict
         run_results = single_run(
-            model_parameters, qpu_depolar_rate, switch_routing, loss_prob, max_attempts
+            model_parameters, switch_routing, loss_prob, max_attempts, max_distillations
         )
-        record_results(full_results, run_results, i, max_attempts)
+        record_results(
+            full_results=full_results,
+            run_results=run_results,
+            i=i,
+            attempt_limit=max_attempts,
+        )
 
     # Average calculations and return
     ret_results["status"] = np.average(full_results["status"])
+    ret_results["status_std"] = np.std(full_results["status"], axis=0)
     ret_results["attempts"] = np.average(full_results["attempts"])
+    ret_results["attempts_std"] = np.std(full_results["attempts"], axis=0)
     ret_results["fidelity"] = np.average(full_results["fidelity"])
+    ret_results["fidelity_std"] = np.std(full_results["fidelity"], axis=0)
     ret_results["simtime"] = np.average(full_results["simtime"])
+    ret_results["simtime_std"] = np.std(full_results["simtime"], axis=0)
     ret_results["quantum_ops"] = np.average(full_results["quantum_ops"])
+    ret_results["quantum_ops_std"] = np.std(full_results["quantum_ops"], axis=0)
     ret_results["entanglement_rate"] = np.average(full_results["entanglement_rate"])
+    ret_results["entanglement_rate_std"] = np.std(
+        full_results["entanglement_rate"], axis=0
+    )
     return ret_results
