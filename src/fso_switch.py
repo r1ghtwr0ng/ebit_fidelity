@@ -1,13 +1,17 @@
 import json
 import logging
+from netsquid.nodes import Node
 from detectors import BSMDetector
-from netsquid.components import Component
 from netsquid.components import QuantumChannel
 from netsquid.examples.repeater_chain import FibreDepolarizeModel
-from netsquid.components.models import FibreDelayModel, FibreLossModel
+from netsquid.components.models import (
+    FibreDelayModel,
+    FibreLossModel,
+    DephaseNoiseModel,
+)
 
 
-class FSOSwitch(Component):
+class FSOSwitch(Node):
     """
     A Free-Space Optical (FSO) switch component for routing quantum signals.
 
@@ -23,7 +27,13 @@ class FSOSwitch(Component):
         Configuration for fiber loss, delay, and depolarization models.
     """
 
-    def __init__(self, name, model_parameters):
+    def __init__(
+        self,
+        name,
+        model_parameters,
+        detector_efficiency,
+        herald_ports=["qout0", "qout1"],
+    ):
         ports = [
             "qin0",
             "qin1",
@@ -33,29 +43,53 @@ class FSOSwitch(Component):
             "qout2",
             "cout0",
             "cout1",
-            "cout2",
         ]
         super().__init__(name, port_names=ports)
         self.__setup_fibre_channels(model_parameters)
-        self.__setup_bsm_detector()
+        self.__setup_bsm_detector(
+            herald_ports=herald_ports, det_eff=detector_efficiency
+        )
         self.__setup_port_forwarding()
 
-    def __setup_bsm_detector(self):
+    def __setup_bsm_detector(self, herald_ports, p_dark=0, det_eff=1, visibility=1):
         """
         Creates a BSM detector component and adds it as a subcomponent to the FSO Switch
         Port bindings:  [FSO] qout0 -> qin0  [BSM]
                         [FSO] qout1 -> qin1  [BSM]
                         [FSO] cout0 <- cout0 [BSM]
                         [FSO] cout1 <- cout1 [BSM]
+
+        Parameters
+        ----------
+        p_dark : float, optional
+            Dark-count probability, i.e. probability of measuring a photon while
+            no photon was present, per detector.
+        det_eff : float, optional
+            Efficiency per detector, i.e. the probability of detecting an incoming
+            photon.
+        visibility : float, optional
+            Visibility of the Hong-Ou-Mandel dip, also referred to as the photon
+            indistinguishability.
         """
+
         # Create BSMDetector component
-        bsm_detector = BSMDetector(f"BSM[{self.name}]")
+        bsm_detector = BSMDetector(
+            name=f"BSM[{self.name}]",
+            p_dark=p_dark,
+            det_eff=det_eff,
+            visibility=visibility,
+        )
 
         # Add subcomponents
         self.add_subcomponent(bsm_detector)
 
-        self.ports["qout0"].bind_output_handler(bsm_detector.ports["qin0"].tx_input)
-        self.ports["qout1"].bind_output_handler(bsm_detector.ports["qin1"].tx_input)
+        # TODO fix the switch location config
+        self.ports[herald_ports[0]].bind_output_handler(
+            bsm_detector.ports["qin0"].tx_input
+        )
+        self.ports[herald_ports[1]].bind_output_handler(
+            bsm_detector.ports["qin1"].tx_input
+        )
         bsm_detector.ports["cout0"].bind_output_handler(self.ports["cout0"].tx_output)
         bsm_detector.ports["cout1"].bind_output_handler(self.ports["cout1"].tx_output)
 
@@ -85,10 +119,9 @@ class FSOSwitch(Component):
             depolarization, loss, and delay parameters.
         """
         model_map_short = {
-            "delay_model": FibreDelayModel(),
-            "quantum_noise_model": FibreDepolarizeModel(
-                p_depol_init=model_parameters["short"]["init_depolar"],
-                p_depol_length=model_parameters["short"]["len_depolar"],
+            "quantum_noise_model": DephaseNoiseModel(
+                dephase_rate=model_parameters["short"]["init_depolar"],
+                time_independent=True,
             ),
             "quantum_loss_model": FibreLossModel(
                 p_loss_init=model_parameters["short"]["init_loss"],
@@ -97,10 +130,14 @@ class FSOSwitch(Component):
             ),
         }
         model_map_mid = {
-            "quantum_noise_model": FibreDepolarizeModel(
-                p_depol_init=model_parameters["mid"]["init_depolar"],
-                p_depol_length=model_parameters["mid"]["len_depolar"],
+            "quantum_noise_model": DephaseNoiseModel(
+                dephase_rate=model_parameters["mid"]["init_depolar"],
+                time_independent=True,
             ),
+            # "quantum_noise_model": FibreDepolarizeModel(
+            #    p_depol_init=model_parameters["mid"]["init_depolar"],
+            #    p_depol_length=model_parameters["mid"]["len_depolar"],
+            # ),
             "quantum_loss_model": FibreLossModel(
                 p_loss_init=model_parameters["mid"]["init_loss"],
                 p_loss_length=model_parameters["mid"]["len_loss"],
@@ -108,11 +145,14 @@ class FSOSwitch(Component):
             ),
         }
         model_map_long = {
-            "delay_model": FibreDelayModel(),
-            "quantum_noise_model": FibreDepolarizeModel(
-                p_depol_init=model_parameters["long"]["init_depolar"],
-                p_depol_length=model_parameters["long"]["len_depolar"],
+            "quantum_noise_model": DephaseNoiseModel(
+                dephase_rate=model_parameters["long"]["init_depolar"],
+                time_independent=True,
             ),
+            # "quantum_noise_model": FibreDepolarizeModel(
+            #    p_depol_init=model_parameters["long"]["init_depolar"],
+            #    p_depol_length=model_parameters["long"]["len_depolar"],
+            # ),
             "quantum_loss_model": FibreLossModel(
                 p_loss_init=model_parameters["long"]["init_loss"],
                 p_loss_length=model_parameters["long"]["len_loss"],
@@ -212,8 +252,8 @@ class FSOSwitch(Component):
         ValueError
             If the provided routing table has invalid keys or values.
         """
-        valid_keys = list(routing_table.keys()) == ["qin0", "qin1", "qin2"]
-        valid_vals = list(routing_table.values()) == ["qout0", "qout1", "qout2"]
+        valid_keys = sorted(routing_table.keys()) == ["qin0", "qin1", "qin2"]
+        valid_vals = sorted(routing_table.values()) == ["qout0", "qout1", "qout2"]
         if not (valid_keys and valid_vals):
             logging.error(f"Invalid routing rable: {routing_table}")
 
