@@ -39,7 +39,7 @@ def single_sim(
             print(f"Progress: {j}/{len(loss_probabilities)}", end="\r")
             # Generate a model parameter configuration and run simulation batch
             # TODO change back to non-ideal
-            model_params = ideal_parameters(fso_drate, loss_prob)
+            model_params = switch_parameters(fso_drate, loss_prob)
             run_results = batch_run(
                 model_parameters=model_params,
                 switch_routing=switch_routing,
@@ -144,8 +144,8 @@ def main_switching():
 
     # Simulation parameters
     # fso_depolar_rates not needed for line plot
-    loss_probabilities = np.linspace(0, 0.4, 40)
-    total_runs = 200
+    loss_probabilities = np.linspace(0, 0.4, 10)
+    total_runs = 20
     max_proto_attempts = 7
 
     # Create a single figure and axes for the line plot
@@ -160,6 +160,7 @@ def main_switching():
             fso_depolar_rates=np.array([0]),  # Dummy value since it's not used
             loss_probabilities=loss_probabilities,
             max_attempts=max_proto_attempts,
+            max_distillations=0,
         )
 
         # Extract plot metric (assumed to be a 1D array with length matching loss_probabilities)
@@ -194,4 +195,4 @@ def main_switching():
 
 
 if __name__ == "__main__":
-    main_single()
+    main_switching()
