@@ -1,8 +1,7 @@
 import logging
-import numpy as np
+import pandas as pd
 import netsquid as ns
 
-from utils import record_results, switch_parameters, get_fidelities
 from qpu_node import QPUNode
 from fso_switch import FSOSwitch
 from protocols import EntanglementRetryProto, ContinuousDistillationProtocol
@@ -14,13 +13,13 @@ from netsquid.components.models.delaymodels import FibreDelayModel
 
 
 def setup_network(
-    model_parameters,
-    loss_prob,
+    dampening_parameter,
     routing,
+    ideal,
+    detector_efficiency,
 ):
     network = Network("switch_test_network")
     # Testing detector induced losses
-    det_eff = 1 - loss_prob
 
     # Determine herald ports depending on switch configuration
     long_paths = routing == {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"}
@@ -32,7 +31,9 @@ def setup_network(
     # Create nodes
     alice_node = QPUNode("AliceNode")
     bob_node = QPUNode("BobNode")
-    fsoswitch_node = FSOSwitch("bsm_fsoswitch", model_parameters, det_eff, herald_ports)
+    fsoswitch_node = FSOSwitch(
+        "bsm_fsoswitch", detector_efficiency, dampening_parameter, ideal, herald_ports
+    )
 
     # Connect node-level ports
     alice_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin0"])
@@ -64,26 +65,31 @@ def setup_network(
     # Add connection to network
     network.add_connection(alice_node, bob_node, connection=conn_cchannel)
     # TODO add quantum channel connections instead of direct port forwards
-    # TODO add DataCollector object
 
     return alice_node, bob_node, fsoswitch_node
 
 
 def single_run(
-    model_parameters, switch_routing, loss_prob, max_attempts, max_distillations
+    switch_routing,
+    dampening_parameter,
+    max_attempts,
+    max_distillations,
+    ideal,
+    detector_efficiency,
+    run,
 ):
     # Initialize simulatio
     ns.sim_reset()
 
     # Setup network connections
     alice_node, bob_node, fsoswitch_node = setup_network(
-        model_parameters,
-        loss_prob,
         routing=switch_routing,
+        dampening_parameter=dampening_parameter,
+        detector_efficiency=detector_efficiency,
+        ideal=ideal,
     )
 
     # Create and start the simulation protocol
-    # retry_proto = EntanglementRetryProto(
     distill_proto = ContinuousDistillationProtocol(
         alice_node,
         bob_node,
@@ -92,8 +98,6 @@ def single_run(
         max_attempts=max_attempts,
         max_distillations=max_distillations,
     )
-
-    # TODO setup entanglement distillation protocol
 
     # Test
     distill_proto.start()
@@ -104,74 +108,67 @@ def single_run(
     simtime = ns.sim_time()
 
     # Get the protocol status
-    protocol_status = distill_proto.get_signal_result(Signals.FINISHED)
-    logging.info(f"[Simulation] Retry protocol returned: {protocol_status}")
-
-    # Calculate ebit fidelity or set to 0 if attempt failed
-    fidelity = (
-        get_fidelities(alice_node, bob_node, qid_1=2, qid_2=2) if protocol_status else 0
+    protocol_status, full_events_dataframe = distill_proto.get_signal_result(
+        Signals.FINISHED
     )
-    logging.debug(f"FIDELITY: {fidelity}")
+    logging.info(f"[Simulation] Retry protocol returned: {protocol_status}")
 
     # Make sure to reset the protocol
     distill_proto.reset()
 
-    # Return results
-    return {
+    # Construct simulation statistics metadata dataframe
+    run_id = f"{run}_{dampening_parameter}_{detector_efficiency}"
+    run_metadata = {
+        "run": run,
+        "detector_efficiency": detector_efficiency,
+        "dampening_parameter": dampening_parameter,
+        "run_id": run_id,
+        "ideal": ideal,
         "status": protocol_status,
-        "attempts": distill_proto.attempts,
-        "fidelity": fidelity,
         "simtime": simtime,
         "quantum_ops": quantum_ops,
     }
+    run_metadata_df = pd.DataFrame([run_metadata])
+
+    # Fill in the run information for the full dataframe
+    full_events_dataframe["run"] = run
+    full_events_dataframe["detector_efficiency"] = detector_efficiency
+    full_events_dataframe["dampening_parameter"] = dampening_parameter
+    full_events_dataframe["run_id"] = run_id
+
+    # Return results
+    return run_metadata_df, full_events_dataframe
 
 
-# Runs the simulation several times, determined by the batch size.
+# TODO multiprocess this so kernel cleans up memory leaks
 def batch_run(
-    model_parameters,
     switch_routing,
     batch_size,
-    loss_prob,
+    ideal_switch,
+    dampening_parameters,
+    detector_efficiencies,
     max_attempts,
     max_distillations,
 ):
-    ret_results = {}
-    full_results = {
-        "status": np.zeros(batch_size, dtype="bool"),
-        "attempts": np.zeros(batch_size, dtype="uint"),
-        "fidelity": np.zeros(batch_size, dtype="float"),
-        "simtime": np.zeros(batch_size, dtype="float"),
-        "quantum_ops": np.zeros(batch_size, dtype="uint"),
-        "entanglement_rate": np.zeros(batch_size, dtype="float"),
-    }
-    for i in range(batch_size):
-        # Perform single run of the simulation and record the results into the dict
-        run_results = single_run(
-            model_parameters,
-            switch_routing,
-            loss_prob,
-            max_attempts,
-            max_distillations,
-        )
-        record_results(full_results, run_results, i, max_attempts)
+    all_event_dfs = []
+    all_metadata_dfs = []
+    for i, dampening_parameter in enumerate(dampening_parameters):
+        print(f"[i] Progress: {i}/{len(dampening_parameters)}", end="\r")
+        for j, detector_eff in enumerate(detector_efficiencies):
+            for run_id in range(batch_size):
+                run_metadata_df, full_events_df = single_run(
+                    switch_routing,
+                    dampening_parameter,
+                    max_attempts,
+                    max_distillations,
+                    ideal_switch,
+                    detector_eff,
+                    run_id,
+                )
+                all_event_dfs.append(full_events_df)
+                all_metadata_dfs.append(run_metadata_df)
 
-    # Successful fidelities
-    status_mask = full_results["status"]
-    fidelities = full_results["fidelity"][status_mask]
-
-    # Average calculations and return
-    ret_results["status"] = np.average(status_mask)
-    ret_results["status_std"] = np.std(status_mask, axis=0)
-    ret_results["attempts"] = np.average(full_results["attempts"])
-    ret_results["attempts_std"] = np.std(full_results["attempts"], axis=0)
-    ret_results["fidelity"] = np.average(fidelities)
-    ret_results["fidelity_std"] = np.std(fidelities, axis=0)
-    ret_results["simtime"] = np.average(full_results["simtime"])
-    ret_results["simtime_std"] = np.std(full_results["simtime"], axis=0)
-    ret_results["quantum_ops"] = np.average(full_results["quantum_ops"])
-    ret_results["quantum_ops_std"] = np.std(full_results["quantum_ops"], axis=0)
-    ret_results["entanglement_rate"] = np.average(full_results["entanglement_rate"])
-    ret_results["entanglement_rate_std"] = np.std(
-        full_results["entanglement_rate"], axis=0
-    )
-    return ret_results
+    # Concatenate all dataframes into a single entity
+    df_all_events = pd.concat(all_event_dfs, ignore_index=True)
+    df_all_metadata = pd.concat(all_metadata_dfs, ignore_index=True)
+    return df_all_events, df_all_metadata
