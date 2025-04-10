@@ -9,7 +9,7 @@ from plotting import plot_events, plot_metadata
 # TODO implement a main function with an amplitude dampening parameter
 def main():
     # Set logging level
-    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.ERROR)
 
     # Switch configuration parameters
     switch_routings = [
@@ -31,11 +31,11 @@ def main():
 
     # Simulation sweep parameters
     detector_efficiencies = np.linspace(1, 1, 1)
-    dampening_parameters = np.linspace(0, 0, 1)
-    batch_size = 1
-    max_distillations = 2
+    dampening_parameters = np.linspace(0, 0.3, 15)
+    batch_size = 500
+    max_distillations = 3
     max_proto_attempts = 10
-    ideal_switch = True
+    ideal_switch = False
 
     for i, switch_routing in enumerate(switch_routings):
         logging.info(f"Running routing config: {titles[i]}")
@@ -56,7 +56,7 @@ def main():
         df_metadata.to_parquet(f"./savefiles/df_metadata_{timestamp}.parquet")
         df_events.to_parquet(f"./savefiles/df_events_{timestamp}.parquet")
 
-        # TODO send this off to get plotted
+        # Plot the collected data
         plot_metadata(df_metadata, config_name=titles[i])
         plot_events(df_events, config_name=titles[i])
 
