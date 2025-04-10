@@ -15,7 +15,7 @@ def collect_fidelity_data(evexpr):
     bob = second_protocol.node
 
     # Get results
-    fidelity = get_fidelities(alice, bob)
+    fidelity = get_fidelities(alice, bob)[0]
     success = first_result["success"] and second_result["success"]
     log = first_result["log"]
     simtime = ns.sim_time()

@@ -98,14 +98,14 @@ class FSOSwitch(Node):
         # Define handler functions for applying amplitude dampening before forwarding
         # Message objects onto BSM device
         def first_bsm_handler(msg):
-            # amplitude_dampen(msg.items[0], self.__amplitude_dampening)
+            amplitude_dampen(msg.items[0], self.__amplitude_dampening)
             logging.debug(
                 f"[FSO | {self.name}] Dampening: {msg.items[0]} by: {self.__amplitude_dampening} | from: {msg.meta['source']}"
             )
             bsm_detector.ports["qin0"].tx_input(msg)
 
         def second_bsm_handler(msg):
-            # amplitude_dampen(msg.items[0], self.__amplitude_dampening)
+            amplitude_dampen(msg.items[0], self.__amplitude_dampening)
             logging.debug(
                 f"[FSO | {self.name}] Dampening: {msg.items[0]} by: {self.__amplitude_dampening} | from: {msg.meta['source']}"
             )
