@@ -713,7 +713,7 @@ class BSMDetector(TwinDetector):
         )
         num_modes = len(qubits) // 2
 
-        logging.debug(f"[DETECTOR] MODES: {num_modes} Qubits: {q_lists}")
+        logging.debug(f"[DETECTOR | {self.name}] Modes: {num_modes} Qubits: {q_lists}")
         # Override for multiplexed measurement
         outcomes = [BSMOutcome(success=False)]
         for mode in range(num_modes):
@@ -738,20 +738,21 @@ class BSMDetector(TwinDetector):
                 False if qubit_right is None else qubit_right.is_number_state
             )
             if is_qubit_left_number_state is not is_qubit_right_number_state:
-                logging.debug("[DETECTOR] Err 740")
+                logging.debug(
+                    f"[DETECTOR | {self.name}] One is number state, one is not"
+                )
                 raise QuantumDetectorError(
-                    f"BSMDetector {self.name} received a pair of qubits from either side "
-                    "for which one is a number state while the other is not."
+                    f"BSMDetector {self.name} received a pair of qubits from either side for which one is a number state while the other is not."
                 )
             if is_qubit_left_number_state:
-                logging.debug("[DETECTOR] Err 746")
+                logging.debug(f"[DETECTOR | {self.name}] Left number state")
                 # Measure in presence-absence encoding
                 outcome = qapi.gmeasure(
                     [qubit_left, qubit_right], meas_operators=self._meas_operators
                 )[0]
                 outcome = self._measoutcome2bsmoutcome[outcome]
             else:
-                logging.debug("[DETECTOR] Err 753")
+                logging.debug(f"[DETECTOR | {self.name}] Unequal number states")
                 # Measure in dual-rail encoding in each of the two modes separately
                 qubit_left_mode_1, qubit_left_mode_2 = self._convert_to_mode_encoding(
                     qubit_left
@@ -783,7 +784,7 @@ class BSMDetector(TwinDetector):
                             success=True, bell_index=BellIndex.PSI_MINUS
                         )
                 else:
-                    logging.debug("[DETECTOR] fucked modes")
+                    logging.debug(f"[DETECTOR | {self.name}] Bad modes")
                     # Not both modes are successful, so the overall outcome is unsuccessful
                     outcome = BSMOutcome(success=False)
             if outcome.success:
@@ -798,7 +799,7 @@ class BSMDetector(TwinDetector):
                     self._meta["successful_modes"] = []
                 self._meta["successful_modes"].append(mode)
                 if logger.isEnabledFor(logging.DEBUG):
-                    logging.debug("[DETECTOR] SUCCESSFUL BSM")
+                    logging.debug(f"[DETECTOR | {self.name}] SUCCESSFUL BSM")
                     logger.debug(
                         f"Successful BSM in BSMDetector {self.name} at time {sim_time()}"
                         f"with outcome {outcome} and successful mode {mode}."
@@ -812,7 +813,7 @@ class BSMDetector(TwinDetector):
         outcomes_per_port = {
             port_name: outcomes[:] for port_name in self._output_port_names
         }
-        logging.debug(f"[DETECTOR] Fucking outcomes: {outcomes_per_port}")
+        logging.debug(f"[DETECTOR | {self.name}] BSM outcomes: {outcomes_per_port}")
         self.inform(outcomes_per_port)
         # Reset the meta information
         self._meta["successful_modes"] = [None]
@@ -953,7 +954,7 @@ class QKDDetector(TwinDetector):
         QuantumDetectorError
             If the `is_number_state` property is not the same for the pair of qubits.
         """
-        print(f"======================================================= MEASURING")
+        self.debug(f"[DETECTOR | {self.name}] Starting measurement")
         self._is_triggered = False
         if self._parameter_changed:
             # Reset the measurement operators based on which basis is used
@@ -998,7 +999,7 @@ class QKDDetector(TwinDetector):
                     arrival_times[num_modes + mode],
                 )
                 if arrival_time_left != arrival_time_right:
-                    logging.debug("[DETECTOR] Fucked arrival time")
+                    logging.debug(f"[DETECTOR | {self.name}] Bad arrival time")
                     raise QuantumDetectorError(
                         f"Arrival times of qubits not equal.\nLeft qubit arrived at "
                         f"{arrival_time_left}, while right qubit arrived at "
@@ -1017,7 +1018,7 @@ class QKDDetector(TwinDetector):
                     else q_late_or_right.is_number_state
                 )
                 if is_qubit_left_number_state is not is_qubit_right_number_state:
-                    logging.debug("[DETECTOR] Number state nonsense")
+                    logging.debug(f"[DETECTOR | {self.name}] Number state nonsense")
                     raise QuantumDetectorError(
                         f"BSMDetector {self.name} received a pair of qubits from either side "
                         "for which one is a number states while the other is not."
@@ -1042,7 +1043,7 @@ class QKDDetector(TwinDetector):
             port_name: outcomes[:] for port_name in self._output_port_names
         }
 
-        logging.debug(f"[DETECTOR] Outcome shit: {outcomes}")
+        logging.debug(f"[DETECTOR | {self.name}] Outcomes: {outcomes}")
         self.inform(outcomes_per_port)
         # Reset the meta information
         self._meta["successful_modes"] = None
