@@ -22,62 +22,6 @@ def record_results(full_results, run_results, i, attempt_limit):
     full_results["quantum_ops"][i] = run_results["quantum_ops"]
 
 
-# TODO add doc comments
-def switch_parameters(depolar_prob, loss_prob=0):
-    model_parameters = {
-        "short": {
-            "init_loss": loss(1.319) + loss_prob,
-            "len_loss": 0,
-            "init_depolar": depolar_prob,
-            "len_depolar": 0,
-            "channel_len": 0.005,
-        },
-        "mid": {
-            "init_loss": loss(2.12) + loss_prob,
-            "len_loss": 0,
-            "init_depolar": depolar_prob,
-            "len_depolar": 0,
-            "channel_len": 0.00587,
-        },
-        "long": {
-            "init_loss": loss(2.005) + loss_prob,
-            "len_loss": 0,
-            "init_depolar": depolar_prob,
-            "len_depolar": 0,
-            "channel_len": 0.00756,
-        },
-    }
-    return model_parameters
-
-
-# Useful for debugging with no loss or dephase
-def ideal_parameters(_depolar_rate, _loss_prob=0):
-    model_parameters = {
-        "short": {
-            "init_loss": 0,
-            "len_loss": 0,
-            "init_depolar": 0,
-            "len_depolar": 0,
-            "channel_len": 0,
-        },
-        "mid": {
-            "init_loss": 0,
-            "len_loss": 0,
-            "init_depolar": 0,
-            "len_depolar": 0,
-            "channel_len": 0,
-        },
-        "long": {
-            "init_loss": 0,
-            "len_loss": 0,
-            "init_depolar": 0,
-            "len_depolar": 0,
-            "channel_len": 0,
-        },
-    }
-    return model_parameters
-
-
 # Flush all messages from a port
 def flush_port(port):
     while port.input_queue:
@@ -104,19 +48,12 @@ def get_fidelities(alice, bob, qid_1=1, qid_2=1):
         - fidelity (float): Fidelity of the Bell state |B00>.
     """
 
-    [qubit0] = alice.processor.peek(qid_1)
-    [qubit1] = bob.processor.peek(qid_2)
-    fidelities = {
-        "|00>": qapi.fidelity([qubit0, qubit1], np.array([1, 0, 0, 0]), squared=True),
-        "|11>": qapi.fidelity([qubit0, qubit1], np.array([0, 0, 0, 1]), squared=True),
-        "B00": qapi.fidelity([qubit0, qubit1], ks.b00, squared=True),
-        "B01": qapi.fidelity([qubit0, qubit1], ks.b01, squared=True),
-        "B10": qapi.fidelity([qubit0, qubit1], ks.b10, squared=True),
-        "B11": qapi.fidelity([qubit0, qubit1], ks.b11, squared=True),
-    }
+    [qubit0] = alice.processor.peek(qid_1, skip_noise=True)
+    [qubit1] = bob.processor.peek(qid_2, skip_noise=True)
+    fidelity = (qapi.fidelity([qubit0, qubit1], ks.b00, squared=True),)
+    logging.debug(f"[FIDELITY_STATS] Simulation output: {fidelity}")
 
-    logging.debug(f"[GREPPABLE] Simulation output: {fidelities}")
-    return fidelities["B00"]
+    return fidelity
 
 
 # Function to calculate fidelity after entanglement distillation
@@ -210,7 +147,7 @@ def find_minimum_ebitz(fidelity, target_fidelity):
     return left if distilled_fidelity(fidelity, left) >= target_fidelity else np.inf
 
 
-def loss(decibels):
+def loss_prob(decibels):
     """
     Convert signal loss in decibels (dB) to a probability.
 
