@@ -4,7 +4,7 @@ import netsquid as ns
 
 from qpu_node import QPUNode
 from fso_switch import FSOSwitch
-from protocols import EntanglementRetryProto, ContinuousDistillationProtocol
+from protocols import ContinuousDistillationProtocol
 from netsquid.protocols import Signals
 from netsquid.nodes.network import Network
 from netsquid.components import ClassicalChannel
@@ -171,4 +171,4 @@ def batch_run(
     # Concatenate all dataframes into a single entity
     df_all_events = pd.concat(all_event_dfs, ignore_index=True)
     df_all_metadata = pd.concat(all_metadata_dfs, ignore_index=True)
-    return df_all_events, df_all_metadata
+    return df_all_metadata, df_all_events
