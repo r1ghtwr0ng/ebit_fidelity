@@ -14,112 +14,8 @@ from qpu_programs import (
 )
 
 
-# class EntanglementProtocol(NodeProtocol):
-#    """Protocol for establishing and correcting quantum entanglement."""
-#
-#    def __init__(self, node, timeout=100, perform_correction=True):
-#        super().__init__(node)
-#        self.node = node
-#        self.timeout = timeout
-#        self.perform_correction = perform_correction
-#        self.protocol_log = "EBIT_CORRECT" if perform_correction else "EBIT_PASSIVE"
-#
-#    def run(self):
-#        """Execute the entanglement protocol."""
-#        node_name = self.node.name
-#        node_proc = self.node.processor
-#        emit_idx = self.node.emit_idx
-#        comm_idx = self.node.comm_idx
-#
-#        # Prepare for entanglement
-#        self._flush_corrections_port(node_name)
-#
-#        # Execute emission and await results
-#        self._execute_emit_program(node_proc, comm_idx, emit_idx)
-#        result = yield from self._await_entanglement_result(node_proc)
-#
-#        return result
-#
-#    def _flush_corrections_port(self, node_name):
-#        """Flush any stale messages on the corrections port."""
-#        logging.debug(f"[{self.protocol_log}] {node_name}: Flushing corrections port.")
-#        flush_port(self.node.ports["corrections"])
-#
-#    def _execute_emit_program(self, processor, comm_idx, emit_idx):
-#        """Execute the photon emission program."""
-#        emit_photon = EmitProgram()
-#        processor.execute_program(emit_photon, qubit_mapping=[comm_idx, emit_idx])
-#
-#    def _await_entanglement_result(self, processor):
-#        """Wait for entanglement establishment and process the result."""
-#        # Set up compound expression to wait for emit completion, correction input, or timeout
-#        emit_done = self.await_program(processor)
-#        port_event = self.await_port_input(self.node.ports["corrections"])
-#        timeout_event = self.await_timer(self.timeout)
-#        compound_expr = (emit_done & port_event) | timeout_event
-#
-#        # Wait for one of the events to occur
-#        ent_expr = yield compound_expr
-#
-#        # Handle timeout
-#        if ent_expr.second_term.value:
-#            logging.info(
-#                f"[{self.protocol_log}] {self.node.name} ebit establishment timeout."
-#            )
-#            return {"log": "timeout", "success": False}
-#
-#        # Process the received Bell state
-#        return self._process_bell_state()
-#
-#    def _process_bell_state(self):
-#        """Process the Bell state from the received message and apply corrections if needed."""
-#        node_name = self.node.name
-#        node_proc = self.node.processor
-#        comm_idx = self.node.comm_idx
-#
-#        # Get message from corrections port
-#        msg = self.node.ports["corrections"].rx_input()
-#        if msg is None:
-#            logging.info(f"[{self.protocol_log}] {node_name} missing message")
-#            return {"log": "no_msg", "success": False}
-#
-#        bell_state = msg.items[0].bell_index
-#
-#        # Handle different Bell states
-#        if bell_state == -1:
-#            logging.info(f"[{self.protocol_log}] {node_name} invalid entanglement")
-#            return {"log": "no entanglement", "success": False}
-#
-#        elif bell_state == 0:
-#            # Bell state 0 doesn't need correction
-#            logging.info(
-#                f"[{self.protocol_log}] {node_name} received Bell state 0 (no correction needed)"
-#            )
-#            return {"log": "no correction needed", "success": True}
-#
-#        elif bell_state == 1:
-#            logging.info(f"[{self.protocol_log}] {node_name} processing Bell state 1")
-#            if self.perform_correction:
-#                x_prog = XCorrection()
-#                node_proc.execute_program(x_prog, qubit_mapping=[comm_idx])
-#                yield self.await_program(node_proc)
-#            return {"log": "corrected", "success": True}
-#
-#        elif bell_state == 2:
-#            logging.info(f"[{self.protocol_log}] {node_name} processing Bell state 2")
-#            if self.perform_correction:
-#                y_prog = YCorrection()
-#                node_proc.execute_program(y_prog, qubit_mapping=[comm_idx])
-#                yield self.await_program(node_proc)
-#            return {"log": "corrected", "success": True}
-#
-#        else:
-#            logging.error(f"[{self.protocol_log}] {node_name} bad state: {bell_state}")
-#            return {"log": f"bad state: {bell_state}", "success": False}
-
-
 class EntanglementProtocol(NodeProtocol):
-    def __init__(self, node, timeout=100, perform_correction=True):
+    def __init__(self, node, timeout=1500, perform_correction=True):
         super().__init__(node)
         self.node = node
         self.timeout = timeout
@@ -145,14 +41,11 @@ class EntanglementProtocol(NodeProtocol):
         emit_done = self.await_program(node_proc)
         port_event = self.await_port_input(self.node.ports["corrections"])
         timeout_event = self.await_timer(self.timeout)
-        compound_expr = (emit_done & port_event) | timeout_event
+        compound_expr = emit_done & (port_event | timeout_event)
         ent_expr = yield compound_expr
 
-        # logging.debug(
-        #    f"[{self.protocol_log}] {node_name} ======================= EXPR === PROG: {ent_expr.first_term.first_term.value} PORT: | {ent_expr.first_term.second_term.value} | TIMEOUT: {ent_expr.second_term.value} |||| {self.node.ports['corrections'].input_queue}"
-        # )
         # Check if a timeout occurred.
-        if ent_expr.second_term.value:
+        if ent_expr.second_term.second_term.value:
             logging.info(
                 f"[{self.protocol_log}] {node_name} ebit establishment timeout."
             )
@@ -203,7 +96,7 @@ class EntanglementRetryProto(Protocol):
         fsoswitch,
         routing_table,
         max_attempts=10,
-        timeout=200,
+        timeout=1500,
     ):
         super().__init__()
         self.fsoswitch_node = fsoswitch
@@ -228,12 +121,11 @@ class EntanglementRetryProto(Protocol):
 
     def run(self):
         # Set the FSO switch path configuration
-        # TODO use a switch scheduler here
         self.fsoswitch_node.switch(self.routing_table)
 
         for attempt in range(self.max_attempts):
             # Register and log the attempt count
-            logging.info(f"[RETRYPROTO] Attempt {attempt + 1}.")
+            logging.info(f"[RETRYPROTO] Attempt {attempt + 1}")
 
             # Run the subprotocols and process the results.
             self.subprotocol_alice.reset()
@@ -273,7 +165,7 @@ class ContinuousDistillationProtocol(Protocol):
         fsoswitch,
         routing_table,
         max_attempts=10,
-        timeout=100,
+        timeout=1500,
         max_distillations=3,
     ):
         super().__init__()
@@ -466,181 +358,3 @@ class ContinuousDistillationProtocol(Protocol):
             f"[ContinuousDistillation] Distillation iteration {iteration_num} succeeded."
         )
         return True
-
-
-# class ContinuousDistillationProtocol(Protocol):
-#    def __init__(
-#        self,
-#        alice,
-#        bob,
-#        fsoswitch,
-#        routing_table,
-#        max_attempts=10,
-#        timeout=100,
-#        max_distillations=3,
-#    ):
-#        super().__init__()
-#        self.alice = alice
-#        self.bob = bob
-#        self.fsoswitch = fsoswitch
-#        self.routing_table = routing_table
-#        self.max_attempts = max_attempts
-#        self.timeout = timeout
-#        self.max_distillations = max_distillations
-#        self.attempts = 0
-#        self.success = False
-#
-#        self.subprotocol_alice = EntanglementProtocol(
-#            alice, timeout=timeout, perform_correction=True
-#        )
-#        self.subprotocol_bob = EntanglementProtocol(
-#            bob, timeout=timeout, perform_correction=False
-#        )
-#        self.add_subprotocol(self.subprotocol_alice, name="alice_entanglement_protocol")
-#        self.add_subprotocol(self.subprotocol_bob, name="bob_entanglement_protocol")
-#
-#    def run(self):
-#        logging.info(
-#            "[ContinuousDistillation] Running initial entanglement establishment."
-#        )
-#        self.fsoswitch.switch(self.routing_table)
-#
-#        # Create a list to store metrics
-#        metrics_list = []
-#
-#        # --- Initial entanglement establishment ---
-#        init_success = False
-#        for attempt in range(self.max_attempts):
-#            logging.info(
-#                f"[ContinuousDistillation] Initial entanglement attempt {attempt + 1}"
-#            )
-#            self.subprotocol_alice.reset()
-#            self.subprotocol_bob.reset()
-#            self.start_subprotocols()
-#
-#            # Create EventExpression for receiving FINISHED signals from subprotocols
-#            subprotocols_done = self.await_signal(
-#                self.subprotocol_alice, signal_label=Signals.FINISHED
-#            ) & self.await_signal(self.subprotocol_bob, signal_label=Signals.FINISHED)
-#            yield subprotocols_done
-#
-#            # Collect metrics data points
-#            data_point = collect_fidelity_data(subprotocols_done)
-#            metrics_list.append(data_point)
-#
-#            # Await EventExpr triggered on RetryProtocol termination
-#            alice_result = self.subprotocol_alice.get_signal_result(Signals.FINISHED)
-#            bob_result = self.subprotocol_bob.get_signal_result(Signals.FINISHED)
-#            logging.info(
-#                f"[ContinuousDistillation] Attempt {attempt + 1}: Alice: {alice_result['log']} | Bob: {bob_result['log']}"
-#            )
-#
-#            # Keep track of the attempts
-#            self.attempts += attempt + 1
-#
-#            if alice_result["success"] and bob_result["success"]:
-#                init_success = True
-#                break
-#            logging.debug(
-#                "[ContinuousDistillation] Initial entanglement failed, retrying."
-#            )
-#
-#        if not init_success:
-#            logging.debug(
-#                "[ContinuousDistillation] Initial entanglement failed after maximum attempts."
-#            )
-#            results_df = pd.DataFrame(metrics_list)
-#            return (init_success, results_df)
-#
-#        # --- Swap qubits ---
-#        logging.info(
-#            "[ContinuousDistillation] Swapping qubits (positions 1->2) on both nodes."
-#        )
-#        alice_swap_prog = SwapProgram()
-#        bob_swap_prog = SwapProgram()
-#        self.alice.processor.execute_program(alice_swap_prog, qubit_mapping=[1, 2])
-#        self.bob.processor.execute_program(bob_swap_prog, qubit_mapping=[1, 2])
-#        yield self.await_program(self.alice.processor) & self.await_program(
-#            self.bob.processor
-#        )
-#
-#        # --- Distillation iterations ---
-#        for i in range(self.max_distillations):
-#            logging.info(f"[ContinuousDistillation] Distillation iteration {i + 1}")
-#            # Reattempt entanglement for this iteration.
-#            iteration_success = False
-#            for attempt in range(self.max_attempts):
-#                logging.info(
-#                    f"[ContinuousDistillation] Iteration {i + 1} entanglement attempt {attempt + 1}"
-#                )
-#                self.subprotocol_alice.reset()
-#                self.subprotocol_bob.reset()
-#                self.start_subprotocols()
-#
-#                subprotocols_done = self.await_signal(
-#                    self.subprotocol_alice, signal_label=Signals.FINISHED
-#                ) & self.await_signal(
-#                    self.subprotocol_bob, signal_label=Signals.FINISHED
-#                )
-#
-#                # Create data collector object
-#                yield subprotocols_done
-#
-#                # Collect metrics data points
-#                data_point = collect_fidelity_data(subprotocols_done)
-#                metrics_list.append(data_point)
-#
-#                # TODO refactor
-#                alice_result = self.subprotocol_alice.get_signal_result(
-#                    Signals.FINISHED
-#                )
-#                bob_result = self.subprotocol_bob.get_signal_result(Signals.FINISHED)
-#
-#                logging.info(
-#                    f"[ContinuousDistillation] Iteration {i + 1}, attempt {attempt + 1}: Alice: {alice_result['log']} | Bob: {bob_result['log']}"
-#                )
-#                self.attempts += attempt + 1
-#                if alice_result["success"] and bob_result["success"]:
-#                    iteration_success = True
-#                    break
-#                logging.debug(
-#                    f"[ContinuousDistillation] Iteration {i + 1} entanglement failed, retrying."
-#                )
-#
-#            if not iteration_success:
-#                logging.debug(
-#                    f"[ContinuousDistillation] Entanglement failed at iteration {i + 1}"
-#                )
-#                results_df = pd.DataFrame(metrics_list)
-#                return (init_success, results_df)
-#
-#            # Run the EPL distillation program after successful entanglement.
-#            logging.info(
-#                f"[ContinuousDistillation] Running distillation at iteration {i + 1}"
-#            )
-#            alice_distill = EPLDistillationProgram()
-#            bob_distill = EPLDistillationProgram()
-#            self.alice.processor.execute_program(alice_distill, qubit_mapping=[1, 2])
-#            self.bob.processor.execute_program(bob_distill, qubit_mapping=[1, 2])
-#            yield self.await_program(self.alice.processor) & self.await_program(
-#                self.bob.processor
-#            )
-#
-#            # Retrieve measurement outcomes from the EPL distillation program.
-#            alice_meas = alice_distill.output["m_target"][0]
-#            bob_meas = bob_distill.output["m_target"][0]
-#            logging.info(
-#                f"[ContinuousDistillation] Iteration {i + 1} results - Alice: {alice_meas}, Bob: {bob_meas}"
-#            )
-#            # Check if the distillation was successful (success condition: both outcomes equal 1).
-#            if (alice_meas, bob_meas) != (1, 1):
-#                logging.debug(
-#                    f"[ContinuousDistillation] Distillation iteration {i + 1} failed."
-#                )
-#                results_df = pd.DataFrame(metrics_list)
-#                return (init_success, results_df)
-#
-#        logging.info("[ContinuousDistillation] All distillation iterations succeeded")
-#        self.success = True
-#        results_df = pd.DataFrame(metrics_list)
-#        return init_success, results_df
