@@ -1,6 +1,6 @@
 import json
 import logging
-import netsquid as ns
+import numpy as np
 
 from netsquid.nodes import Node
 import netsquid.components.instructions as instr
@@ -46,6 +46,14 @@ class QPUNode(Node):
         Private helper method used to initialize the quantum processor for the entity.
         We have nonphysical instructions as we use an abstract QPU architecture.
 
+        Communication qubit coherence times:
+        T1: 2.68ms
+        T2: 1ms
+
+        Memory (shielded) qubit coherence times:
+        T1: inf
+        T2: 3.5ms
+
         Parameters
         ----------
         name : str
@@ -63,12 +71,11 @@ class QPUNode(Node):
         memory_noise_models = [
             None,  # Utility qubit: no noise applied
             T1T2NoiseModel(
-                T1=50, T2=30
+                T1=2_680_000, T2=1_000_000
             ),  # Communication qubit: high error (short coherence times)
-            None,
-            # T1T2NoiseModel(
-            #    T1=400, T2=280
-            # ),  # Shielded qubit: low error (long coherence times)
+            T1T2NoiseModel(
+                T1=np.inf, T2=3_500_000
+            ),  # Shielded qubit: low error (long coherence times)
         ]
         processor = QuantumProcessor(
             name,
@@ -80,32 +87,32 @@ class QPUNode(Node):
         # TODO fix this to not be in the processor
         processor.add_ports(["qout_hdr", "qout0_hdr"])
         processor.add_physical_instruction(
-            PhysicalInstruction(instruction=instr.INSTR_INIT, duration=1.0)
+            PhysicalInstruction(instruction=instr.INSTR_INIT, duration=200.0)
         )
         processor.add_physical_instruction(
             PhysicalInstruction(
                 instruction=instr.INSTR_X,
-                duration=1.0,
+                duration=50.0,
                 # quantum_noise_model=T1T2NoiseModel(T1=0.5, T2=0.3),
             )
         )
         processor.add_physical_instruction(
             PhysicalInstruction(
                 instruction=instr.INSTR_Y,
-                duration=1.0,
+                duration=50.0,
                 # quantum_noise_model=T1T2NoiseModel(T1=0.5, T2=0.3),
             )
         )
         processor.add_physical_instruction(
-            PhysicalInstruction(instruction=instr.INSTR_EMIT, duration=2.0)
+            PhysicalInstruction(instruction=instr.INSTR_EMIT, duration=20.0)
         )
         processor.add_physical_instruction(
-            PhysicalInstruction(instruction=instr.INSTR_SWAP, duration=2.0)
+            PhysicalInstruction(instruction=instr.INSTR_SWAP, duration=900.0)
         )
         processor.add_physical_instruction(
             PhysicalInstruction(
                 instruction=instr.INSTR_CNOT,
-                duration=2.0,
+                duration=300.0,
                 # quantum_noise_model=DepolarNoiseModel(
                 #    depolar_rate=1e6, time_independent=False
                 # ),
@@ -113,7 +120,7 @@ class QPUNode(Node):
         )
         processor.add_physical_instruction(
             PhysicalInstruction(
-                instruction=instr.INSTR_MEASURE, duration=3.0, parallel=True
+                instruction=instr.INSTR_MEASURE, duration=400.0, parallel=True
             )
         )
         return processor
