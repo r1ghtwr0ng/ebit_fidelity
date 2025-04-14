@@ -1,5 +1,7 @@
+import os
 import time
 import logging
+import datetime
 import numpy as np
 
 from simulation import batch_run
@@ -21,22 +23,31 @@ def main():
         #    {"qin0": "qout1", "qin1": "qout2", "qin2": "qout0"},  # High, High
     ]
     titles = [
-        "(Low, Low)",
-        #    "(Low, Mid)",
-        #    "(Low, High)",
-        #    "(Mid, Mid)",
-        #    "(Mid, High)",
-        #    "(High, High)",
+        "Low_Low",
+        #    "Low_Mid",
+        #    "Low_High",
+        #    "Mid_Mid",
+        #    "Mid_High",
+        #    "High_High",
     ]
 
     # Simulation sweep parameters
     detector_efficiencies = np.linspace(1, 1, 1)
     dampening_parameters = np.linspace(0, 0.3, 15)
-    batch_size = 500
+    batch_size = 400
     max_distillations = 3
     max_proto_attempts = 10
     ideal_switch = False
 
+    # Make directory to save plots in
+    timestamp = f"{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"
+    plot_directory = f"./plots/2d/{timestamp}"
+    save_directory = f"./savefiles/{timestamp}"
+    logging.info(f"Creating directories: {plot_directory} and {save_directory}")
+    os.mkdir(plot_directory)
+    os.mkdir(save_directory)
+
+    # Run simulation for each switch configuration
     for i, switch_routing in enumerate(switch_routings):
         logging.info(f"Running routing config: {titles[i]}")
 
@@ -52,13 +63,12 @@ def main():
         )
 
         # Save to paraquet files on disk
-        timestamp = int(time.time())
-        df_metadata.to_parquet(f"./savefiles/df_metadata_{timestamp}.parquet")
-        df_events.to_parquet(f"./savefiles/df_events_{timestamp}.parquet")
+        df_metadata.to_parquet(f"{save_directory}/df_metadata.parquet")
+        df_events.to_parquet(f"{save_directory}/df_events.parquet")
 
         # Plot the collected data
-        plot_metadata(df_metadata, config_name=titles[i])
-        plot_events(df_events, config_name=titles[i])
+        plot_metadata(df_metadata, config_name=titles[i], directory=plot_directory)
+        plot_events(df_events, config_name=titles[i], directory=plot_directory)
 
 
 if __name__ == "__main__":

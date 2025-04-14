@@ -1,15 +1,8 @@
-import matplotlib.pyplot as plt
-import pandas as pd
 import time
-import os
-
 import matplotlib.pyplot as plt
-import pandas as pd
-import time
-import os
 
 
-def plot_metadata(df_metadata, config_name):
+def plot_metadata(df_metadata, config_name, directory):
     # Columns: run detector_efficiency dampening_parameter run_id ideal status simtime quantum_ops
     timestamp = int(time.time())
 
@@ -32,10 +25,10 @@ def plot_metadata(df_metadata, config_name):
         )
         plt.xlabel("Dampening Parameter")
         plt.ylabel("Average Simtime")
-        plt.title("Average Simtime vs Dampening")
+        plt.title("(Metadata) Average Simtime vs Dampening")
         plt.grid(True)
         plt.tight_layout()
-        plt.savefig(f"./plots/2d/simtime_vs_dampening_{config_name}_{timestamp}.png")
+        plt.savefig(f"{directory}/simtime_vs_dampening_{config_name}.png")
         plt.clf()
 
         # 2. Mean quantum_ops
@@ -49,12 +42,10 @@ def plot_metadata(df_metadata, config_name):
         )
         plt.xlabel("Dampening Parameter")
         plt.ylabel("Average Quantum Ops")
-        plt.title("Average Quantum Ops vs Dampening")
+        plt.title("(Metadata) Average Quantum Ops vs Dampening")
         plt.grid(True)
         plt.tight_layout()
-        plt.savefig(
-            f"./plots/2d/quantum_ops_vs_dampening_{config_name}_{timestamp}.png"
-        )
+        plt.savefig(f"{directory}/quantum_ops_vs_dampening_{config_name}.png")
         plt.clf()
 
         # 3. Success probability (status == True)
@@ -64,16 +55,14 @@ def plot_metadata(df_metadata, config_name):
         )
         plt.xlabel("Dampening Parameter")
         plt.ylabel("Success Probability")
-        plt.title("Success Probability vs Dampening")
+        plt.title("(Metadata) Success Probability vs Dampening")
         plt.grid(True)
         plt.tight_layout()
-        plt.savefig(
-            f"./plots/2d/success_prob_vs_dampening_{config_name}_{timestamp}.png"
-        )
+        plt.savefig(f"{directory}/success_prob_vs_dampening_{config_name}.png")
         plt.clf()
 
 
-def plot_events(df_events, config_name):
+def plot_events(df_events, config_name, directory):
     # Columns: fidelity simtime attempt_log success phase attempt total_attempts time run detector_efficiency dampening_parameter
     timestamp = int(time.time())
 
@@ -103,7 +92,7 @@ def plot_events(df_events, config_name):
         plt.plot(
             success_fidelity["dampening_parameter"],
             success_fidelity["fidelity"],
-            "o-",
+            "x-",
             label="Successful attempts",
         )
         plt.xlabel("Dampening Parameter")
@@ -112,7 +101,7 @@ def plot_events(df_events, config_name):
         plt.legend()
         plt.grid(True)
         plt.tight_layout()
-        plt.savefig(f"./plots/2d/fidelity_comparison_{config_name}_{timestamp}.png")
+        plt.savefig(f"{directory}/fidelity_comparison_{config_name}.png")
         plt.clf()
 
         # 2. Success probability
@@ -125,7 +114,7 @@ def plot_events(df_events, config_name):
         plt.title("Success Probability vs Dampening")
         plt.grid(True)
         plt.tight_layout()
-        plt.savefig(f"./plots/2d/event_success_prob_{config_name}_{timestamp}.png")
+        plt.savefig(f"{directory}/event_success_prob_{config_name}.png")
         plt.clf()
 
         # 3. Phase success histogram
@@ -144,7 +133,7 @@ def plot_events(df_events, config_name):
         plt.title("Success Probability per Phase")
         plt.legend(title="Phase")
         plt.tight_layout()
-        plt.savefig(f"./plots/2d/phase_success_{config_name}_{timestamp}.png")
+        plt.savefig(f"{directory}/phase_success_{config_name}.png")
         plt.clf()
 
         # 4. Avg fidelity per phase (success only)
@@ -172,5 +161,5 @@ def plot_events(df_events, config_name):
         plt.legend(title="Phase")
         plt.grid(True)
         plt.tight_layout()
-        plt.savefig(f"./plots/2d/fidelity_per_phase_{config_name}_{timestamp}.png")
+        plt.savefig(f"{directory}/fidelity_per_phase_{config_name}.png")
         plt.clf()
