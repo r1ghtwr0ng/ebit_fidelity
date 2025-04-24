@@ -217,58 +217,6 @@ def plot_switch_meta(dfs, config_names, directory, colors=None):
     plt.savefig(f"{directory}/switched/success_prob_vs_dampening_comparison.png")
     plt.clf()
 
-    # Also save individual plots if needed
-    for i, (df, config_name, color) in enumerate(zip(dfs, config_names, colors)):
-        grouped = df.groupby("dampening_parameter")
-
-        # Individual simtime plot
-        simtime_stats = grouped["simtime"].agg(["mean"]).reset_index()
-        plt.plot(
-            simtime_stats["dampening_parameter"],
-            simtime_stats["mean"],
-            marker="o",
-            color=color,
-        )
-        plt.xlabel("Dampening Parameter")
-        plt.ylabel("Average Simtime")
-        plt.title(f"(Metadata) Average Simtime vs Dampening - {config_name}")
-        plt.grid(True)
-        plt.tight_layout()
-        plt.savefig(f"{directory}/switched/simtime_vs_dampening_{config_name}.png")
-        plt.clf()
-
-        # Individual quantum_ops plot
-        ops_stats = grouped["quantum_ops"].agg(["mean"]).reset_index()
-        plt.plot(
-            ops_stats["dampening_parameter"],
-            ops_stats["mean"],
-            marker="o",
-            color=color,
-        )
-        plt.xlabel("Dampening Parameter")
-        plt.ylabel("Average Quantum Ops")
-        plt.title(f"(Metadata) Average Quantum Ops vs Dampening - {config_name}")
-        plt.grid(True)
-        plt.tight_layout()
-        plt.savefig(f"{directory}/switched/quantum_ops_vs_dampening_{config_name}.png")
-        plt.clf()
-
-        # Individual success probability plot
-        success_rate = grouped["status"].mean().reset_index()
-        plt.plot(
-            success_rate["dampening_parameter"],
-            success_rate["status"],
-            marker="o",
-            color=color,
-        )
-        plt.xlabel("Dampening Parameter")
-        plt.ylabel("Success Probability")
-        plt.title(f"(Metadata) Success Probability vs Dampening - {config_name}")
-        plt.grid(True)
-        plt.tight_layout()
-        plt.savefig(f"{directory}/switched/success_prob_vs_dampening_{config_name}.png")
-        plt.clf()
-
 
 def plot_metadata(df_metadata, config_name, directory):
     # TODO doc comments

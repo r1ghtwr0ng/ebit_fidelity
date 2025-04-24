@@ -35,6 +35,7 @@ def main():
     save_directory = f"./savefiles/{timestamp}"
     logging.info(f"Creating directories: {plot_directory} and {save_directory}")
     os.mkdir(plot_directory)
+    os.mkdir(f"{plot_directory}/switched")
     os.mkdir(save_directory)
 
     # Lists for dataframe collection for bulk plotting between switch configs
@@ -68,6 +69,7 @@ def main():
         plot_metadata(df_metadata, config_name=title, directory=plot_directory)
         plot_events(df_events, config_name=title, directory=plot_directory)
 
+    print("Done with main loop, printing rest")
     # Get the config names from the routing configurations
     config_names = [name for _, name in switch_routings]
 
