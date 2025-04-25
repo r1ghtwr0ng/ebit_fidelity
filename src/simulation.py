@@ -2,6 +2,8 @@ import logging
 import pandas as pd
 import netsquid as ns
 
+from multiprocessing import Pool
+
 from qpu_node import QPUNode
 from fso_switch import FSOSwitch
 from protocols import ContinuousDistillationProtocol
@@ -140,7 +142,6 @@ def single_run(
     return run_metadata_df, full_events_dataframe
 
 
-# TODO multiprocess this so kernel cleans up memory leaks
 def batch_run(
     switch_routing,
     batch_size,
@@ -149,26 +150,81 @@ def batch_run(
     detector_efficiencies,
     max_attempts,
     max_distillations,
+    workers,
 ):
+    total_params = len(dampening_parameters) * len(detector_efficiencies)
+    print(
+        f"[i] Starting processing of {total_params} parameter combinations with {workers} workers"
+    )
+
+    # Prepare all parameter combinations
+    param_combinations = [
+        (
+            batch_size,
+            switch_routing,
+            dampening_parameter,
+            max_attempts,
+            max_distillations,
+            ideal_switch,
+            detector_eff,
+            i * len(detector_efficiencies) + j,
+        )
+        for i, dampening_parameter in enumerate(dampening_parameters)
+        for j, detector_eff in enumerate(detector_efficiencies)
+    ]
+
+    # Use multiprocessing to execute all parameter combinations
+    with Pool(workers) as pool:
+        results = pool.starmap(batch_proc, param_combinations)
+
+        # Print progress update after completion
+        print(
+            f"[i] Processing complete: {total_params}/{total_params} parameter combinations"
+        )
+
+    # Unpack results
     all_event_dfs = []
     all_metadata_dfs = []
-    for i, dampening_parameter in enumerate(dampening_parameters):
-        print(f"[i] Progress: {i}/{len(dampening_parameters)}", end="\r")
-        for j, detector_eff in enumerate(detector_efficiencies):
-            for run_id in range(batch_size):
-                run_metadata_df, full_events_df = single_run(
-                    switch_routing,
-                    dampening_parameter,
-                    max_attempts,
-                    max_distillations,
-                    ideal_switch,
-                    detector_eff,
-                    run_id,
-                )
-                all_event_dfs.append(full_events_df)
-                all_metadata_dfs.append(run_metadata_df)
+
+    for batch_event_dfs, batch_metadata_dfs in results:
+        all_event_dfs.extend(batch_event_dfs)
+        all_metadata_dfs.extend(batch_metadata_dfs)
 
     # Concatenate all dataframes into a single entity
     df_all_events = pd.concat(all_event_dfs, ignore_index=True)
     df_all_metadata = pd.concat(all_metadata_dfs, ignore_index=True)
+
     return df_all_metadata, df_all_events
+
+
+# Single worker process instance
+def batch_proc(
+    batch_size,
+    switch_routing,
+    dampening_parameter,
+    max_attempts,
+    max_distillations,
+    ideal_switch,
+    detector_eff,
+    run_id,
+):
+    logging.info(
+        f"[i] Processing combination {run_id}: dampening={dampening_parameter}, detector_eff={detector_eff}"
+    )
+    batch_event_dfs = []
+    batch_metadata_dfs = []
+
+    for batch_run_id in range(batch_size):
+        run_metadata_df, full_events_df = single_run(
+            switch_routing,
+            dampening_parameter,
+            max_attempts,
+            max_distillations,
+            ideal_switch,
+            detector_eff,
+            batch_run_id,
+        )
+        batch_event_dfs.append(full_events_df)
+        batch_metadata_dfs.append(run_metadata_df)
+
+    return batch_event_dfs, batch_metadata_dfs
