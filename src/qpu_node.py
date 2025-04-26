@@ -29,10 +29,10 @@ class QPUNode(Node):
         Depolarization rate for the noise model, by default 0.
     """
 
-    def __init__(self, name, qbit_count=3):
+    def __init__(self, name, ideal_qpu, qbit_count=3):
         super().__init__(name, port_names=["corrections"])
         # The last qubit slot is used for photon emission into fibre
-        self.processor = self.__create_processor(name, qbit_count)
+        self.processor = self.__create_processor(name, qbit_count, ideal_qpu)
         self.__setup_callbacks()
         # Keep track of qubit mappings
         self.emit_idx = 0
@@ -41,7 +41,7 @@ class QPUNode(Node):
 
     # ======== PRIVATE METHODS ========
     # Helper function to create a simple QPU with a few useful instructions
-    def __create_processor(self, name, qbit_count):
+    def __create_processor(self, name, ideal_qpu, qbit_count):
         """
         Private helper method used to initialize the quantum processor for the entity.
         We have nonphysical instructions as we use an abstract QPU architecture.
@@ -58,6 +58,8 @@ class QPUNode(Node):
         ----------
         name : str
             Name of the quantum processor.
+        ideal_qpu : bool
+            Whether the QPU has noise and delay models applied.
         qbit_count : int
             Number of qubits in the processor.
         depolar_rate : float
@@ -68,6 +70,12 @@ class QPUNode(Node):
         QuantumProcessor
             A configured quantum processor with fallback to nonphysical instructions.
         """
+
+        # Return ideal QPU
+        if ideal_qpu:
+            return QuantumProcessor(name, fallback_to_nonphysical=True)
+
+        # Build a noisy QPU
         memory_noise_models = [
             None,  # Utility qubit: no noise applied
             T1T2NoiseModel(
@@ -82,7 +90,7 @@ class QPUNode(Node):
             num_positions=qbit_count,
             memory_noise_models=memory_noise_models,
             phys_instructions=None,
-            # fallback_to_nonphysical=True,  # Execute instructions as nonphysical
+            fallback_to_nonphysical=False,
         )
         # TODO fix this to not be in the processor
         processor.add_ports(["qout_hdr", "qout0_hdr"])
