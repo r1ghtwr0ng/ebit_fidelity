@@ -17,7 +17,8 @@ from netsquid.components.models.delaymodels import FibreDelayModel
 def setup_network(
     dampening_parameter,
     routing,
-    ideal,
+    ideal_switch,
+    ideal_qpu,
     detector_efficiency,
 ):
     network = Network("switch_test_network")
@@ -31,8 +32,8 @@ def setup_network(
         herald_ports = [routing["qin0"], routing["qin1"]]
 
     # Create nodes
-    alice_node = QPUNode("AliceNode")
-    bob_node = QPUNode("BobNode")
+    alice_node = QPUNode("AliceNode", ideal_qpu)
+    bob_node = QPUNode("BobNode", ideal_qpu)
     fsoswitch_node = FSOSwitch(
         "bsm_fsoswitch", detector_efficiency, dampening_parameter, ideal, herald_ports
     )
@@ -76,7 +77,8 @@ def single_run(
     dampening_parameter,
     max_attempts,
     max_distillations,
-    ideal,
+    ideal_switch,
+    ideal_qpu,
     detector_efficiency,
     run,
 ):
@@ -88,7 +90,8 @@ def single_run(
         routing=switch_routing,
         dampening_parameter=dampening_parameter,
         detector_efficiency=detector_efficiency,
-        ideal=ideal,
+        ideal_switch=ideal_switch,
+        ideal_qpu=ideal_qpu,
     )
 
     # Create and start the simulation protocol
@@ -146,6 +149,7 @@ def batch_run(
     switch_routing,
     batch_size,
     ideal_switch,
+    ideal_qpu,
     dampening_parameters,
     detector_efficiencies,
     max_attempts,
@@ -166,6 +170,7 @@ def batch_run(
             max_attempts,
             max_distillations,
             ideal_switch,
+            ideal_qpu,
             detector_eff,
             i * len(detector_efficiencies) + j,
         )
@@ -205,6 +210,7 @@ def batch_proc(
     max_attempts,
     max_distillations,
     ideal_switch,
+    ideal_qpu,
     detector_eff,
     run_id,
 ):
@@ -221,6 +227,7 @@ def batch_proc(
             max_attempts,
             max_distillations,
             ideal_switch,
+            ideal_qpu,
             detector_eff,
             batch_run_id,
         )

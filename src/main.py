@@ -9,7 +9,6 @@ from plotting import (
     plot_best_fidelity_phase_heatmap,
     plot_average_phase_time_heatmap,
     plot_average_phase_fidelity_heatmap,
-    plot_switch_fidelity_2d,
     plot_mean_fidelity_2d,
     plot_mean_simtime_2d,
     plot_mean_success_prob_2d,
@@ -33,26 +32,26 @@ def main():
 
     # Simulation sweep parameters
     detector_efficiencies = np.linspace(1, 1, 1)
-    dampening_parameters = np.linspace(0, 0.5, 5)
-    batch_size = 100
+    dampening_parameters = np.linspace(0, 0.3, 7)
+    batch_size = 1000
     max_distillations = 3
-    max_proto_attempts = 10
+    max_proto_attempts = 12
     ideal_switch = False
-    workers = 4
+    ideal_qpu = False
+    workers = 7
+    # TODO add ideal_qpu option
 
     # Make directory to save plots in
     timestamp = f"{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"
-    plot_directory_2d = f"./plots/2d/{timestamp}"
-    plot_directory_heatmap = f"./plots/heatmap/{timestamp}"
-    save_directory = f"./savefiles/{timestamp}"
-    logging.info(
-        f"Creating directories: {plot_directory_2d}, {plot_directory_heatmap} and {save_directory}"
-    )
-    os.mkdir(plot_directory_2d)
-    os.mkdir(plot_directory_heatmap)
-    os.mkdir(f"{plot_directory_2d}/switched")
-    os.mkdir(f"{plot_directory_heatmap}/switched")
-    os.mkdir(save_directory)
+    plot_dir_2d = f"./plots/2d/{timestamp}"
+    plot_dir_hmap = f"./plots/heatmap/{timestamp}"
+    save_dir = f"./savefiles/{timestamp}"
+    logging.info(f"Creating directories: {plot_dir_2d}, {plot_dir_hmap} and {save_dir}")
+    os.mkdir(plot_dir_2d)
+    os.mkdir(plot_dir_hmap)
+    os.mkdir(f"{plot_dir_2d}/switched")
+    os.mkdir(f"{plot_dir_hmap}/switched")
+    os.mkdir(save_dir)
 
     # Lists for dataframe collection for bulk plotting between switch configs
     meta_list = []
@@ -67,6 +66,7 @@ def main():
             switch_routing=switch_routing,
             batch_size=batch_size,
             ideal_switch=ideal_switch,
+            ideal_qpu=ideal_qpu,
             dampening_parameters=dampening_parameters,
             detector_efficiencies=detector_efficiencies,
             max_attempts=max_proto_attempts,
@@ -75,8 +75,8 @@ def main():
         )
 
         # Save to paraquet files on disk
-        df_metadata.to_parquet(f"{save_directory}/df_metadata_{title}.parquet")
-        df_events.to_parquet(f"{save_directory}/df_events_{title}.parquet")
+        df_metadata.to_parquet(f"{save_dir}/df_metadata_{title}.parquet")
+        df_events.to_parquet(f"{save_dir}/df_events_{title}.parquet")
 
         # Append metadata to list
         meta_list.append(df_metadata)
@@ -87,32 +87,21 @@ def main():
 
     # Plot heatmaps
     low_loss_df = event_list[0]
-    plot_mean_fidelity_heatmap(
-        dfs=event_list, directory=plot_directory_heatmap, config_names=config_names
-    )
-    plot_best_fidelity_phase_heatmap(
-        dfs=event_list, directory=plot_directory_heatmap, config_names=config_names
-    )
-    plot_average_phase_time_heatmap(df=low_loss_df, directory=plot_directory_heatmap)
-    plot_average_phase_fidelity_heatmap(
-        df=low_loss_df, directory=plot_directory_heatmap
-    )
+    plot_mean_fidelity_heatmap(event_list, plot_dir_hmap, config_names)
+    plot_best_fidelity_phase_heatmap(event_list, plot_dir_hmap, config_names)
+    plot_average_phase_time_heatmap(low_loss_df, plot_dir_hmap)
+    plot_average_phase_fidelity_heatmap(low_loss_df, plot_dir_hmap)
 
     # Filter out the dataframes where detector efficiency is 1
     filtered_event_df = [df.loc[df["detector_efficiency"] == 1] for df in event_list]
     filtered_meta_df = [df.loc[df["detector_efficiency"] == 1] for df in meta_list]
+    low_loss_filter = filtered_event_df[0]
 
     # Plot 2D plots (perfect detector)
-    plot_mean_fidelity_2d(
-        filtered_event_df, directory=plot_directory_2d, config_names=config_names
-    )
-    plot_mean_success_prob_2d(
-        filtered_event_df, directory=plot_directory_2d, config_names=config_names
-    )
-    plot_mean_simtime_2d(filtered_event_df[0], directory=plot_directory_2d)
-    plot_mean_operation_count_2d(
-        filtered_meta_df, directory=plot_directory_2d, config_names=config_names
-    )
+    plot_mean_fidelity_2d(low_loss_filter, plot_dir_2d)
+    plot_mean_simtime_2d(low_loss_filter, plot_dir_2d)
+    plot_mean_success_prob_2d(filtered_event_df, plot_dir_2d, config_names)
+    plot_mean_operation_count_2d(filtered_meta_df, plot_dir_2d, config_names)
 
 
 if __name__ == "__main__":
