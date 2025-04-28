@@ -14,12 +14,12 @@ def plot_best_fidelity_phase_heatmap(dfs, directory, config_names):
 
 
 # TODO (single dataframe, one switch config only)
-def plot_average_phase_time_heatmap(df, directory):
+def plot_mean_phase_time_heatmap(df, directory):
     pass
 
 
 # TODO (single dataframe, one switch config only)
-def plot_average_phase_fidelity_heatmap(df, directory):
+def plot_mean_phase_fidelity_heatmap(df, directory):
     pass
 
 

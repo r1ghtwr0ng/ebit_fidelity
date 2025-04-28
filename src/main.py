@@ -7,8 +7,8 @@ from simulation import batch_run
 from plotting import (
     plot_mean_fidelity_heatmap,
     plot_best_fidelity_phase_heatmap,
-    plot_average_phase_time_heatmap,
-    plot_average_phase_fidelity_heatmap,
+    plot_mean_phase_time_heatmap,
+    plot_mean_phase_fidelity_heatmap,
     plot_mean_fidelity_2d,
     plot_mean_simtime_2d,
     plot_mean_success_prob_2d,
@@ -89,8 +89,8 @@ def main():
     low_loss_df = event_list[0]
     plot_mean_fidelity_heatmap(event_list, plot_dir_hmap, config_names)
     plot_best_fidelity_phase_heatmap(event_list, plot_dir_hmap, config_names)
-    plot_average_phase_time_heatmap(low_loss_df, plot_dir_hmap)
-    plot_average_phase_fidelity_heatmap(low_loss_df, plot_dir_hmap)
+    plot_mean_phase_time_heatmap(low_loss_df, plot_dir_hmap)
+    plot_mean_phase_fidelity_heatmap(low_loss_df, plot_dir_hmap)
 
     # Filter out the dataframes where detector efficiency is 1
     filtered_event_df = [df.loc[df["detector_efficiency"] == 1] for df in event_list]
