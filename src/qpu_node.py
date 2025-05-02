@@ -41,7 +41,7 @@ class QPUNode(Node):
 
     # ======== PRIVATE METHODS ========
     # Helper function to create a simple QPU with a few useful instructions
-    def __create_processor(self, name, ideal_qpu, qbit_count):
+    def __create_processor(self, name, qbit_count, ideal_qpu):
         """
         Private helper method used to initialize the quantum processor for the entity.
         We have nonphysical instructions as we use an abstract QPU architecture.
@@ -71,66 +71,70 @@ class QPUNode(Node):
             A configured quantum processor with fallback to nonphysical instructions.
         """
 
-        # Return ideal QPU
         if ideal_qpu:
-            return QuantumProcessor(name, fallback_to_nonphysical=True)
-
-        # Build a noisy QPU
-        memory_noise_models = [
-            None,  # Utility qubit: no noise applied
-            T1T2NoiseModel(
-                T1=2_680_000, T2=1_000_000
-            ),  # Communication qubit: high error (short coherence times)
-            T1T2NoiseModel(
-                T1=np.inf, T2=3_500_000
-            ),  # Shielded qubit: low error (long coherence times)
-        ]
-        processor = QuantumProcessor(
-            name,
-            num_positions=qbit_count,
-            memory_noise_models=memory_noise_models,
-            phys_instructions=None,
-            fallback_to_nonphysical=False,
-        )
-        # TODO fix this to not be in the processor
-        processor.add_ports(["qout_hdr", "qout0_hdr"])
-        processor.add_physical_instruction(
-            PhysicalInstruction(instruction=instr.INSTR_INIT, duration=200.0)
-        )
-        processor.add_physical_instruction(
-            PhysicalInstruction(
-                instruction=instr.INSTR_X,
-                duration=50.0,
-                # quantum_noise_model=T1T2NoiseModel(T1=0.5, T2=0.3),
+            # Build ideal QPU
+            processor = QuantumProcessor(
+                name,
+                num_positions=qbit_count,
+                fallback_to_nonphysical=True,
             )
-        )
-        processor.add_physical_instruction(
-            PhysicalInstruction(
-                instruction=instr.INSTR_Y,
-                duration=50.0,
-                # quantum_noise_model=T1T2NoiseModel(T1=0.5, T2=0.3),
+            processor.add_ports(["qout_hdr", "qout0_hdr"])
+        else:
+            # Build a noisy QPU
+            memory_noise_models = [
+                None,  # Utility qubit: no noise applied
+                T1T2NoiseModel(
+                    T1=2_680_000, T2=1_000_000
+                ),  # Communication qubit: high error (short coherence times)
+                T1T2NoiseModel(
+                    T1=np.inf, T2=3_500_000
+                ),  # Shielded qubit: low error (long coherence times)
+            ]
+            processor = QuantumProcessor(
+                name,
+                num_positions=qbit_count,
+                memory_noise_models=memory_noise_models,
+                phys_instructions=None,
+                fallback_to_nonphysical=False,
             )
-        )
-        processor.add_physical_instruction(
-            PhysicalInstruction(instruction=instr.INSTR_EMIT, duration=20.0)
-        )
-        processor.add_physical_instruction(
-            PhysicalInstruction(instruction=instr.INSTR_SWAP, duration=900.0)
-        )
-        processor.add_physical_instruction(
-            PhysicalInstruction(
-                instruction=instr.INSTR_CNOT,
-                duration=300.0,
-                # quantum_noise_model=DepolarNoiseModel(
-                #    depolar_rate=1e6, time_independent=False
-                # ),
+            processor.add_ports(["qout_hdr", "qout0_hdr"])
+            processor.add_physical_instruction(
+                PhysicalInstruction(instruction=instr.INSTR_INIT, duration=200.0)
             )
-        )
-        processor.add_physical_instruction(
-            PhysicalInstruction(
-                instruction=instr.INSTR_MEASURE, duration=400.0, parallel=True
+            processor.add_physical_instruction(
+                PhysicalInstruction(
+                    instruction=instr.INSTR_X,
+                    duration=50.0,
+                    # quantum_noise_model=T1T2NoiseModel(T1=0.5, T2=0.3),
+                )
             )
-        )
+            processor.add_physical_instruction(
+                PhysicalInstruction(
+                    instruction=instr.INSTR_Y,
+                    duration=50.0,
+                    # quantum_noise_model=T1T2NoiseModel(T1=0.5, T2=0.3),
+                )
+            )
+            processor.add_physical_instruction(
+                PhysicalInstruction(instruction=instr.INSTR_EMIT, duration=20.0)
+            )
+            processor.add_physical_instruction(
+                PhysicalInstruction(instruction=instr.INSTR_SWAP, duration=900.0)
+            )
+            processor.add_physical_instruction(
+                PhysicalInstruction(
+                    instruction=instr.INSTR_CNOT,
+                    duration=300.0,
+                    # quantum_noise_model=DepolarNoiseModel(
+                    #    depolar_rate=1e6, time_independent=False
+                    # ),
+                )
+            )
+            processor.add_physical_instruction(
+                PhysicalInstruction(
+                    instruction=instr.INSTR_MEASURE, duration=400.0, parallel=True
+                )
+            )
         return processor
 
     # Helper for setting up the callbacks and handlers

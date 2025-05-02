@@ -35,7 +35,11 @@ def setup_network(
     alice_node = QPUNode("AliceNode", ideal_qpu)
     bob_node = QPUNode("BobNode", ideal_qpu)
     fsoswitch_node = FSOSwitch(
-        "bsm_fsoswitch", detector_efficiency, dampening_parameter, ideal, herald_ports
+        "bsm_fsoswitch",
+        detector_efficiency,
+        dampening_parameter,
+        ideal_switch,
+        herald_ports,
     )
 
     # Connect node-level ports
@@ -128,7 +132,8 @@ def single_run(
         "detector_efficiency": detector_efficiency,
         "dampening_parameter": dampening_parameter,
         "run_id": run_id,
-        "ideal": ideal,
+        "ideal_switch": ideal_switch,
+        "ideal_qpu": ideal_qpu,
         "status": protocol_status,
         "simtime": simtime,
         "quantum_ops": quantum_ops,
