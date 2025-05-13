@@ -7,7 +7,6 @@ from simulation import batch_run
 from plotting import (
     plot_mean_fidelity_heatmap,
     plot_best_fidelity_phase_heatmap,
-    plot_mean_phase_time_heatmap,
     plot_mean_phase_fidelity_heatmap,
     plot_mean_fidelity_2d,
     plot_mean_simtime_2d,
@@ -31,15 +30,14 @@ def main():
     ]
 
     # Simulation sweep parameters
-    detector_efficiencies = np.linspace(1, 1, 1)
-    dampening_parameters = np.linspace(0, 0.3, 7)
-    batch_size = 1000
+    depolar_rates = np.linspace(0, 0, 1)
+    dampening_parameters = np.linspace(0, 0.3, 15)
+    batch_size = 10000
     max_distillations = 3
-    max_proto_attempts = 12
-    ideal_switch = False
+    max_proto_attempts = 10
+    ideal_switch = True
     ideal_qpu = False
-    workers = 7
-    # TODO add ideal_qpu option
+    workers = 5
 
     # Make directory to save plots in
     timestamp = f"{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"
@@ -68,7 +66,7 @@ def main():
             ideal_switch=ideal_switch,
             ideal_qpu=ideal_qpu,
             dampening_parameters=dampening_parameters,
-            detector_efficiencies=detector_efficiencies,
+            depolar_rates=depolar_rates,
             max_attempts=max_proto_attempts,
             max_distillations=max_distillations,
             workers=workers,
@@ -89,12 +87,11 @@ def main():
     low_loss_df = event_list[0]
     plot_mean_fidelity_heatmap(event_list, plot_dir_hmap, config_names)
     plot_best_fidelity_phase_heatmap(event_list, plot_dir_hmap, config_names)
-    plot_mean_phase_time_heatmap(low_loss_df, plot_dir_hmap)
     plot_mean_phase_fidelity_heatmap(low_loss_df, plot_dir_hmap)
 
-    # Filter out the dataframes where detector efficiency is 1
-    filtered_event_df = [df.loc[df["detector_efficiency"] == 1] for df in event_list]
-    filtered_meta_df = [df.loc[df["detector_efficiency"] == 1] for df in meta_list]
+    # Filter out the dataframes where depolar_rate is 0
+    filtered_event_df = [df.loc[df["depolar_rate"] == 0] for df in event_list]
+    filtered_meta_df = [df.loc[df["depolar_rate"] == 0] for df in meta_list]
     low_loss_filter = filtered_event_df[0]
 
     # Plot 2D plots (perfect detector)
