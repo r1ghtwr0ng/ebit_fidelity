@@ -223,6 +223,7 @@ class ContinuousDistillationProtocol(Protocol):
             # Perform distillation
             distillation_success = yield from self._perform_distillation(i)
             if not distillation_success:
+                # TODO
                 return False, pd.DataFrame(metrics_list)
 
         # All steps completed successfully
@@ -349,8 +350,9 @@ class ContinuousDistillationProtocol(Protocol):
 
         # Success condition: both outcomes equal 1
         if (alice_meas, bob_meas) != (1, 1):
+            # TODO fix failed distillation terminating protocol
             logging.debug(
-                f"[ContinuousDistillation] Distillation iteration {iteration_num} failed."
+                f"[ContinuousDistillation] Distillation iteration {iteration_num} failed, terminating"
             )
             return False
 

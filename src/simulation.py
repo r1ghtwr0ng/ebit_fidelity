@@ -1,8 +1,9 @@
+import gc
 import logging
 import pandas as pd
 import netsquid as ns
 
-from multiprocessing import Pool
+from multiprocessing import Pool, Manager
 
 from qpu_node import QPUNode
 from fso_switch import FSOSwitch
@@ -19,7 +20,7 @@ def setup_network(
     routing,
     ideal_switch,
     ideal_qpu,
-    detector_efficiency,
+    visibility,
 ):
     network = Network("switch_test_network")
     # Testing detector induced losses
@@ -36,10 +37,10 @@ def setup_network(
     bob_node = QPUNode("BobNode", ideal_qpu)
     fsoswitch_node = FSOSwitch(
         "bsm_fsoswitch",
-        detector_efficiency,
         dampening_parameter,
         ideal_switch,
         herald_ports,
+        visibility,
     )
 
     # Connect node-level ports
@@ -83,7 +84,7 @@ def single_run(
     max_distillations,
     ideal_switch,
     ideal_qpu,
-    detector_efficiency,
+    depolar_rate,
     run,
 ):
     # Initialize simulatio
@@ -93,7 +94,7 @@ def single_run(
     alice_node, bob_node, fsoswitch_node = setup_network(
         routing=switch_routing,
         dampening_parameter=dampening_parameter,
-        detector_efficiency=detector_efficiency,
+        visibility=depolar_rate,
         ideal_switch=ideal_switch,
         ideal_qpu=ideal_qpu,
     )
@@ -120,16 +121,18 @@ def single_run(
     protocol_status, full_events_dataframe = distill_proto.get_signal_result(
         Signals.FINISHED
     )
-    logging.info(f"[Simulation] Retry protocol returned: {protocol_status}")
+    logging.info(
+        f"[Simulation] Continuous distill protocol returned: {protocol_status}"
+    )
 
     # Make sure to reset the protocol
     distill_proto.reset()
 
     # Construct simulation statistics metadata dataframe
-    run_id = f"{run}_{dampening_parameter}_{detector_efficiency}"
+    run_id = f"{run}_{dampening_parameter}_{depolar_rate}"
     run_metadata = {
         "run": run,
-        "detector_efficiency": detector_efficiency,
+        "depolar_rate": depolar_rate,
         "dampening_parameter": dampening_parameter,
         "run_id": run_id,
         "ideal_switch": ideal_switch,
@@ -142,7 +145,7 @@ def single_run(
 
     # Fill in the run information for the full dataframe
     full_events_dataframe["run"] = run
-    full_events_dataframe["detector_efficiency"] = detector_efficiency
+    full_events_dataframe["depolar_rate"] = depolar_rate
     full_events_dataframe["dampening_parameter"] = dampening_parameter
     full_events_dataframe["run_id"] = run_id
 
@@ -156,12 +159,12 @@ def batch_run(
     ideal_switch,
     ideal_qpu,
     dampening_parameters,
-    detector_efficiencies,
+    depolar_rates,
     max_attempts,
     max_distillations,
     workers,
 ):
-    total_params = len(dampening_parameters) * len(detector_efficiencies)
+    total_params = len(dampening_parameters) * len(depolar_rates)
     print(
         f"[i] Starting processing of {total_params} parameter combinations with {workers} workers"
     )
@@ -176,33 +179,61 @@ def batch_run(
             max_distillations,
             ideal_switch,
             ideal_qpu,
-            detector_eff,
-            i * len(detector_efficiencies) + j,
+            depolar_rate,
+            i * len(depolar_rates) + j,
         )
         for i, dampening_parameter in enumerate(dampening_parameters)
-        for j, detector_eff in enumerate(detector_efficiencies)
+        for j, depolar_rate in enumerate(depolar_rates)
     ]
 
-    # Use multiprocessing to execute all parameter combinations
-    with Pool(workers) as pool:
-        results = pool.starmap(batch_proc, param_combinations)
-
-        # Print progress update after completion
-        print(
-            f"[i] Processing complete: {total_params}/{total_params} parameter combinations"
-        )
-
-    # Unpack results
+    # Use a custom processing method to ensure better memory management
     all_event_dfs = []
     all_metadata_dfs = []
 
-    for batch_event_dfs, batch_metadata_dfs in results:
-        all_event_dfs.extend(batch_event_dfs)
-        all_metadata_dfs.extend(batch_metadata_dfs)
+    # Split parameter combinations into chunks to control parallel processing
+    def process_chunk(chunk):
+        # Create a new pool for each chunk to ensure clean process lifecycle
+        with Pool(workers) as pool:
+            chunk_results = pool.starmap(batch_proc, chunk)
+            pool.close()
+            pool.terminate()
+            pool.join()
+
+        # Collect results from this chunk
+        chunk_event_dfs = []
+        chunk_metadata_dfs = []
+        for batch_event_dfs, batch_metadata_dfs in chunk_results:
+            chunk_event_dfs.extend(batch_event_dfs)
+            chunk_metadata_dfs.extend(batch_metadata_dfs)
+
+        # Trigger garbage collection
+        gc.collect()
+
+        return chunk_event_dfs, chunk_metadata_dfs
+
+    # Process parameters in smaller chunks
+    chunk_size = max(1, len(param_combinations) // (workers * 2))
+    for i in range(0, len(param_combinations), chunk_size):
+        chunk = param_combinations[i : i + chunk_size]
+        chunk_event_dfs, chunk_metadata_dfs = process_chunk(chunk)
+
+        all_event_dfs.extend(chunk_event_dfs)
+        all_metadata_dfs.extend(chunk_metadata_dfs)
+
+        # Additional garbage collection between chunks
+        gc.collect()
 
     # Concatenate all dataframes into a single entity
     df_all_events = pd.concat(all_event_dfs, ignore_index=True)
     df_all_metadata = pd.concat(all_metadata_dfs, ignore_index=True)
+
+    # Final garbage collection
+    gc.collect()
+
+    # Print completion message
+    print(
+        f"[i] Processing complete: {total_params}/{total_params} parameter combinations"
+    )
 
     return df_all_metadata, df_all_events
 
@@ -216,15 +247,14 @@ def batch_proc(
     max_distillations,
     ideal_switch,
     ideal_qpu,
-    detector_eff,
+    depolar_rate,
     run_id,
 ):
     logging.info(
-        f"[i] Processing combination {run_id}: dampening={dampening_parameter}, detector_eff={detector_eff}"
+        f"[i] Processing combination {run_id}: dampening={dampening_parameter}, depolar_rate={depolar_rate}"
     )
     batch_event_dfs = []
     batch_metadata_dfs = []
-
     for batch_run_id in range(batch_size):
         run_metadata_df, full_events_df = single_run(
             switch_routing,
@@ -233,10 +263,15 @@ def batch_proc(
             max_distillations,
             ideal_switch,
             ideal_qpu,
-            detector_eff,
+            depolar_rate,
             batch_run_id,
         )
         batch_event_dfs.append(full_events_df)
         batch_metadata_dfs.append(run_metadata_df)
+
+    # Explicitly delete large objects and trigger garbage collection
+    del run_metadata_df
+    del full_events_df
+    gc.collect()
 
     return batch_event_dfs, batch_metadata_dfs

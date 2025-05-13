@@ -8,6 +8,7 @@ from netsquid.components import QuantumChannel
 from netsquid.components.models import (
     FibreDelayModel,
     FibreLossModel,
+    DepolarNoiseModel,
 )
 
 
@@ -30,10 +31,10 @@ class FSOSwitch(Node):
     def __init__(
         self,
         name,
-        detector_efficiency,
         dampening_parameter,
         ideal=False,
         herald_ports=["qout0", "qout1"],
+        visibility=1,
     ):
         ports = [
             "qin0",
@@ -49,7 +50,7 @@ class FSOSwitch(Node):
         self.__setup_fibre_channels(ideal)
         self.__setup_bsm_detector(
             herald_ports=herald_ports,
-            det_eff=detector_efficiency,
+            det_eff=1,  # Ideal detector
             dampening_parameter=dampening_parameter,
         )
         self.__setup_port_forwarding()
@@ -114,6 +115,7 @@ class FSOSwitch(Node):
         # Connect output heralding ports to BSM device
         self.ports[herald_ports[0]].bind_output_handler(first_bsm_handler)
         self.ports[herald_ports[1]].bind_output_handler(second_bsm_handler)
+
         # Connect classical BSM heralding signal outputs to FSO switch outputs
         bsm_detector.ports["cout0"].bind_output_handler(self.ports["cout0"].tx_output)
         bsm_detector.ports["cout1"].bind_output_handler(self.ports["cout1"].tx_output)
