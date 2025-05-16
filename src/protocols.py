@@ -15,23 +15,28 @@ from qpu_programs import (
 
 
 class EntanglementProtocol(NodeProtocol):
-    def __init__(self, node, timeout=1500, perform_correction=True):
-        super().__init__(node)
-        self.node = node
+    def __init__(
+        self, ctrl_node, source, target, timeout=1500, perform_correction=True
+    ):
+        super().__init__(source)
+        # Entanglement source (node which runs protocol) and target
+        self.source = source
+        self.target = target
+        self.ctrl_node = ctrl_node
         self.timeout = timeout
         self.perform_correction = perform_correction
         self.protocol_log = "EBIT_CORRECT" if perform_correction else "EBIT_PASSIVE"
 
     def run(self):
         # Local vars
-        node_name = self.node.name
-        node_proc = self.node.processor
-        emit_idx = self.node.emit_idx
-        comm_idx = self.node.comm_idx
+        node_name = self.source.name
+        node_proc = self.source.processor
+        emit_idx = self.source.emit_idx
+        comm_idx = self.source.comm_idx
 
         # Flush any stale messages on the corrections port
         logging.debug(f"[{self.protocol_log}] {node_name}: Flushing corrections port.")
-        flush_port(self.node.ports["corrections"])
+        flush_port(self.source.ports["corrections"])
 
         # Execute the emit program
         emit_photon = EmitProgram()
@@ -39,7 +44,7 @@ class EntanglementProtocol(NodeProtocol):
 
         # Prepare to wait for the emit program to finish AND a port input, OR a timeout
         emit_done = self.await_program(node_proc)
-        port_event = self.await_port_input(self.node.ports["corrections"])
+        port_event = self.await_port_input(self.source.ports["corrections"])
         timeout_event = self.await_timer(self.timeout)
         compound_expr = emit_done & (port_event | timeout_event)
         ent_expr = yield compound_expr
@@ -52,7 +57,7 @@ class EntanglementProtocol(NodeProtocol):
             return {"log": "timeout", "success": False}
 
         # Process the Bell state from the received message
-        msg = self.node.ports["corrections"].rx_input()
+        msg = self.source.ports["corrections"].rx_input()
         if msg is None:
             logging.info(f"[{self.protocol_log}] {node_name} missing message")
             return {"log": "no_msg", "success": False}
@@ -91,8 +96,9 @@ class EntanglementRetryProto(Protocol):
 
     def __init__(
         self,
-        alice,
-        bob,
+        ctrl_node,
+        qnode_1,
+        qnode_2,
         fsoswitch,
         routing_table,
         max_attempts=10,
@@ -106,21 +112,34 @@ class EntanglementRetryProto(Protocol):
         self.attempts = 0
 
         # Create a single instance of the EntanglementProtocol
-        self.subprotocol_alice = EntanglementProtocol(
-            alice, timeout=timeout, perform_correction=True
+        self.subprotocol_qnode_1 = EntanglementProtocol(
+            ctrl_node=ctrl_node,
+            source=qnode_1,
+            target=qnode_2,
+            timeout=timeout,
+            perform_correction=True,
         )
-        self.subprotocol_bob = EntanglementProtocol(
-            bob, timeout=timeout, perform_correction=False
+        self.subprotocol_qnode_2 = EntanglementProtocol(
+            ctrl_node=ctrl_node,
+            source=qnode_2,
+            target=qnode_1,
+            timeout=timeout,
+            perform_correction=False,
         )
 
         # Add the subprotocols
-        self.add_subprotocol(self.subprotocol_alice, name="alice_entanglement_protocol")
-        self.add_subprotocol(self.subprotocol_bob, name="bob_entanglement_protocol")
+        self.add_subprotocol(
+            self.subprotocol_qnode_1, name="qnode_1_entanglement_protocol"
+        )
+        self.add_subprotocol(
+            self.subprotocol_qnode_2, name="qnode_2_entanglement_protocol"
+        )
 
-        # TODO add connections from Alice to FSO and from Bob to FSO
+        # TODO add connections from qnode_1 to FSO and from qnode_2 to FSO
 
     def run(self):
         # Set the FSO switch path configuration
+        # TODO leave this out for control node to handle
         self.fsoswitch_node.switch(self.routing_table)
 
         for attempt in range(self.max_attempts):
@@ -128,25 +147,31 @@ class EntanglementRetryProto(Protocol):
             logging.info(f"[RETRYPROTO] Attempt {attempt + 1}")
 
             # Run the subprotocols and process the results.
-            self.subprotocol_alice.reset()
-            self.subprotocol_bob.reset()
+            self.subprotocol_qnode_1.reset()
+            self.subprotocol_qnode_2.reset()
             self.start_subprotocols()
 
             # Wait for finish signals from both subprotocols
             yield self.await_signal(
-                self.subprotocol_alice, signal_label=Signals.FINISHED
-            ) & self.await_signal(self.subprotocol_bob, signal_label=Signals.FINISHED)
+                self.subprotocol_qnode_1, signal_label=Signals.FINISHED
+            ) & self.await_signal(
+                self.subprotocol_qnode_2, signal_label=Signals.FINISHED
+            )
 
             # Retrieve results from subprotocols
-            alice_result = self.subprotocol_alice.get_signal_result(Signals.FINISHED)
-            bob_result = self.subprotocol_bob.get_signal_result(Signals.FINISHED)
+            qnode_1_result = self.subprotocol_qnode_1.get_signal_result(
+                Signals.FINISHED
+            )
+            qnode_2_result = self.subprotocol_qnode_2.get_signal_result(
+                Signals.FINISHED
+            )
 
             logging.info(
-                f"[RETRYPROTO] Done | Alice: {alice_result['log']} | Bob: {bob_result['log']}"
+                f"[RETRYPROTO] Done | qnode_1: {qnode_1_result['log']} | qnode_2: {qnode_2_result['log']}"
             )
 
             # Verify protocol response status
-            if alice_result["success"] and bob_result["success"]:
+            if qnode_1_result["success"] and qnode_2_result["success"]:
                 self.attempts = attempt + 1
                 return True
             else:
@@ -160,8 +185,9 @@ class EntanglementRetryProto(Protocol):
 class ContinuousDistillationProtocol(Protocol):
     def __init__(
         self,
-        alice,
-        bob,
+        ctrl_node,
+        qnode_1,
+        qnode_2,
         fsoswitch,
         routing_table,
         max_attempts=10,
@@ -169,8 +195,9 @@ class ContinuousDistillationProtocol(Protocol):
         max_distillations=3,
     ):
         super().__init__()
-        self.alice = alice
-        self.bob = bob
+        self.ctrl_node = ctrl_node
+        self.qnode_1 = qnode_1
+        self.qnode_2 = qnode_2
         self.fsoswitch = fsoswitch
         self.routing_table = routing_table
         self.max_attempts = max_attempts
@@ -183,15 +210,27 @@ class ContinuousDistillationProtocol(Protocol):
         self._setup_subprotocols()
 
     def _setup_subprotocols(self):
-        """Set up the entanglement subprotocols for Alice and Bob."""
-        self.subprotocol_alice = EntanglementProtocol(
-            self.alice, timeout=self.timeout, perform_correction=True
+        """Set up the entanglement subprotocols for qnode_1 and qnode_2."""
+        self.subprotocol_qnode_1 = EntanglementProtocol(
+            ctrl_node=self.ctrl_node,
+            source=self.qnode_1,
+            target=self.qnode_2,
+            timeout=self.timeout,
+            perform_correction=True,
         )
-        self.subprotocol_bob = EntanglementProtocol(
-            self.bob, timeout=self.timeout, perform_correction=False
+        self.subprotocol_qnode_2 = EntanglementProtocol(
+            ctrl_node=self.ctrl_node,
+            source=self.qnode_2,
+            target=self.qnode_1,
+            timeout=self.timeout,
+            perform_correction=False,
         )
-        self.add_subprotocol(self.subprotocol_alice, name="alice_entanglement_protocol")
-        self.add_subprotocol(self.subprotocol_bob, name="bob_entanglement_protocol")
+        self.add_subprotocol(
+            self.subprotocol_qnode_1, name="qnode_1_entanglement_protocol"
+        )
+        self.add_subprotocol(
+            self.subprotocol_qnode_2, name="qnode_2_entanglement_protocol"
+        )
 
     def run(self):
         """Main protocol execution logic."""
@@ -231,7 +270,7 @@ class ContinuousDistillationProtocol(Protocol):
         return True, pd.DataFrame(metrics_list)
 
     def _establish_entanglement(self, metrics_list, phase):
-        """Establish entanglement between Alice and Bob.
+        """Establish entanglement between qnode_1 and qnode_2.
 
         Args:
             metrics_list: List to store collected metrics
@@ -253,18 +292,34 @@ class ContinuousDistillationProtocol(Protocol):
             self.attempts += 1
 
             # Reset and start subprotocols
-            self.subprotocol_alice.reset()
-            self.subprotocol_bob.reset()
+            self.subprotocol_qnode_1.reset()
+            self.subprotocol_qnode_2.reset()
+
+            # Create request UUID and request route from control node
+            request_uuid = self.ctrl_node.request_route(
+                self.qnode_1.name, self.qnode_2.name
+            )
+            if request_uuid is None:
+                logging.error(f"[ContinuousDistillation] CTRL node NACKs route request")
+                return False
+
+            # Set request UUIDs for both nodes and run entanglement protocol
+            self.qnode_1.set_emit_uuid(request_uuid)
+            self.qnode_2.set_emit_uuid(request_uuid)
             self.start_subprotocols()
 
             # Wait for subprotocols to finish
             subprotocols_done = self.await_signal(
-                self.subprotocol_alice, signal_label=Signals.FINISHED
-            ) & self.await_signal(self.subprotocol_bob, signal_label=Signals.FINISHED)
+                self.subprotocol_qnode_1, signal_label=Signals.FINISHED
+            ) & self.await_signal(
+                self.subprotocol_qnode_2, signal_label=Signals.FINISHED
+            )
             yield subprotocols_done
 
             # Collect metrics
             data_point = collect_fidelity_data(subprotocols_done)
+            data_point["qnode_1"] = self.qnode_1.name
+            data_point["qnode_2"] = self.qnode_2.name
             data_point["phase"] = phase
             data_point["attempt"] = attempt + 1
             data_point["total_attempts"] = self.attempts
@@ -272,16 +327,20 @@ class ContinuousDistillationProtocol(Protocol):
             metrics_list.append(data_point)
 
             # Get results
-            alice_result = self.subprotocol_alice.get_signal_result(Signals.FINISHED)
-            bob_result = self.subprotocol_bob.get_signal_result(Signals.FINISHED)
+            qnode_1_result = self.subprotocol_qnode_1.get_signal_result(
+                Signals.FINISHED
+            )
+            qnode_2_result = self.subprotocol_qnode_2.get_signal_result(
+                Signals.FINISHED
+            )
 
             logging.info(
                 f"[ContinuousDistillation] {phase_desc}, attempt {attempt + 1}: "
-                f"Alice: {alice_result['log']} | Bob: {bob_result['log']}"
+                f"qnode_1: {qnode_1_result['log']} | qnode_2: {qnode_2_result['log']}"
             )
 
             # Check success
-            if alice_result["success"] and bob_result["success"]:
+            if qnode_1_result["success"] and qnode_2_result["success"]:
                 return True
 
             logging.debug(
@@ -300,15 +359,15 @@ class ContinuousDistillationProtocol(Protocol):
         )
 
         # Create and execute swap programs
-        alice_swap_prog = SwapProgram()
-        bob_swap_prog = SwapProgram()
+        qnode_1_swap_prog = SwapProgram()
+        qnode_2_swap_prog = SwapProgram()
 
-        self.alice.processor.execute_program(alice_swap_prog, qubit_mapping=[1, 2])
-        self.bob.processor.execute_program(bob_swap_prog, qubit_mapping=[1, 2])
+        self.qnode_1.processor.execute_program(qnode_1_swap_prog, qubit_mapping=[1, 2])
+        self.qnode_2.processor.execute_program(qnode_2_swap_prog, qubit_mapping=[1, 2])
 
         # Wait for programs to complete
-        yield self.await_program(self.alice.processor) & self.await_program(
-            self.bob.processor
+        yield self.await_program(self.qnode_1.processor) & self.await_program(
+            self.qnode_2.processor
         )
 
         logging.info("[ContinuousDistillation] Swap operations completed.")
@@ -328,28 +387,28 @@ class ContinuousDistillationProtocol(Protocol):
         )
 
         # Create and execute distillation programs
-        alice_distill = EPLDistillationProgram()
-        bob_distill = EPLDistillationProgram()
+        qnode_1_distill = EPLDistillationProgram()
+        qnode_2_distill = EPLDistillationProgram()
 
-        self.alice.processor.execute_program(alice_distill, qubit_mapping=[1, 2])
-        self.bob.processor.execute_program(bob_distill, qubit_mapping=[1, 2])
+        self.qnode_1.processor.execute_program(qnode_1_distill, qubit_mapping=[1, 2])
+        self.qnode_2.processor.execute_program(qnode_2_distill, qubit_mapping=[1, 2])
 
         # Wait for programs to complete
-        yield self.await_program(self.alice.processor) & self.await_program(
-            self.bob.processor
+        yield self.await_program(self.qnode_1.processor) & self.await_program(
+            self.qnode_2.processor
         )
 
         # Check measurement outcomes
-        alice_meas = alice_distill.output["m_target"][0]
-        bob_meas = bob_distill.output["m_target"][0]
+        qnode_1_meas = qnode_1_distill.output["m_target"][0]
+        qnode_2_meas = qnode_2_distill.output["m_target"][0]
 
         logging.info(
             f"[ContinuousDistillation] Iteration {iteration_num} results - "
-            f"Alice: {alice_meas}, Bob: {bob_meas}"
+            f"qnode_1: {qnode_1_meas}, qnode_2: {qnode_2_meas}"
         )
 
         # Success condition: both outcomes equal 1
-        if (alice_meas, bob_meas) != (1, 1):
+        if (qnode_1_meas, qnode_2_meas) != (1, 1):
             # TODO fix failed distillation terminating protocol
             logging.debug(
                 f"[ContinuousDistillation] Distillation iteration {iteration_num} failed, terminating"
