@@ -7,6 +7,7 @@ from multiprocessing import Pool, Manager
 
 from qpu_node import QPUNode
 from fso_switch import FSOSwitch
+from control_node import ControlNode
 from protocols import ContinuousDistillationProtocol
 from netsquid.protocols import Signals
 from netsquid.nodes.network import Network
@@ -22,6 +23,11 @@ def setup_network(
     ideal_qpu,
     visibility,
 ):
+    # Setup control node
+    ctrl_node = ControlNode(id=0)
+    ctrl_port = ctrl_node.ports["switch_herald"]
+
+    # TODO setup based on networkx topology
     network = Network("switch_test_network")
     # Testing detector induced losses
 
@@ -33,27 +39,26 @@ def setup_network(
         herald_ports = [routing["qin0"], routing["qin1"]]
 
     # Create nodes
-    alice_node = QPUNode("AliceNode", ideal_qpu)
-    bob_node = QPUNode("BobNode", ideal_qpu)
+    node_1 = QPUNode(id=1, ideal_qpu=ideal_qpu)
+    node_2 = QPUNode(id=2, ideal_qpu=ideal_qpu)
     fsoswitch_node = FSOSwitch(
-        "bsm_fsoswitch",
-        dampening_parameter,
-        ideal_switch,
-        herald_ports,
-        visibility,
+        id=3,
+        ctrl_port=ctrl_port,
+        dampening_parameter=dampening_parameter,
+        ideal=ideal_switch,
+        herald_ports=herald_ports,
+        visibility=visibility,
     )
 
     # Connect node-level ports
-    alice_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin0"])
+    node_1.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin0"])
     if long_paths:
-        bob_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin2"])
+        node_2.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin2"])
     else:
-        bob_node.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin1"])
-    fsoswitch_node.ports["cout0"].connect(alice_node.ports["corrections"])
-    fsoswitch_node.ports["cout1"].connect(bob_node.ports["corrections"])
+        node_2.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin1"])
 
     # Add nodes to network
-    network.add_nodes(nodes=[alice_node, bob_node, fsoswitch_node])
+    network.add_nodes(nodes=[node_1, node_2, fsoswitch_node])
 
     # Setup classical communication channel between nodes for entanglement distillation
     conn_cchannel = DirectConnection(
@@ -71,10 +76,15 @@ def setup_network(
     )
 
     # Add connection to network
-    network.add_connection(alice_node, bob_node, connection=conn_cchannel)
+    network.add_connection(node_1, node_2, connection=conn_cchannel)
     # TODO add quantum channel connections instead of direct port forwards
+    # TODO connect all switches to control node
 
-    return alice_node, bob_node, fsoswitch_node
+    # Register nodes with the control node's registry for UUID lookups
+    ctrl_node.register_nodes([node_1, node_2, fsoswitch_node])
+
+    # TODO group qnodes and fso switches in two lists
+    return ctrl_node, node_1, node_2, fsoswitch_node
 
 
 def single_run(
@@ -91,7 +101,7 @@ def single_run(
     ns.sim_reset()
 
     # Setup network connections
-    alice_node, bob_node, fsoswitch_node = setup_network(
+    ctrl_node, node_1, node_2, fsoswitch_node = setup_network(
         routing=switch_routing,
         dampening_parameter=dampening_parameter,
         visibility=depolar_rate,
@@ -101,15 +111,16 @@ def single_run(
 
     # Create and start the simulation protocol
     distill_proto = ContinuousDistillationProtocol(
-        alice_node,
-        bob_node,
+        ctrl_node,
+        node_1,
+        node_2,
         fsoswitch_node,
         switch_routing,
         max_attempts=max_attempts,
         max_distillations=max_distillations,
     )
 
-    # Test
+    # Run protocol(s)
     distill_proto.start()
 
     # Run the simulation
