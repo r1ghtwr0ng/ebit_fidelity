@@ -29,7 +29,7 @@ class FSOSwitch(Node):
 
     def __init__(
         self,
-        id,
+        switch_id,
         ctrl_port,
         dampening_parameter,
         ideal=False,
@@ -45,8 +45,8 @@ class FSOSwitch(Node):
             "qout2",
             "cout",
         ]
-        self.id = id
-        name = f"FSO[{id}]"
+        self.id = switch_id
+        name = f"switch_{switch_id}"
         super().__init__(name, port_names=ports)
         self.__ctrl_port = ctrl_port
         self.__setup_fibre_channels(ideal)
@@ -54,6 +54,7 @@ class FSOSwitch(Node):
             herald_ports=herald_ports,
             det_eff=1,  # Ideal detector
             dampening_parameter=dampening_parameter,
+            visibility=visibility,
         )
         self.__setup_port_forwarding(ctrl_port)
 
@@ -63,10 +64,10 @@ class FSOSwitch(Node):
     def __setup_bsm_detector(
         self,
         herald_ports,
-        dampening_parameter=0,
+        dampening_parameter,
+        det_eff,
+        visibility,
         p_dark=0,
-        det_eff=1,
-        visibility=1,
     ):
         """
         Creates a BSM detector component and adds it as a subcomponent to the FSO Switch
@@ -89,7 +90,7 @@ class FSOSwitch(Node):
         """
 
         bsm_wrapper = BSMWrapper(
-            name=f"BSMWrap[{self.id}]",
+            name=f"BSMWrap_{self.id}",
             p_dark=p_dark,
             det_eff=det_eff,
             visibility=visibility,

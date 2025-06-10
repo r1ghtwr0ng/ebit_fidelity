@@ -39,10 +39,10 @@ def setup_network(
         herald_ports = [routing["qin0"], routing["qin1"]]
 
     # Create nodes
-    node_1 = QPUNode(id=1, ideal_qpu=ideal_qpu)
-    node_2 = QPUNode(id=2, ideal_qpu=ideal_qpu)
+    node_1 = QPUNode(qnode_id=0, ideal_qpu=ideal_qpu)
+    node_2 = QPUNode(qnode_id=1, ideal_qpu=ideal_qpu)
     fsoswitch_node = FSOSwitch(
-        id=3,
+        switch_id=0,
         ctrl_port=ctrl_port,
         dampening_parameter=dampening_parameter,
         ideal=ideal_switch,
@@ -94,7 +94,7 @@ def single_run(
     max_distillations,
     ideal_switch,
     ideal_qpu,
-    depolar_rate,
+    visibility,
     run,
 ):
     # Initialize simulatio
@@ -104,7 +104,7 @@ def single_run(
     ctrl_node, node_1, node_2, fsoswitch_node = setup_network(
         routing=switch_routing,
         dampening_parameter=dampening_parameter,
-        visibility=depolar_rate,
+        visibility=visibility,
         ideal_switch=ideal_switch,
         ideal_qpu=ideal_qpu,
     )
@@ -140,10 +140,10 @@ def single_run(
     distill_proto.reset()
 
     # Construct simulation statistics metadata dataframe
-    run_id = f"{run}_{dampening_parameter}_{depolar_rate}"
+    run_id = f"{run}_{dampening_parameter}_{visibility}"
     run_metadata = {
         "run": run,
-        "depolar_rate": depolar_rate,
+        "visibility": visibility,
         "dampening_parameter": dampening_parameter,
         "run_id": run_id,
         "ideal_switch": ideal_switch,
@@ -156,7 +156,7 @@ def single_run(
 
     # Fill in the run information for the full dataframe
     full_events_dataframe["run"] = run
-    full_events_dataframe["depolar_rate"] = depolar_rate
+    full_events_dataframe["visibility"] = visibility
     full_events_dataframe["dampening_parameter"] = dampening_parameter
     full_events_dataframe["run_id"] = run_id
 
@@ -170,12 +170,12 @@ def batch_run(
     ideal_switch,
     ideal_qpu,
     dampening_parameters,
-    depolar_rates,
+    visibilities,
     max_attempts,
     max_distillations,
     workers,
 ):
-    total_params = len(dampening_parameters) * len(depolar_rates)
+    total_params = len(dampening_parameters) * len(visibilities)
     print(
         f"[i] Starting processing of {total_params} parameter combinations with {workers} workers"
     )
@@ -190,11 +190,11 @@ def batch_run(
             max_distillations,
             ideal_switch,
             ideal_qpu,
-            depolar_rate,
-            i * len(depolar_rates) + j,
+            visibility,
+            i * len(visibilities) + j,
         )
         for i, dampening_parameter in enumerate(dampening_parameters)
-        for j, depolar_rate in enumerate(depolar_rates)
+        for j, visibility in enumerate(visibilities)
     ]
 
     # Use a custom processing method to ensure better memory management
@@ -203,6 +203,9 @@ def batch_run(
 
     # Split parameter combinations into chunks to control parallel processing
     def process_chunk(chunk):
+        # Debug
+        print(f"[DEBUG] New workload chunk of {len(chunk)} allocated to worker pool")
+
         # Create a new pool for each chunk to ensure clean process lifecycle
         with Pool(workers) as pool:
             chunk_results = pool.starmap(batch_proc, chunk)
@@ -223,7 +226,7 @@ def batch_run(
         return chunk_event_dfs, chunk_metadata_dfs
 
     # Process parameters in smaller chunks
-    chunk_size = max(1, len(param_combinations) // (workers * 2))
+    chunk_size = workers
     for i in range(0, len(param_combinations), chunk_size):
         chunk = param_combinations[i : i + chunk_size]
         chunk_event_dfs, chunk_metadata_dfs = process_chunk(chunk)
@@ -258,11 +261,11 @@ def batch_proc(
     max_distillations,
     ideal_switch,
     ideal_qpu,
-    depolar_rate,
+    visibility,
     run_id,
 ):
     logging.info(
-        f"[i] Processing combination {run_id}: dampening={dampening_parameter}, depolar_rate={depolar_rate}"
+        f"[i] Processing combination {run_id}: dampening={dampening_parameter}, visibility={visibility}"
     )
     batch_event_dfs = []
     batch_metadata_dfs = []
@@ -274,7 +277,7 @@ def batch_proc(
             max_distillations,
             ideal_switch,
             ideal_qpu,
-            depolar_rate,
+            visibility,
             batch_run_id,
         )
         batch_event_dfs.append(full_events_df)

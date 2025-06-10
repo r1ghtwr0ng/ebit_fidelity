@@ -12,6 +12,7 @@ from plotting import (
     plot_mean_simtime_2d,
     plot_mean_success_prob_2d,
     plot_mean_operation_count_2d,
+    plot_switch_fidelity_2d,
 )
 
 
@@ -30,14 +31,14 @@ def main():
     ]
 
     # Simulation sweep parameters
-    depolar_rates = np.linspace(0, 0, 1)
-    dampening_parameters = np.linspace(0, 0.3, 15)
-    batch_size = 10000
+    visibilities = np.linspace(1, 0.7, 4)
+    dampening_parameters = np.linspace(0, 0.3, 4)
+    batch_size = 1000
     max_distillations = 3
-    max_proto_attempts = 10
-    ideal_switch = True
+    max_proto_attempts = 5
+    ideal_switch = False
     ideal_qpu = False
-    workers = 5
+    workers = 4
 
     # Make directory to save plots in
     timestamp = f"{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"
@@ -66,11 +67,15 @@ def main():
             ideal_switch=ideal_switch,
             ideal_qpu=ideal_qpu,
             dampening_parameters=dampening_parameters,
-            depolar_rates=depolar_rates,
+            visibilities=visibilities,
             max_attempts=max_proto_attempts,
             max_distillations=max_distillations,
             workers=workers,
         )
+
+        # Append titles
+        df_metadata["config"] = title
+        df_events["config"] = title
 
         # Save to paraquet files on disk
         df_metadata.to_parquet(f"{save_dir}/df_metadata_{title}.parquet")
@@ -89,16 +94,18 @@ def main():
     plot_best_fidelity_phase_heatmap(event_list, plot_dir_hmap, config_names)
     plot_mean_phase_fidelity_heatmap(low_loss_df, plot_dir_hmap)
 
-    # Filter out the dataframes where depolar_rate is 0
-    filtered_event_df = [df.loc[df["depolar_rate"] == 0] for df in event_list]
-    filtered_meta_df = [df.loc[df["depolar_rate"] == 0] for df in meta_list]
+    # Filter out the dataframes where visibility is 0
+    filtered_event_df = [df.loc[df["visibility"] == 1] for df in event_list]
+    filtered_meta_df = [df.loc[df["visibility"] == 1] for df in meta_list]
     low_loss_filter = filtered_event_df[0]
 
     # Plot 2D plots (perfect detector)
     plot_mean_fidelity_2d(low_loss_filter, plot_dir_2d)
     plot_mean_simtime_2d(low_loss_filter, plot_dir_2d)
-    plot_mean_success_prob_2d(filtered_event_df, plot_dir_2d, config_names)
-    plot_mean_operation_count_2d(filtered_meta_df, plot_dir_2d, config_names)
+
+    plot_mean_success_prob_2d(filtered_event_df, plot_dir_2d)
+    plot_mean_operation_count_2d(filtered_meta_df, plot_dir_2d)
+    plot_switch_fidelity_2d(filtered_event_df, plot_dir_2d)
 
 
 if __name__ == "__main__":

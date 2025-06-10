@@ -28,10 +28,10 @@ class QPUNode(Node):
         Depolarization rate for the noise model, by default 0.
     """
 
-    def __init__(self, id, ideal_qpu, qbit_count=3):
+    def __init__(self, qnode_id, ideal_qpu, qbit_count=3):
         # Changed: generate name from ID
-        self.id = id
-        name = f"QPUNode[{id}]"
+        self.id = qnode_id
+        name = f"qnode_{qnode_id}"
         super().__init__(name, port_names=["corrections"])
 
         # The last qubit slot is used for photon emission into fibre
@@ -72,7 +72,7 @@ class QPUNode(Node):
         QuantumProcessor
             A configured quantum processor with fallback to nonphysical instructions.
         """
-        qproc_name = f"QProc[{self.id}]"
+        qproc_name = f"qproc_{self.id}"
 
         if ideal_qpu:
             # Build ideal QPU

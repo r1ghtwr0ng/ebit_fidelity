@@ -1,3 +1,4 @@
+import re
 import uuid
 import json
 import logging
@@ -7,7 +8,7 @@ from netsquid.nodes import Node
 
 
 class ControlNode(Node):
-    def __init__(self, id):
+    def __init__(self, id, network_type=None):
         # Central registry for all nodes, allows for name -> Object resolution
         self.__registry = {}
 
@@ -16,12 +17,23 @@ class ControlNode(Node):
 
         self.__uuid_queue = {}
         self.__setup_callbacks()
-        # TODO setup topology for routing
+
+        # Compile regexes for efficiency
+        self.__switch_re = re.compile("^(switch_)([0-9]{1,})$")
+        self.__qnode_re = re.compile("^(qnode_)([0-9]{1,})$")
+
+        # Setup routing controls based on topology
+        if network_type == "tree":
+            self.__switch_route = self.__switch_ring
+        elif network_type == "tree":
+            self.__switch_route = self.__switch_tree
+        else:
+            self.__switch_route = self.__noop
 
     def request_route(self, qnode_1_name, qnode_2_name):
-        # TODO send switching signals along the route to configure the network
+        # Send switching signals along the route to configure the network
+        self.__switch_route(qnode_1_name, qnode_2_name)
 
-        # TODO save the request_uuid in a requests queue
         # TODO clean up the requests table if too big (i.e. leftover dropped requests)
         # Create request UUID
         request_uuid = str(uuid.uuid4())
@@ -62,3 +74,36 @@ class ControlNode(Node):
         # Relay the request to the corrections port
         qnode_1.ports["corrections"].tx_input(msg)
         qnode_2.ports["corrections"].tx_input(msg)
+
+    def __switch_ring(self, qnode_1_name, qnode_2_name):
+        # Step 1: Parse the ID from the string name
+        id_1 = self.__qnode_re.findall(qnode_1_name)[0][1]
+        id_2 = self.__qnode_re.findall(qnode_2_name)[0][1]
+
+        # Step 2: sort x < y
+        [low_id, high_id] = sorted([id_1, id_2])
+
+        # Step 3: Identify the switches
+        sw_low = low_id // 2
+        sw_high = high_id // 2
+
+        # Step 3: Do routing checks
+        # Step 4: Transform the IDs to switch names and send commands
+        # Step 5: Profit?
+        pass
+
+    def __switch_tree(self, qnode_1_name, qnode_2_name):
+        # Step 1: Parse the ID from the string name
+        id_1 = self.__qnode_re.findall(qnode_1_name)[0][1]
+        id_2 = self.__qnode_re.findall(qnode_2_name)[0][1]
+
+        # Step 2: sort x < y
+        [low_id, high_id] = sorted([id_1, id_2])
+
+        # Step 3: Do routing checks
+        # Step 4: Transform the IDs to switch names and send commands
+        # Step 5: Profit?
+        pass
+
+    def __noop(self, _arg1, _arg2):
+        pass
