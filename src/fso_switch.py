@@ -61,6 +61,13 @@ class FSOSwitch(Node):
         # Amplitude dampening parameter
         self.__amplitude_dampening = dampening_parameter
 
+        # Save the outbound port name for quick lookup
+        self.__outbound_port = list({"qout0", "qout1", "qout2"} - set(herald_ports))[0]
+        self.__herald_ports = herald_ports
+
+        # Connections registry
+        self.__registry = {}
+
     def __setup_bsm_detector(
         self,
         herald_ports,
@@ -234,7 +241,7 @@ class FSOSwitch(Node):
         # Relay qubit
         channel.ports["send"].tx_input(msg)
 
-    def switch(self, routing_table):
+    def __switch(self, routing_table):
         """
         Configure the FSO switch's routing table for input-output port mapping.
 
@@ -255,3 +262,33 @@ class FSOSwitch(Node):
             logging.error(f"[FSO] Invalid routing rable: {routing_table}")
 
         self.__routing_table = routing_table.copy()
+
+    def register(self, node_name, inbound_port):
+        self.__registry[node_name] = inbound_port
+
+    def outbound_switch(self, high_qnode):
+        # Fetch port names
+        inbound = self.__registry.get(high_qnode)
+        remaining = list({"qin0", "qin1", "qin2"} - {inbound})
+
+        # Construct routing table
+        routing_table = {
+            inbound: self.__outbound_port,
+            remaining[0]: self.__herald_ports[0],
+            remaining[1]: self.__herald_ports[1],
+        }
+        self.__switch(routing_table)
+
+    def herald_switch(self, node_low, node_high):
+        # Fetch port names
+        inbound_low = self.__registry.get(node_low)
+        inbound_high = self.__registry.get(node_high)
+        remaining = list({"qin0", "qin1", "qin2"} - {inbound_low, inbound_high})[0]
+
+        # Construct routing table
+        routing_table = {
+            inbound_low: self.__herald_ports[0],
+            inbound_high: self.__herald_ports[1],
+            remaining: self.__outbound_port,
+        }
+        self.__switch(routing_table)

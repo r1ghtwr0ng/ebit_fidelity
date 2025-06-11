@@ -23,10 +23,12 @@ class ControlNode(Node):
         self.__qnode_re = re.compile("^(qnode_)([0-9]{1,})$")
 
         # Setup routing controls based on topology
-        if network_type == "tree":
+        if network_type == "ring":
             self.__switch_route = self.__switch_ring
         elif network_type == "tree":
             self.__switch_route = self.__switch_tree
+        elif network_type == "simple":
+            self.__switch_route = self.__switch_simple
         else:
             self.__switch_route = self.__noop
 
@@ -48,11 +50,6 @@ class ControlNode(Node):
     def _query_node(self, name):
         # For debugging purposes, allows directly querying the central registry
         return self.__registry.get(name)
-
-    def __calculate_route(self, qnode_1, target):
-        # TODO calculate which switches need signals (and which signals) to connect qnode_1 to target for entanglement
-        # Return map with switch: config, empty map for no route
-        return {}
 
     def __setup_callbacks(self):
         # Setup callbacks for port
@@ -101,9 +98,37 @@ class ControlNode(Node):
         [low_id, high_id] = sorted([id_1, id_2])
 
         # Step 3: Do routing checks
+        sw_low = low_id // 3
+        sw_high = high_id // 3
+
+        # Convert to qnode names
+        low_qnode = f"qnode_{low_id}"
+        high_qnode = f"qnode_{high_id}"
+        low_switch = f"switch_{sw_low}"
+        high_switch = f"switch_{sw_high}"
+        super_switch = "switch_3"
+
         # Step 4: Transform the IDs to switch names and send commands
-        # Step 5: Profit?
-        pass
+        if sw_low == sw_high:
+            # Get the switch objects
+            switch = self._query_node(low_switch)
+
+            # Switch herald
+            switch.herald_switch(low_qnode, high_qnode)
+        else:
+            # Get the switch objects
+            switch_low = self._query_node(low_switch)
+            switch_high = self._query_node(high_switch)
+            switch_super = self._query_node(super_switch)
+
+            # Send switch signals
+            switch_low.outbound_switch(low_qnode)
+            switch_high.outbound_switch(high_qnode)
+            switch_super.herald_switch(low_switch, high_switch)
+
+    def __switch_simple(self, qnode_1_name, qnode_2_name):
+        switch = self._query_node("switch_0")
+        switch.herald_switch(qnode_1_name, qnode_2_name)
 
     def __noop(self, _arg1, _arg2):
         pass

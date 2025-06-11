@@ -111,6 +111,10 @@ class EntanglementRetryProto(Protocol):
         self.timeout = timeout
         self.attempts = 0
 
+        # Save nodes TODO remove when CTRL node switching is fixed
+        self.qnode_1 = qnode_1
+        self.qnode_2 = qnode_2
+
         # Create a single instance of the EntanglementProtocol
         self.subprotocol_qnode_1 = EntanglementProtocol(
             ctrl_node=ctrl_node,
@@ -138,10 +142,6 @@ class EntanglementRetryProto(Protocol):
         # TODO add connections from qnode_1 to FSO and from qnode_2 to FSO
 
     def run(self):
-        # Set the FSO switch path configuration
-        # TODO leave this out for control node to handle
-        self.fsoswitch_node.switch(self.routing_table)
-
         for attempt in range(self.max_attempts):
             # Register and log the attempt count
             logging.info(f"[RETRYPROTO] Attempt {attempt + 1}")
@@ -235,7 +235,6 @@ class ContinuousDistillationProtocol(Protocol):
     def run(self):
         """Main protocol execution logic."""
         logging.info("[ContinuousDistillation] Running protocol.")
-        self.fsoswitch.switch(self.routing_table)
 
         # Storage for metrics collection
         metrics_list = []

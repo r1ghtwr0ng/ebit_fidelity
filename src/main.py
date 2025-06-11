@@ -23,11 +23,11 @@ def main():
     # Switch configuration parameters
     switch_routings = [
         ({"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}, "low_low"),
-        ({"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"}, "low_mid"),
-        ({"qin0": "qout0", "qin1": "qout2", "qin2": "qout1"}, "low_high"),
-        ({"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"}, "mid_mid"),
-        ({"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"}, "mid_high"),
-        ({"qin0": "qout1", "qin1": "qout2", "qin2": "qout0"}, "high_high"),
+        # ({"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"}, "low_mid"),
+        # ({"qin0": "qout0", "qin1": "qout2", "qin2": "qout1"}, "low_high"),
+        # ({"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"}, "mid_mid"),
+        # ({"qin0": "qout2", "qin1": "qout0", "qin2": "qout1"}, "mid_high"),
+        # ({"qin0": "qout1", "qin1": "qout2", "qin2": "qout0"}, "high_high"),
     ]
 
     # Simulation sweep parameters

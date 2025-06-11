@@ -3,7 +3,7 @@ import logging
 import pandas as pd
 import netsquid as ns
 
-from multiprocessing import Pool, Manager
+from multiprocessing import Pool
 
 from qpu_node import QPUNode
 from fso_switch import FSOSwitch
@@ -16,7 +16,96 @@ from netsquid.nodes.connections import DirectConnection
 from netsquid.components.models.delaymodels import FibreDelayModel
 
 
-def setup_network(
+def setup_tree_network(
+    dampening_parameter,
+    routing,
+    ideal_switch,
+    ideal_qpu,
+    visibility,
+):
+    # Hardcoded vars, maybe we can dynamically determine the fso_count
+    qpu_count = 9
+    fso_count = 4
+
+    # Setup control node
+    ctrl_node = ControlNode(id=0)
+    ctrl_port = ctrl_node.ports["switch_herald"]
+
+    # TODO setup based on networkx topology
+    tree_network = Network("switch_test_network")
+
+    # Determine herald ports depending on switch configuration
+    if routing != {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}:
+        # TODO throw
+        pass
+
+    herald_ports = ["qout0", "qout1"]
+
+    # Create FSO switches
+    fsoswitch_nodes = []
+    for i in range(4):
+        fsoswitch_node = FSOSwitch(
+            switch_id=i,
+            ctrl_port=ctrl_port,
+            dampening_parameter=dampening_parameter,
+            ideal=ideal_switch,
+            herald_ports=herald_ports,
+            visibility=visibility,
+        )
+        fsoswitch_nodes.append(fsoswitch_node)
+
+    # Create QPU nodes and connect to switch ports
+    qpu_nodes = []
+    for i in range(qpu_count):
+        inbound_port = f"qin{i%3}"
+        qpu_node = QPUNode(qnode_id=i, ideal_qpu=ideal_qpu)
+        qpu_node.processor.ports["qout_hdr"].connect(
+            fsoswitch_nodes[i // 3].ports[inbound_port]
+        )
+        qpu_nodes.append(qpu_node)
+        fsoswitch_nodes[i // 3].register(qpu_node.name, inbound_port)
+
+    # TODO connect the FSO switches in a heirerachy
+    for i in range(3):
+        inbound_port = f"qin{i}"
+        fsoswitch_nodes[i].ports["qout2"].connect(
+            fsoswitch_nodes[3].ports[inbound_port]
+        )
+        fsoswitch_nodes[3].register(fsoswitch_nodes[i].name, inbound_port)
+
+    # Add nodes to network
+    all_nodes = qpu_nodes + fsoswitch_nodes
+    tree_network.add_nodes(nodes=all_nodes)
+
+    for i in range(qpu_count):
+        for j in range(i, qpu_count):
+            # Setup classical communication channel between nodes for entanglement distillation
+            conn_cchannel = DirectConnection(
+                "CChannelConn_AB",
+                ClassicalChannel(
+                    "CChannel_A->B",
+                    length=0,
+                    models={"delay_model": FibreDelayModel(c=200e3)},
+                ),
+                ClassicalChannel(
+                    "CChannel_B->A",
+                    length=0,
+                    models={"delay_model": FibreDelayModel(c=200e3)},
+                ),
+            )
+            # Add connection to network
+            tree_network.add_connection(
+                qpu_nodes[i], qpu_nodes[j], connection=conn_cchannel
+            )
+            # TODO add quantum channel connections instead of direct port forwards
+
+    # Register nodes with the control node's registry for UUID lookups
+    ctrl_node.register_nodes(all_nodes)
+
+    return ctrl_node, qpu_nodes, fsoswitch_nodes
+
+
+def setup_simple_network(
     dampening_parameter,
     routing,
     ideal_switch,
@@ -24,7 +113,7 @@ def setup_network(
     visibility,
 ):
     # Setup control node
-    ctrl_node = ControlNode(id=0)
+    ctrl_node = ControlNode(id=0, network_type="simple")
     ctrl_port = ctrl_node.ports["switch_herald"]
 
     # TODO setup based on networkx topology
@@ -52,10 +141,13 @@ def setup_network(
 
     # Connect node-level ports
     node_1.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin0"])
+    fsoswitch_node.register(node_1.name, "qin0")
     if long_paths:
         node_2.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin2"])
+        fsoswitch_node.register(node_2.name, "qin2")
     else:
         node_2.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin1"])
+        fsoswitch_node.register(node_2.name, "qin1")
 
     # Add nodes to network
     network.add_nodes(nodes=[node_1, node_2, fsoswitch_node])
@@ -101,7 +193,7 @@ def single_run(
     ns.sim_reset()
 
     # Setup network connections
-    ctrl_node, node_1, node_2, fsoswitch_node = setup_network(
+    ctrl_node, node_1, node_2, fsoswitch_node = setup_simple_network(
         routing=switch_routing,
         dampening_parameter=dampening_parameter,
         visibility=visibility,
