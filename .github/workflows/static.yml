@@ -1,21 +1,15 @@
-# Simple workflow for deploying static content to GitHub Pages
 name: Build and deploy docs to pages
 
 on:
-  # Runs on pushes targeting the default branch (update if needed)
   push:
     branches: ["master"]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment
 concurrency:
   group: "pages"
   cancel-in-progress: false
@@ -30,26 +24,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.11'
 
-      - name: Install dependencies and NetSquid
+      - name: Install dependencies (with NetSquid)
         env:
           NETSQUID_USERNAME: ${{ secrets.NETSQUID_USERNAME }}
           NETSQUID_PASSWORD: ${{ secrets.NETSQUID_PASSWORD }}
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install sphinx furo
-          pip install --user --extra-index-url https://${NETSQUID_USERNAME}:${NETSQUID_PASSWORD}@pypi.netsquid.org netsquid
+          python -m pip install \
+            --extra-index-url "https://${NETSQUID_USERNAME}:${NETSQUID_PASSWORD}@pypi.netsquid.org" \
+            -r requirements.txt \
+            sphinx furo netsquid
 
       - name: Clean and build Sphinx documentation
         run: |
           cd docs
-          make clean    # This will clear out the previous build
-          make html     # Build fresh HTML documentation
+          make clean
+          make html
 
       - name: Upload built HTML files
         uses: actions/upload-pages-artifact@v3
