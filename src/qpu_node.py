@@ -43,6 +43,9 @@ class QPUNode(Node):
         self.comm_idx = 1
         self.shielded_idx = 2
 
+        # Fetch logger
+        self.__logger = logging.getLogger("qpu_logger")
+
     # ======== PRIVATE METHODS ========
     # Helper function to create a simple QPU with a few useful instructions
     def __create_processor(self, qbit_count, ideal_qpu):
@@ -152,7 +155,7 @@ class QPUNode(Node):
 
     def __debug(self, msg):
         port = msg.meta.get("rx_port_name", "missing_port_metadata")
-        logging.debug(f"Received message on port: {port}, MSG: {msg}")
+        self.__logger.debug(f"Received message on port: {port}, MSG: {msg}")
 
     def __setup_header_wrapper(self, msg):
         """
@@ -172,7 +175,7 @@ class QPUNode(Node):
         event_id = msg.meta["put_event"].id
 
         if self.request_uuid is None:
-            logging.error(
+            self.__logger.error(
                 f"[Emission header callback]: {self.name}, request_uuid not set for port {port}, event_id: {event_id}"
             )
             # TODO consider throwing an error

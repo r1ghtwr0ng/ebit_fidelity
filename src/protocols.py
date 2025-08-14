@@ -27,6 +27,9 @@ class EntanglementProtocol(NodeProtocol):
         self.perform_correction = perform_correction
         self.protocol_log = "EBIT_CORRECT" if perform_correction else "EBIT_PASSIVE"
 
+        # Fetch logger
+        self.__logger = logging.getLogger("proto_logger")
+
     def run(self):
         # Local vars
         node_name = self.source.name
@@ -35,7 +38,9 @@ class EntanglementProtocol(NodeProtocol):
         comm_idx = self.source.comm_idx
 
         # Flush any stale messages on the corrections port
-        logging.debug(f"[{self.protocol_log}] {node_name}: Flushing corrections port.")
+        self.__logger.debug(
+            f"[{self.protocol_log}] {node_name}: Flushing corrections port."
+        )
         flush_port(self.source.ports["corrections"])
 
         # Execute the emit program
@@ -48,10 +53,11 @@ class EntanglementProtocol(NodeProtocol):
         timeout_event = self.await_timer(self.timeout)
         compound_expr = emit_done & (port_event | timeout_event)
         ent_expr = yield compound_expr
+        self.__logger.info("Emit program completed")
 
         # Check if a timeout occurred.
         if ent_expr.second_term.second_term.value:
-            logging.info(
+            self.__logger.info(
                 f"[{self.protocol_log}] {node_name} ebit establishment timeout."
             )
             return {"log": "timeout", "success": False}
@@ -59,30 +65,38 @@ class EntanglementProtocol(NodeProtocol):
         # Process the Bell state from the received message
         msg = self.source.ports["corrections"].rx_input()
         if msg is None:
-            logging.info(f"[{self.protocol_log}] {node_name} missing message")
+            self.__logger.info(f"[{self.protocol_log}] {node_name} missing message")
             return {"log": "no_msg", "success": False}
 
         bell_state = msg.items[0].bell_index
 
         if bell_state == -1:
-            logging.info(f"[{self.protocol_log}] {node_name} invalid entanglement")
+            self.__logger.info(
+                f"[{self.protocol_log}] {node_name} invalid entanglement"
+            )
             result = {"log": "no entanglement", "success": False}
         elif bell_state == 1:
-            logging.info(f"[{self.protocol_log}] {node_name} processing Bell state 1")
+            self.__logger.info(
+                f"[{self.protocol_log}] {node_name} processing Bell state 1"
+            )
             if self.perform_correction:
                 x_prog = XCorrection()
                 node_proc.execute_program(x_prog, qubit_mapping=[comm_idx])
                 yield self.await_program(node_proc)
             result = {"log": "corrected", "success": True}
         elif bell_state == 2:
-            logging.info(f"[{self.protocol_log}] {node_name} processing Bell state 2")
+            self.__logger.info(
+                f"[{self.protocol_log}] {node_name} processing Bell state 2"
+            )
             if self.perform_correction:
                 y_prog = YCorrection()
                 node_proc.execute_program(y_prog, qubit_mapping=[comm_idx])
                 yield self.await_program(node_proc)
             result = {"log": "corrected", "success": True}
         else:
-            logging.error(f"[{self.protocol_log}] {node_name} bad state: {bell_state}")
+            self.__logger.error(
+                f"[{self.protocol_log}] {node_name} bad state: {bell_state}"
+            )
             result = {"log": f"bad state: {bell_state}", "success": False}
 
         return result
@@ -99,13 +113,11 @@ class EntanglementRetryProto(Protocol):
         ctrl_node,
         qnode_1,
         qnode_2,
-        fsoswitch,
         routing_table,
         max_attempts=10,
         timeout=1500,
     ):
         super().__init__()
-        self.fsoswitch_node = fsoswitch
         self.routing_table = routing_table
         self.max_attempts = max_attempts
         self.timeout = timeout
@@ -114,6 +126,9 @@ class EntanglementRetryProto(Protocol):
         # Save nodes TODO remove when CTRL node switching is fixed
         self.qnode_1 = qnode_1
         self.qnode_2 = qnode_2
+
+        # Fetch logger
+        self.__logger = logging.getLogger("proto_logger")
 
         # Create a single instance of the EntanglementProtocol
         self.subprotocol_qnode_1 = EntanglementProtocol(
@@ -139,12 +154,10 @@ class EntanglementRetryProto(Protocol):
             self.subprotocol_qnode_2, name="qnode_2_entanglement_protocol"
         )
 
-        # TODO add connections from qnode_1 to FSO and from qnode_2 to FSO
-
     def run(self):
         for attempt in range(self.max_attempts):
             # Register and log the attempt count
-            logging.info(f"[RETRYPROTO] Attempt {attempt + 1}")
+            self.__logger.info(f"[RETRYPROTO] Attempt {attempt + 1}")
 
             # Run the subprotocols and process the results.
             self.subprotocol_qnode_1.reset()
@@ -166,7 +179,7 @@ class EntanglementRetryProto(Protocol):
                 Signals.FINISHED
             )
 
-            logging.info(
+            self.__logger.info(
                 f"[RETRYPROTO] Done | qnode_1: {qnode_1_result['log']} | qnode_2: {qnode_2_result['log']}"
             )
 
@@ -175,7 +188,7 @@ class EntanglementRetryProto(Protocol):
                 self.attempts = attempt + 1
                 return True
             else:
-                logging.debug("[RETRYPROTO] Failed, retrying")
+                self.__logger.debug("[RETRYPROTO] Failed, retrying")
 
         # If all attempts fail return False
         self.attempts = self.max_attempts
@@ -188,7 +201,6 @@ class ContinuousDistillationProtocol(Protocol):
         ctrl_node,
         qnode_1,
         qnode_2,
-        fsoswitch,
         routing_table,
         max_attempts=10,
         timeout=1500,
@@ -198,13 +210,15 @@ class ContinuousDistillationProtocol(Protocol):
         self.ctrl_node = ctrl_node
         self.qnode_1 = qnode_1
         self.qnode_2 = qnode_2
-        self.fsoswitch = fsoswitch
         self.routing_table = routing_table
         self.max_attempts = max_attempts
         self.timeout = timeout
         self.max_distillations = max_distillations
         self.attempts = 0
         self.success = False
+
+        # Fetch logger
+        self.__logger = logging.getLogger("proto_logger")
 
         # Initialize subprotocols
         self._setup_subprotocols()
@@ -234,7 +248,7 @@ class ContinuousDistillationProtocol(Protocol):
 
     def run(self):
         """Main protocol execution logic."""
-        logging.info("[ContinuousDistillation] Running protocol.")
+        self.__logger.info("[ContinuousDistillation] Running protocol.")
 
         # Storage for metrics collection
         metrics_list = []
@@ -281,10 +295,12 @@ class ContinuousDistillationProtocol(Protocol):
         phase_desc = (
             "initial" if phase == "initial" else f"iteration {phase.split('_')[1]}"
         )
-        logging.info(f"[ContinuousDistillation] {phase} entanglement establishment.")
+        self.__logger.info(
+            f"[ContinuousDistillation] {phase} entanglement establishment."
+        )
 
         for attempt in range(self.max_attempts):
-            logging.info(
+            self.__logger.info(
                 f"[ContinuousDistillation] {phase_desc} entanglement attempt {attempt + 1}"
             )
             # Track attempts
@@ -299,7 +315,9 @@ class ContinuousDistillationProtocol(Protocol):
                 self.qnode_1.name, self.qnode_2.name
             )
             if request_uuid is None:
-                logging.error(f"[ContinuousDistillation] CTRL node NACKs route request")
+                self.__logger.error(
+                    f"[ContinuousDistillation] CTRL node NACKs route request"
+                )
                 return False
 
             # Set request UUIDs for both nodes and run entanglement protocol
@@ -314,6 +332,7 @@ class ContinuousDistillationProtocol(Protocol):
                 self.subprotocol_qnode_2, signal_label=Signals.FINISHED
             )
             yield subprotocols_done
+            self.__logger.info("Subprotocols completed")
 
             # Collect metrics
             data_point = collect_fidelity_data(subprotocols_done)
@@ -333,7 +352,7 @@ class ContinuousDistillationProtocol(Protocol):
                 Signals.FINISHED
             )
 
-            logging.info(
+            self.__logger.info(
                 f"[ContinuousDistillation] {phase_desc}, attempt {attempt + 1}: "
                 f"qnode_1: {qnode_1_result['log']} | qnode_2: {qnode_2_result['log']}"
             )
@@ -342,18 +361,18 @@ class ContinuousDistillationProtocol(Protocol):
             if qnode_1_result["success"] and qnode_2_result["success"]:
                 return True
 
-            logging.debug(
+            self.__logger.debug(
                 f"[ContinuousDistillation] {phase_desc} entanglement failed, retrying."
             )
 
-        logging.debug(
+        self.__logger.debug(
             f"[ContinuousDistillation] {phase_desc} entanglement failed after maximum attempts."
         )
         return False
 
     def _swap_qubits(self):
         """Perform qubit swap operation on both nodes."""
-        logging.info(
+        self.__logger.info(
             "[ContinuousDistillation] Swapping qubits (positions 1->2) on both nodes."
         )
 
@@ -369,7 +388,7 @@ class ContinuousDistillationProtocol(Protocol):
             self.qnode_2.processor
         )
 
-        logging.info("[ContinuousDistillation] Swap operations completed.")
+        self.__logger.info("[ContinuousDistillation] Swap operations completed.")
 
     def _perform_distillation(self, iteration):
         """Perform EPL distillation for the given iteration.
@@ -381,7 +400,7 @@ class ContinuousDistillationProtocol(Protocol):
             bool: True if distillation was successful
         """
         iteration_num = iteration + 1
-        logging.info(
+        self.__logger.info(
             f"[ContinuousDistillation] Running distillation at iteration {iteration_num}"
         )
 
@@ -401,7 +420,7 @@ class ContinuousDistillationProtocol(Protocol):
         qnode_1_meas = qnode_1_distill.output["m_target"][0]
         qnode_2_meas = qnode_2_distill.output["m_target"][0]
 
-        logging.info(
+        self.__logger.info(
             f"[ContinuousDistillation] Iteration {iteration_num} results - "
             f"qnode_1: {qnode_1_meas}, qnode_2: {qnode_2_meas}"
         )
@@ -409,12 +428,12 @@ class ContinuousDistillationProtocol(Protocol):
         # Success condition: both outcomes equal 1
         if (qnode_1_meas, qnode_2_meas) != (1, 1):
             # TODO fix failed distillation terminating protocol
-            logging.debug(
+            self.__logger.debug(
                 f"[ContinuousDistillation] Distillation iteration {iteration_num} failed, terminating"
             )
             return False
 
-        logging.info(
+        self.__logger.info(
             f"[ContinuousDistillation] Distillation iteration {iteration_num} succeeded."
         )
         return True

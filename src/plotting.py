@@ -1,6 +1,5 @@
 import math
 import pandas as pd
-import logging
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
@@ -8,6 +7,80 @@ import seaborn as sns
 
 
 # ==== Heatmap plots ====
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import pandas as pd
+
+
+def plot_adjacency_heatmap(df, directory):
+    # Step 1: Filter successful entries
+    filtered = df[df["success"]]
+
+    # Get unique phases (max 4 for subplot layout)
+    phases = sorted(filtered["phase"].unique())
+    n_phases = len(phases)
+
+    # Step 2: Set up subplots
+    fig, axes = plt.subplots(1, n_phases, figsize=(6 * n_phases, 6), squeeze=False)
+
+    for i, phase in enumerate(phases):
+        phase_df = filtered[filtered["phase"] == phase]
+
+        # Step 3: Compute mean fidelities
+        fidelity_df = (
+            phase_df.groupby(["qnode_1", "qnode_2"])["fidelity"].mean().reset_index()
+        )
+
+        # Step 4: Extract numerical node indices
+        fidelity_df["qnode_1"] = (
+            fidelity_df["qnode_1"].str.extract(r"(\d+)").astype(int)
+        )
+        fidelity_df["qnode_2"] = (
+            fidelity_df["qnode_2"].str.extract(r"(\d+)").astype(int)
+        )
+
+        # Step 5: Make matrix symmetric
+        mirror_df = fidelity_df.rename(
+            columns={"qnode_1": "qnode_2", "qnode_2": "qnode_1"}
+        )
+        symmetric_df = pd.concat([fidelity_df, mirror_df], ignore_index=True)
+
+        # Step 6: Add diagonal entries (fidelity = 1.0)
+        nodes = sorted(set(symmetric_df["qnode_1"]) | set(symmetric_df["qnode_2"]))
+        diag_df = pd.DataFrame({"qnode_1": nodes, "qnode_2": nodes, "fidelity": 1.0})
+        symmetric_df = pd.concat([symmetric_df, diag_df], ignore_index=True)
+
+        # Step 7: Pivot to square matrix
+        matrix = symmetric_df.pivot(
+            index="qnode_1", columns="qnode_2", values="fidelity"
+        )
+        matrix = matrix.sort_index().sort_index(axis=1)
+        matrix = matrix.fillna(0)
+
+        # Step 8: Plot the heatmap for this phase
+        ax = axes[0, i]
+        sns.heatmap(
+            matrix,
+            annot=True,
+            cmap="inferno",
+            square=True,
+            cbar=False,  # Show colorbar only on last plot to save space
+            cbar_kws={"label": "Fidelity"},
+            vmin=np.min(matrix),
+            vmax=1,
+            ax=ax,
+        )
+        title = phase.replace("_", " ").title()
+        ax.set_title(title)
+        ax.set_xlabel("QNode ID")
+        ax.set_ylabel("QNode ID")
+
+    plt.tight_layout()
+    plt.savefig(f"{directory}/adjacency_fidelity_heatmap_phases.png")
+    plt.clf()
+
+
 def plot_mean_fidelity_heatmap(dfs, directory, config_names):
     """
     Plot mean fidelities as heatmaps in a grid layout for multiple dataframes.

@@ -2,7 +2,6 @@ import re
 import uuid
 import json
 import logging
-import networkx as nx
 
 from netsquid.nodes import Node
 
@@ -14,6 +13,9 @@ class ControlNode(Node):
 
         # Setup ports
         super().__init__(f"CTRL[{id}]", port_names=["switch_herald"])
+
+        # Fetch logger
+        self.__logger = logging.getLogger("ctrl_logger")
 
         self.__uuid_queue = {}
         self.__setup_callbacks()
@@ -58,9 +60,9 @@ class ControlNode(Node):
     def __handle_correction(self, msg):
         dict_headers = json.loads(msg.meta.get("header", "{}"))
         request_uuid = dict_headers.pop("request_uuid", None)
-        (qnode_1_name, qnode_2_name) = self.__uuid_queue.pop(request_uuid)
+        (qnode_1_name, qnode_2_name) = self.__uuid_queue.get(request_uuid)
 
-        logging.debug(
+        self.__logger.debug(
             f"[ControlNode] Received corrections UUID: {request_uuid}, routing to: {qnode_1_name}, {qnode_2_name}"
         )
 
@@ -78,16 +80,46 @@ class ControlNode(Node):
         id_2 = self.__qnode_re.findall(qnode_2_name)[0][1]
 
         # Step 2: sort x < y
-        [low_id, high_id] = sorted([id_1, id_2])
+        [low_id, high_id] = sorted([int(id_1), int(id_2)])
 
         # Step 3: Identify the switches
         sw_low = low_id // 2
         sw_high = high_id // 2
 
-        # Step 3: Do routing checks
-        # Step 4: Transform the IDs to switch names and send commands
-        # Step 5: Profit?
-        pass
+        # Convert to qnode names
+        low_qnode = f"qnode_{low_id}"
+        high_qnode = f"qnode_{high_id}"
+        low_switch = f"switch_{sw_low}"
+        high_switch = f"switch_{sw_high}"
+
+        # Step 4: Do routing checks, send commands
+        if sw_low == sw_high:
+            # Get the switch object and send command
+            switch_node = self._query_node(low_switch)
+            switch_node.herald_switch(low_qnode, high_qnode)
+        else:
+            # Get number of switches in ring network
+            switch_count = len([x for x in self.__registry if "switch_" in x])
+
+            # Switch intermediate nodes to relay previous -> next node
+            for sw_idx in range(sw_low + 1, sw_high):
+                prev_switch_idx = (sw_idx - 1) % switch_count
+                next_switch_idx = (sw_idx + 1) % switch_count
+                prev_switch = f"switch_{prev_switch_idx}"
+                next_switch = f"switch_{next_switch_idx}"
+                intermediate_switch_node = self._query_node(f"switch_{sw_idx}")
+                intermediate_switch_node.relay_switch(prev_switch, next_switch)
+
+            # Find target (next node) and switch first node to it
+            next_switch_idx = (sw_low + 1) % switch_count
+            next_switch = f"switch_{next_switch_idx}"
+            first_switch_node = self._query_node(low_switch)
+            first_switch_node.relay_switch(low_qnode, next_switch)
+
+            # Switch final node to herald (high_id, 2)
+            prev_sw_name = f"switch_{sw_high - 1}"
+            final_switch_node = self._query_node(high_switch)
+            final_switch_node.herald_switch(high_qnode, prev_sw_name)
 
     def __switch_tree(self, qnode_1_name, qnode_2_name):
         # Step 1: Parse the ID from the string name
@@ -95,7 +127,7 @@ class ControlNode(Node):
         id_2 = self.__qnode_re.findall(qnode_2_name)[0][1]
 
         # Step 2: sort x < y
-        [low_id, high_id] = sorted([id_1, id_2])
+        [low_id, high_id] = [int(x) for x in sorted([id_1, id_2])]
 
         # Step 3: Do routing checks
         sw_low = low_id // 3
@@ -111,24 +143,24 @@ class ControlNode(Node):
         # Step 4: Transform the IDs to switch names and send commands
         if sw_low == sw_high:
             # Get the switch objects
-            switch = self._query_node(low_switch)
+            switch_node = self._query_node(low_switch)
 
             # Switch herald
-            switch.herald_switch(low_qnode, high_qnode)
+            switch_node.herald_switch(low_qnode, high_qnode)
         else:
             # Get the switch objects
-            switch_low = self._query_node(low_switch)
-            switch_high = self._query_node(high_switch)
-            switch_super = self._query_node(super_switch)
+            switch_low_node = self._query_node(low_switch)
+            switch_high_node = self._query_node(high_switch)
+            switch_super_node = self._query_node(super_switch)
 
             # Send switch signals
-            switch_low.outbound_switch(low_qnode)
-            switch_high.outbound_switch(high_qnode)
-            switch_super.herald_switch(low_switch, high_switch)
+            switch_low_node.relay_switch(low_qnode, super_switch)
+            switch_high_node.relay_switch(high_qnode, super_switch)
+            switch_super_node.herald_switch(low_switch, high_switch)
 
     def __switch_simple(self, qnode_1_name, qnode_2_name):
-        switch = self._query_node("switch_0")
-        switch.herald_switch(qnode_1_name, qnode_2_name)
+        switch_node = self._query_node("switch_0")
+        switch_node.herald_switch(qnode_1_name, qnode_2_name)
 
     def __noop(self, _arg1, _arg2):
         pass

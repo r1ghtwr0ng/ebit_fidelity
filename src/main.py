@@ -1,10 +1,11 @@
 import os
 import logging
 import datetime
-import numpy as np
+import multiprocessing
 
 from simulation import batch_run
 from plotting import (
+    plot_adjacency_heatmap,
     plot_mean_fidelity_heatmap,
     plot_best_fidelity_phase_heatmap,
     plot_mean_phase_fidelity_heatmap,
@@ -18,7 +19,16 @@ from plotting import (
 
 def main():
     # Set logging level
-    logging.getLogger().setLevel(logging.ERROR)
+    logging.getLogger().setLevel(logging.WARNING)
+    logging.getLogger("matplotlib").setLevel(logging.WARNING)
+    logging.getLogger("sim_logger").setLevel(logging.WARNING)
+    logging.getLogger("fso_logger").setLevel(logging.WARNING)
+    logging.getLogger("qpu_logger").setLevel(logging.WARNING)
+    logging.getLogger("bsm_logger").setLevel(logging.WARNING)
+    logging.getLogger("ctrl_logger").setLevel(logging.WARNING)
+    logging.getLogger("data_logger").setLevel(logging.WARNING)
+    logging.getLogger("proto_logger").setLevel(logging.WARNING)
+    logging.getLogger("qprog_logger").setLevel(logging.WARNING)
 
     # Switch configuration parameters
     switch_routings = [
@@ -31,14 +41,13 @@ def main():
     ]
 
     # Simulation sweep parameters
-    visibilities = np.linspace(1, 0.7, 4)
-    dampening_parameters = np.linspace(0, 0.3, 4)
-    batch_size = 1000
-    max_distillations = 3
-    max_proto_attempts = 5
+    visibilities = [0.85]  # np.linspace(0.8, 0.8, 1)
+    dampening_parameters = [0.15]  # np.linspace(0.2, 0.2, 1)
+    batch_size = 400
+    max_distillations = 2
+    max_proto_attempts = 10
     ideal_switch = False
     ideal_qpu = False
-    workers = 4
 
     # Make directory to save plots in
     timestamp = f"{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"
@@ -70,7 +79,6 @@ def main():
             visibilities=visibilities,
             max_attempts=max_proto_attempts,
             max_distillations=max_distillations,
-            workers=workers,
         )
 
         # Append titles
@@ -78,8 +86,10 @@ def main():
         df_events["config"] = title
 
         # Save to paraquet files on disk
+        logging.info("Saving dataframes to parquet files")
         df_metadata.to_parquet(f"{save_dir}/df_metadata_{title}.parquet")
         df_events.to_parquet(f"{save_dir}/df_events_{title}.parquet")
+        os.sync()  # Flush buffers
 
         # Append metadata to list
         meta_list.append(df_metadata)
@@ -88,25 +98,30 @@ def main():
     # Get the config names from the routing configurations
     config_names = [name for _, name in switch_routings]
 
-    # Plot heatmaps
+    # Plot fidelity heatmaps
     low_loss_df = event_list[0]
-    plot_mean_fidelity_heatmap(event_list, plot_dir_hmap, config_names)
-    plot_best_fidelity_phase_heatmap(event_list, plot_dir_hmap, config_names)
+    plot_adjacency_heatmap(low_loss_df, plot_dir_hmap)
     plot_mean_phase_fidelity_heatmap(low_loss_df, plot_dir_hmap)
 
-    # Filter out the dataframes where visibility is 0
+    # Plot configuration heatmaps if more than one
+    if len(config_names) > 1:
+        plot_mean_fidelity_heatmap(event_list, plot_dir_hmap, config_names)
+        plot_best_fidelity_phase_heatmap(event_list, plot_dir_hmap, config_names)
+
+    # Filter out the dataframes where visibility is 1
     filtered_event_df = [df.loc[df["visibility"] == 1] for df in event_list]
     filtered_meta_df = [df.loc[df["visibility"] == 1] for df in meta_list]
     low_loss_filter = filtered_event_df[0]
 
     # Plot 2D plots (perfect detector)
-    plot_mean_fidelity_2d(low_loss_filter, plot_dir_2d)
-    plot_mean_simtime_2d(low_loss_filter, plot_dir_2d)
-
-    plot_mean_success_prob_2d(filtered_event_df, plot_dir_2d)
-    plot_mean_operation_count_2d(filtered_meta_df, plot_dir_2d)
-    plot_switch_fidelity_2d(filtered_event_df, plot_dir_2d)
+    if len(low_loss_filter) > 0:
+        plot_mean_fidelity_2d(low_loss_filter, plot_dir_2d)
+        plot_mean_simtime_2d(low_loss_filter, plot_dir_2d)
+        plot_mean_success_prob_2d(filtered_event_df, plot_dir_2d)
+        plot_mean_operation_count_2d(filtered_meta_df, plot_dir_2d)
+        plot_switch_fidelity_2d(filtered_event_df, plot_dir_2d)
 
 
 if __name__ == "__main__":
+    multiprocessing.set_start_method("spawn")
     main()
