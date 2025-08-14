@@ -67,7 +67,7 @@ def plot_adjacency_heatmap(df, directory):
             square=True,
             cbar=False,  # Show colorbar only on last plot to save space
             cbar_kws={"label": "Fidelity"},
-            vmin=np.min(matrix),
+            vmin=0,
             vmax=1,
             ax=ax,
         )
