@@ -1,10 +1,11 @@
+import uuid
 import json
 import logging
 import numpy as np
 
 from netsquid.nodes import Node
 import netsquid.components.instructions as instr
-from netsquid.components.models.qerrormodels import T1T2NoiseModel, DepolarNoiseModel
+from netsquid.components.models.qerrormodels import T1T2NoiseModel
 from netsquid.components.qprocessor import QuantumProcessor, PhysicalInstruction
 
 
@@ -21,27 +22,33 @@ class QPUNode(Node):
 
     Parameters
     ----------
-    name : str
-        The name of the QPU entity.
     qbit_count : int, optional
         Number of qubits in the processor, by default 2.
     depolar_rate : float, optional
         Depolarization rate for the noise model, by default 0.
     """
 
-    def __init__(self, name, ideal_qpu, qbit_count=3):
+    def __init__(self, qnode_id, ideal_qpu, qbit_count=3):
+        # Changed: generate name from ID
+        self.id = qnode_id
+        name = f"qnode_{qnode_id}"
         super().__init__(name, port_names=["corrections"])
+
         # The last qubit slot is used for photon emission into fibre
-        self.processor = self.__create_processor(name, qbit_count, ideal_qpu)
+        self.processor = self.__create_processor(qbit_count, ideal_qpu)
         self.__setup_callbacks()
+
         # Keep track of qubit mappings
         self.emit_idx = 0
         self.comm_idx = 1
         self.shielded_idx = 2
 
+        # Fetch logger
+        self.__logger = logging.getLogger("qpu_logger")
+
     # ======== PRIVATE METHODS ========
     # Helper function to create a simple QPU with a few useful instructions
-    def __create_processor(self, name, qbit_count, ideal_qpu):
+    def __create_processor(self, qbit_count, ideal_qpu):
         """
         Private helper method used to initialize the quantum processor for the entity.
         We have nonphysical instructions as we use an abstract QPU architecture.
@@ -56,8 +63,6 @@ class QPUNode(Node):
 
         Parameters
         ----------
-        name : str
-            Name of the quantum processor.
         ideal_qpu : bool
             Whether the QPU has noise and delay models applied.
         qbit_count : int
@@ -70,11 +75,12 @@ class QPUNode(Node):
         QuantumProcessor
             A configured quantum processor with fallback to nonphysical instructions.
         """
+        qproc_name = f"qproc_{self.id}"
 
         if ideal_qpu:
             # Build ideal QPU
             processor = QuantumProcessor(
-                name,
+                qproc_name,
                 num_positions=qbit_count,
                 fallback_to_nonphysical=True,
             )
@@ -91,7 +97,7 @@ class QPUNode(Node):
                 ),  # Shielded qubit: low error (long coherence times)
             ]
             processor = QuantumProcessor(
-                name,
+                qproc_name,
                 num_positions=qbit_count,
                 memory_noise_models=memory_noise_models,
                 phys_instructions=None,
@@ -149,7 +155,7 @@ class QPUNode(Node):
 
     def __debug(self, msg):
         port = msg.meta.get("rx_port_name", "missing_port_metadata")
-        logging.debug(f"Received message on port: {port}, MSG: {msg}")
+        self.__logger.debug(f"Received message on port: {port}, MSG: {msg}")
 
     def __setup_header_wrapper(self, msg):
         """
@@ -168,6 +174,17 @@ class QPUNode(Node):
         port = msg.meta.get("rx_port_name", "missing_port_metadata")
         event_id = msg.meta["put_event"].id
 
-        header = {"event_id": event_id, "request_id": "TODO"}
-        msg.meta["header"] = json.dumps(header)
-        self.processor.ports[f"{port}_hdr"].tx_output(msg)
+        if self.request_uuid is None:
+            self.__logger.error(
+                f"[Emission header callback]: {self.name}, request_uuid not set for port {port}, event_id: {event_id}"
+            )
+            # TODO consider throwing an error
+        else:
+            header = {"event_id": event_id, "request_uuid": self.request_uuid}
+            msg.meta["header"] = json.dumps(header)
+            self.processor.ports[f"{port}_hdr"].tx_output(msg)
+            self.request_uuid = None  # Remove old UUID once request is transmitted
+
+    # Set UUID for next message coming out of the emission port
+    def set_emit_uuid(self, request_uuid):
+        self.request_uuid = request_uuid

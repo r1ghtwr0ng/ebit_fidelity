@@ -1,3 +1,4 @@
+import logging
 import netsquid as ns
 from utils import get_fidelities
 from netsquid.protocols import Signals
@@ -5,6 +6,9 @@ from netsquid.protocols import Signals
 
 # DataCollection handler
 def collect_fidelity_data(evexpr):
+    # Get logger
+    logger = logging.getLogger("data_logger")
+
     first_protocol = evexpr.first_term.triggered_events[-1].source
     second_protocol = evexpr.second_term.triggered_events[-1].source
     first_result = first_protocol.get_signal_result(Signals.FINISHED)
@@ -26,4 +30,5 @@ def collect_fidelity_data(evexpr):
         "attempt_log": log,
         "success": success,
     }
+    logger.info(f"Data returned by data collection handler: {results}")
     return results

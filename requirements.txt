@@ -1,7 +1,11 @@
 mypy
 numpy
 scipy
+seaborn
 matplotlib
+networkx
+pandas
+fastparquet
 pytest
 pytest-cov
 sphinx

@@ -1,4 +1,5 @@
-import logging
+import math
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
@@ -6,52 +7,138 @@ import seaborn as sns
 
 
 # ==== Heatmap plots ====
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import pandas as pd
+
+
+def plot_adjacency_heatmap(df, directory):
+    # Step 1: Filter successful entries
+    filtered = df[df["success"]]
+
+    # Get unique phases (max 4 for subplot layout)
+    phases = sorted(filtered["phase"].unique())
+    n_phases = len(phases)
+
+    # Step 2: Set up subplots
+    fig, axes = plt.subplots(1, n_phases, figsize=(6 * n_phases, 6), squeeze=False)
+
+    for i, phase in enumerate(phases):
+        phase_df = filtered[filtered["phase"] == phase]
+
+        # Step 3: Compute mean fidelities
+        fidelity_df = (
+            phase_df.groupby(["qnode_1", "qnode_2"])["fidelity"].mean().reset_index()
+        )
+
+        # Step 4: Extract numerical node indices
+        fidelity_df["qnode_1"] = (
+            fidelity_df["qnode_1"].str.extract(r"(\d+)").astype(int)
+        )
+        fidelity_df["qnode_2"] = (
+            fidelity_df["qnode_2"].str.extract(r"(\d+)").astype(int)
+        )
+
+        # Step 5: Make matrix symmetric
+        mirror_df = fidelity_df.rename(
+            columns={"qnode_1": "qnode_2", "qnode_2": "qnode_1"}
+        )
+        symmetric_df = pd.concat([fidelity_df, mirror_df], ignore_index=True)
+
+        # Step 6: Add diagonal entries (fidelity = 1.0)
+        nodes = sorted(set(symmetric_df["qnode_1"]) | set(symmetric_df["qnode_2"]))
+        diag_df = pd.DataFrame({"qnode_1": nodes, "qnode_2": nodes, "fidelity": 1.0})
+        symmetric_df = pd.concat([symmetric_df, diag_df], ignore_index=True)
+
+        # Step 7: Pivot to square matrix
+        matrix = symmetric_df.pivot(
+            index="qnode_1", columns="qnode_2", values="fidelity"
+        )
+        matrix = matrix.sort_index().sort_index(axis=1)
+        matrix = matrix.fillna(0)
+
+        # Step 8: Plot the heatmap for this phase
+        ax = axes[0, i]
+        sns.heatmap(
+            matrix,
+            annot=True,
+            cmap="inferno",
+            square=True,
+            cbar=False,  # Show colorbar only on last plot to save space
+            cbar_kws={"label": "Fidelity"},
+            vmin=np.min(matrix),
+            vmax=1,
+            ax=ax,
+        )
+        title = phase.replace("_", " ").title()
+        ax.set_title(title)
+        ax.set_xlabel("QNode ID")
+        ax.set_ylabel("QNode ID")
+
+    plt.tight_layout()
+    plt.savefig(f"{directory}/adjacency_fidelity_heatmap_phases.png")
+    plt.clf()
+
+
 def plot_mean_fidelity_heatmap(dfs, directory, config_names):
     """
-    Plot mean fidelities as heatmaps for multiple dataframes (switch configurations)
+    Plot mean fidelities as heatmaps in a grid layout for multiple dataframes.
 
     Parameters:
     - dfs: List of dataframes, each representing a different switch configuration
-    - directory: Directory to save the plots
     - config_names: List of configuration names corresponding to the dataframes
+    - figsize: Tuple for figure size (default: (12, 10))
+
+    Returns:
+    - matplotlib.pyplot object
     """
-    plt.figure(figsize=(15, 5 * len(dfs)))
+    figsize = (12, 10)
+    num_plots = len(dfs)
+    cols = 2
+    rows = math.ceil(num_plots / cols)
+
+    fig, axes = plt.subplots(rows, cols, figsize=figsize)
+    axes = axes.flatten()  # Makes it easier to index
 
     for i, (df, config_name) in enumerate(zip(dfs, config_names)):
-        # Filter successful runs
+        ax = axes[i]
+
         success_df = df[df["success"]]
 
-        # Group by dampening_parameter and depolar_rate, calculate mean fidelity
         heatmap_data = (
-            success_df.groupby(["dampening_parameter", "depolar_rate"])["fidelity"]
+            success_df.groupby(["dampening_parameter", "visibility"])["fidelity"]
             .mean()
             .reset_index()
         )
 
-        # Pivot the data to create a matrix suitable for heatmap
         pivot_data = heatmap_data.pivot(
-            index="dampening_parameter", columns="depolar_rate", values="fidelity"
+            index="dampening_parameter", columns="visibility", values="fidelity"
         )
 
-        # Create subplot for this configuration
-        plt.subplot(len(dfs), 1, i + 1)
+        # Format x/y ticks to 3 decimal places
+        pivot_data.index = [f"{x:.3f}" for x in pivot_data.index]
+        pivot_data.columns = [f"{x:.3f}" for x in pivot_data.columns]
 
-        # Create heatmap with explicit x and y ticks
         sns.heatmap(
             pivot_data,
             cmap="inferno",
             annot=True,
-            fmt=".3f",
+            fmt=".2f",
             cbar_kws={"label": "Mean Fidelity"},
-            xticklabels=pivot_data.columns,
-            yticklabels=pivot_data.index,
+            ax=ax,
         )
 
-        plt.title(f"Mean Fidelity Heatmap - {config_name}")
-        plt.xlabel("Depolarization Rate")
-        plt.ylabel("Dampening Parameter")
+        ax.set_title(f"Mean Fidelity Heatmap - {config_name}")
+        ax.set_xlabel("HOM Visibility")
+        ax.set_ylabel("Dampening Parameter")
 
-    plt.tight_layout()
+    # Hide any unused subplots
+    for j in range(i + 1, len(axes)):
+        fig.delaxes(axes[j])
+
+    fig.tight_layout()
+
     plt.savefig(f"{directory}/mean_fidelity_heatmaps.png")
     plt.clf()
 
@@ -75,16 +162,16 @@ def plot_best_fidelity_phase_heatmap(dfs, directory, config_names):
         # Filter successful runs
         success_df = df[df["success"]]
 
-        # Find the best phase for each dampening_parameter and depolar_rate combination
+        # Find the best phase for each dampening_parameter and visibility combination
         best_phase_data = success_df.loc[
-            success_df.groupby(["dampening_parameter", "depolar_rate"])[
+            success_df.groupby(["dampening_parameter", "visibility"])[
                 "fidelity"
             ].idxmax()
         ]
 
         # Create pivot table with best phases converted to numeric values
         pivot_data = best_phase_data.pivot(
-            index="dampening_parameter", columns="depolar_rate", values="phase"
+            index="dampening_parameter", columns="visibility", values="phase"
         ).applymap(lambda x: phase_to_num.get(x, np.nan))
 
         # Create subplot for this configuration
@@ -104,13 +191,13 @@ def plot_best_fidelity_phase_heatmap(dfs, directory, config_names):
         # Plot heatmap
         im = plt.imshow(pivot_data, cmap=cmap, norm=norm, aspect="auto")
 
-        # Format dampening and depolar rate to 3 significant figures
+        # Format dampening and HOM visibility to 3 significant figures
         dampening_ticks = [f"{x:.3g}" for x in pivot_data.index]
-        depolar_ticks = [f"{x:.3g}" for x in pivot_data.columns]
+        visibility_ticks = [f"{x:.3g}" for x in pivot_data.columns]
 
         # Set x and y ticks
         plt.xticks(
-            range(len(pivot_data.columns)), depolar_ticks, rotation=45, ha="right"
+            range(len(pivot_data.columns)), visibility_ticks, rotation=45, ha="right"
         )
         plt.yticks(range(len(pivot_data.index)), dampening_ticks)
 
@@ -122,7 +209,7 @@ def plot_best_fidelity_phase_heatmap(dfs, directory, config_names):
                     # Use the original phase name for text
                     phase_name = best_phase_data.pivot(
                         index="dampening_parameter",
-                        columns="depolar_rate",
+                        columns="visibility",
                         values="phase",
                     ).iloc[y, x]
                     plt.text(
@@ -140,7 +227,7 @@ def plot_best_fidelity_phase_heatmap(dfs, directory, config_names):
         cbar.set_ticklabels(phase_order)
 
         plt.title(f"Best Fidelity Phase Heatmap - {config_name}")
-        plt.xlabel("Depolarization Rate")
+        plt.xlabel("HOM Visibility")
         plt.ylabel("Dampening Parameter")
 
     plt.tight_layout()
@@ -156,52 +243,56 @@ def plot_mean_phase_fidelity_heatmap(df, directory):
     - df: Dataframe for a single switch configuration
     - directory: Directory to save the plots
     """
-    # Filter successful runs
-    success_df = df[df["success"]]
-
-    # Get unique phases
-    phases = sorted(success_df["phase"].unique())
-
-    # Create subplots for each phase
-    plt.figure(figsize=(15, 5 * len(phases)))
-
-    for i, phase in enumerate(phases):
-        # Filter for specific phase
+    success_df = df  # [df["success"]]
+    phases = sorted(success_df["phase"].unique())[:4]
+    n_phases = len(phases)
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    axes = axes.flatten()
+    fidelities, heatmap_data_list = [], []
+    for phase in phases:
         phase_df = success_df[success_df["phase"] == phase]
-
-        # Group by dampening_parameter and depolar_rate, calculate mean fidelity
         heatmap_data = (
-            phase_df.groupby(["dampening_parameter", "depolar_rate"])["fidelity"]
+            phase_df.groupby(["dampening_parameter", "visibility"])["fidelity"]
             .mean()
             .reset_index()
+            .pivot(index="dampening_parameter", columns="visibility", values="fidelity")
         )
-
-        # Pivot the data to create a matrix suitable for heatmap
-        pivot_data = heatmap_data.pivot(
-            index="dampening_parameter", columns="depolar_rate", values="fidelity"
-        )
-
-        # Create subplot for this phase
-        plt.subplot(len(phases), 1, i + 1)
-
-        # Create heatmap with explicit x and y ticks
+        heatmap_data_list.append(heatmap_data)
+        fidelities.append(heatmap_data.values)
+    all_vals = np.concatenate([vals[~np.isnan(vals)] for vals in fidelities])
+    vmin, vmax = all_vals.min(), all_vals.max()
+    for i, phase in enumerate(phases):
+        ax = axes[i]
+        pivot_data = heatmap_data_list[i]
+        xticks = [f"{x:.2f}" for x in pivot_data.columns]
+        yticks = [f"{y:.2f}" for y in pivot_data.index]
         sns.heatmap(
             pivot_data,
             cmap="inferno",
-            annot=True,
-            fmt=".3f",
-            cbar_kws={"label": "Mean Fidelity"},
-            xticklabels=pivot_data.columns,
-            yticklabels=pivot_data.index,
+            annot=False,
+            cbar=False,
+            vmin=vmin,
+            vmax=vmax,
+            ax=ax,
+            xticklabels=xticks,
+            yticklabels=yticks,
         )
-
-        plt.title(f"Mean Fidelity Heatmap - Phase: {phase}")
-        plt.xlabel("Depolarization Rate")
-        plt.ylabel("Dampening Parameter")
-
-    plt.tight_layout()
-    plt.savefig(f"{directory}/mean_phase_fidelity_heatmaps.png")
-    plt.clf()
+        title = phase.replace("_", " ").title()
+        ax.set_title(f"{title}", pad=12)
+        ax.set_xlabel("HOM Visibility")
+        ax.set_ylabel("Dampening Parameter")
+        ax.tick_params(axis="x", labelrotation=45)
+    for j in range(n_phases, 4):
+        fig.delaxes(axes[j])
+    cbar_ax = fig.add_axes([0.92, 0.25, 0.015, 0.5])
+    norm = plt.Normalize(vmin=vmin, vmax=vmax)
+    sm = plt.cm.ScalarMappable(cmap="inferno", norm=norm)
+    sm.set_array([])
+    fig.colorbar(sm, cax=cbar_ax, label="Mean Fidelity")
+    fig.subplots_adjust(wspace=0.4, hspace=0.4)  # tweak spacing as needed
+    fig.suptitle("Mean Fidelity", fontsize=16)
+    fig.savefig(f"{directory}/mean_phase_fidelity_heatmaps.png")
+    fig.clf()
 
 
 # ==== 2D plots ====
@@ -247,37 +338,6 @@ def plot_mean_fidelity_2d(df, directory):
     return
 
 
-# def plot_switch_fidelity_2d(dfs, directory, config_names):
-#    colors = plt.cm.tab10.colors[: len(dfs)]
-#    plt.figure(figsize=(10, 6))
-#
-#    for i, (df, config_name, color) in enumerate(zip(dfs, config_names, colors)):
-#        # Filter successful entries first
-#        success_df = df[df["success"]]
-#
-#        # Then group by dampening parameter and calculate mean fidelity
-#        mean_fidelity = (
-#            success_df.groupby("dampening_parameter")["fidelity"].mean().reset_index()
-#        )
-#
-#        plt.plot(
-#            mean_fidelity["dampening_parameter"],
-#            mean_fidelity["fidelity"],
-#            marker="o",
-#            label=config_name,
-#            color=color,
-#        )
-#
-#    plt.xlabel("Dampening parameter")
-#    plt.ylabel("Mean ebit fidelity")
-#    plt.title("Fidelity comparison per switching configuration")
-#    plt.legend()
-#    plt.grid(True)
-#    plt.tight_layout()
-#    plt.savefig(f"{directory}/switched/switched_fidelity_comparison.png")
-#    plt.clf()
-
-
 def plot_mean_simtime_2d(df, directory):
     plt.figure(figsize=(10, 6))
 
@@ -319,52 +379,80 @@ def plot_mean_simtime_2d(df, directory):
 
 
 # TODO
-def plot_mean_success_prob_2d(dfs, directory, config_names):
-    colors = plt.cm.tab10.colors[: len(dfs)]
-    for i, (df, config_name, color) in enumerate(zip(dfs, config_names, colors)):
-        # Group by phase and dampening
-        success_rate = df.groupby("dampening_parameter")["success"].mean().reset_index()
-        # Plot
+def plot_mean_success_prob_2d(dfs, directory):
+    df = pd.concat(dfs, ignore_index=True)
+    plt.figure(figsize=(10, 6))
+
+    for config_name, group in df.groupby("config"):
+        success_rate = (
+            group.groupby("dampening_parameter")["success"].mean().reset_index()
+        )
         plt.plot(
             success_rate["dampening_parameter"],
             success_rate["success"],
             marker="o",
             label=config_name,
-            color=color,
         )
 
     plt.xlabel("Dampening parameter")
     plt.ylabel("Success probability")
     plt.title("Success probability per switching configuration")
-    plt.legend()
+    plt.ylim(0, 1.05)
     plt.grid(True)
+    plt.legend()
     plt.tight_layout()
     plt.savefig(f"{directory}/switched/success_prob_comparison.png")
     plt.clf()
 
 
 # TODO
-def plot_mean_operation_count_2d(dfs, directory, config_names):
-    colors = plt.cm.tab10.colors[: len(dfs)]
+def plot_mean_operation_count_2d(dfs, directory):
+    df = pd.concat(dfs, ignore_index=True)
     plt.figure(figsize=(10, 6))
-    for i, (df, config_name, color) in enumerate(zip(dfs, config_names, colors)):
-        ops_stats = (
-            df.groupby("dampening_parameter")["quantum_ops"].mean().reset_index()
-        )
 
+    for config_name, group in df.groupby("config"):
+        ops_stats = (
+            group.groupby("dampening_parameter")["quantum_ops"].mean().reset_index()
+        )
         plt.plot(
             ops_stats["dampening_parameter"],
             ops_stats["quantum_ops"],
             marker="o",
             label=config_name,
-            color=color,
         )
 
     plt.xlabel("Dampening parameter")
-    plt.ylabel("Mean quantum ops")
+    plt.ylabel("Mean quantum operations")
     plt.title("Mean quantum ops per switching configuration")
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
     plt.savefig(f"{directory}/switched/quantum_ops_comparison.png")
+    plt.clf()
+
+
+# TODO
+def plot_switch_fidelity_2d(dfs, directory):
+    df = pd.concat(dfs, ignore_index=True)
+    plt.figure(figsize=(10, 6))
+
+    for config_name, group in df[df["success"]].groupby("config"):
+        mean_fidelity = (
+            group.groupby("dampening_parameter")["fidelity"].mean().reset_index()
+        )
+        plt.plot(
+            mean_fidelity["dampening_parameter"],
+            mean_fidelity["fidelity"],
+            marker="o",
+            label=config_name,
+        )
+
+    plt.xlabel("Dampening parameter")
+    plt.ylabel("Mean ebit fidelity")
+    plt.title("Fidelity per switching configuration")
+    plt.ylim(0, 1.05)
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f"{directory}/switched/switched_fidelity_comparison.png")
     plt.clf()
