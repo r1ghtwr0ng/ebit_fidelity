@@ -15,16 +15,44 @@ class FSOSwitch(Node):
     """
     A Free-Space Optical (FSO) switch component for routing quantum signals.
 
-    This component manages the routing of quantum information through lossy
-    channels, including the setup of a Bell-state measurement (BSM) detector
-    and fiber models for noise, loss, and delay.
+    This routes photonic qubits through lossy fibre channels and connects to
+    a Bell-state measurement (BSM) detector. It applies fibre models for noise and loss.
+
+    The connections to and from the switch should be registered using register() to
+    allow for proper switching on a component name basis.
+
+    It uses the "fso_logger" logger object, get it with logging.getLogger("fso_logger")
 
     Parameters
     ----------
-    name : str
-        Name of the FSO switch.
-    model_parameters : dict
-        Configuration for fiber loss, delay, and depolarization models.
+    switch_id : int
+        Integer ID of the switch, it's used to create the Node superclass name.
+    ctrl_port : netsquid.components.component.Port
+        The port object of the control node, all output commands are sent to it.
+    dampening_parameter : float
+        Amplitude dampening parameter for photons passing through the switch.
+        Should be between 0 and 1.
+    ideal : bool
+        Specify whether the switch is ideal, i.e. no photon losses and path differences
+        in fibre channels.
+    herald_ports : list
+        The entanglement heralding port names which will be connected to the BSM device.
+    visibility : float
+        The HOM visibility parameter of the BSM detector attached to the herald ports.
+        Should be between 0 and 1.
+
+    Examples
+    --------
+    >>> ctrl_node = ControlNode(id=0, network_type="tree")
+    >>> ctrl_port = ctrl_node.ports["switch_herald"]
+    >>> fsoswitch_node = FSOSwitch(
+    >>>     switch_id=1,
+    >>>     ctrl_port=ctrl_port,
+    >>>     dampening_parameter=0.15,
+    >>>     ideal=False,
+    >>>     herald_ports=["qout0", "qout1"],
+    >>>     visibility=0.85,
+    >>> )
     """
 
     def __init__(
@@ -84,22 +112,26 @@ class FSOSwitch(Node):
     ):
         """
         Creates a BSM detector component and adds it as a subcomponent to the FSO Switch
-        Port bindings:  [FSO] qout0 -> qin0  [BSM]
-                        [FSO] qout1 -> qin1  [BSM]
-                        [FSO] cout0 <- cout0 [BSM]
-                        [FSO] cout1 <- cout1 [BSM]
+        Assuming herald_ports of ["qout0", "qout1"], we have these port bindings:
+            [FSO] qout0 -> qin0  [BSM]
+            [FSO] qout1 -> qin1  [BSM]
 
         Parameters
         ----------
-        p_dark : float, optional
-            Dark-count probability, i.e. probability of measuring a photon while
-            no photon was present, per detector.
-        det_eff : float, optional
+        herald_ports : list
+            The entanglement heralding port names which will be connected to the BSM.
+        dampening_parameter : float
+            Amplitude dampening parameter for photons passing through the switch.
+            Should be between 0 and 1.
+        det_eff : float
             Efficiency per detector, i.e. the probability of detecting an incoming
             photon.
-        visibility : float, optional
-            Visibility of the Hong-Ou-Mandel dip, also referred to as the photon
-            indistinguishability.
+        visibility : float
+            The HOM visibility parameter of the BSM detector attached to the herald ports.
+            Should be between 0 and 1.
+        p_dark : float, optional
+            Dark-count probability, i.e. probability of measuring a photon while
+            no photon was present.
         """
 
         bsm_wrapper = BSMWrapper(
@@ -125,10 +157,11 @@ class FSOSwitch(Node):
 
         Parameters
         ----------
-        model_parameters : dict
-            Configuration dictionary for short, mid, and long channels with
-            depolarization, loss, and delay parameters.
+        ideal : bool
+            A boolean parameter controlling whether the switch is an ideal component
+            (no loss and path differences).
         """
+
         model_map_short = {
             "quantum_loss_model": FibreLossModel(
                 p_loss_init=0 if ideal else loss_prob(1.319),
@@ -170,8 +203,15 @@ class FSOSwitch(Node):
 
     def __setup_port_forwarding(self, ctrl_port):
         """
-        Setup routing for the incoming ports through the lossy channels to the output
-        ports
+        Setup routing for the incoming ports through the fibre channels to the output
+        ports. The classical output (cout) port is bound to the control node's port
+        (ctrl_port) for communicating routing requests.
+
+        Parameters
+        ----------
+        ctrl_port : netsquid.components.component.Port
+            The port object of the control node to which requests from the "cout" port
+            are relayed.
         """
         # Bind input handlers
         self.ports["qin0"].bind_input_handler(self.__recv_qubit, tag_meta=True)
@@ -188,12 +228,13 @@ class FSOSwitch(Node):
 
     def __relay_qubit(self, msg):
         """
-        Apply amplitude dampening and route an incoming quantum message
-        to the appropriate output port.
+        Route an incoming quantum message to the appropriate output port. This requires
+        deserializing the message headers, popping the output port and relaying the
+        message through the port.
 
         Parameters
         ----------
-        msg : object
+        msg : netsquid.components.component.Message
             Quantum message containing metadata for routing.
         """
 
@@ -209,18 +250,19 @@ class FSOSwitch(Node):
 
     def __recv_qubit(self, msg):
         """
-        Process an inbound qubit, apply amplitude dempaning, determine the routing path
+        Process an inbound qubit, apply amplitude dampening, determine the routing path
         and forward it through the appropriate lossy channel.
 
         Parameters
         ----------
-        msg : object
+        msg : netsquid.components.component.Message
             Quantum message received on a specific input port.
         """
         inbound_port = msg.meta.get("rx_port_name", "missing_port_name")
         outbound_port = self.__routing_table[inbound_port]
         self.__logger.debug(
-            f"[{self.name}] Received ({msg.items[0]} sender: {msg.meta['source']}, hdr: {msg.meta['header']}) on port {inbound_port}"
+            f"""[{self.name}] Received ({msg.items[0]} sender: {msg.meta['source']}
+            hdr: {msg.meta['header']}) on port {inbound_port}"""
         )
 
         # Deserialize the JSON headers
@@ -266,7 +308,7 @@ class FSOSwitch(Node):
         valid_keys = sorted(routing_table.keys()) == ["qin0", "qin1", "qin2"]
         valid_vals = sorted(routing_table.values()) == ["qout0", "qout1", "qout2"]
         if not (valid_keys and valid_vals):
-            self.__logger.error(f"[FSO] Invalid routing rable: {routing_table}")
+            self.__logger.error(f"[FSO] Invalid routing table: {routing_table}")
 
         self.__routing_table = routing_table.copy()
 
@@ -274,27 +316,62 @@ class FSOSwitch(Node):
         return self.__registry.get(node_name)
 
     def register(self, node_name, inbound_port):
+        """
+        Register a node that is connected to the switch's port for later querying.
+
+        Parameters
+        ----------
+        node_name : str
+            The name of the node object.
+        inbound_port : str
+            The port name to which the node is connected to.
+        """
         self.__registry[node_name] = inbound_port
 
-    def herald_switch(self, node_low, node_high):
+    def herald_switch(self, node_one, node_two):
+        """
+        Change to a routing configuration which routes the input ports connected to the
+        two nodes to the BSM detector node (heralding device).
+
+        Parameters
+        ----------
+        node_one : str
+            The first node which must be routed to the heralding device.
+
+        node_two : str
+            The second node which must be routed to the heralding device.
+        """
         # Fetch port names
-        inbound_low = self._query_node(node_low)
-        inbound_high = self._query_node(node_high)
-        remaining = list({"qin0", "qin1", "qin2"} - {inbound_low, inbound_high})[0]
+        inbound_one = self._query_node(node_one)
+        inbound_two = self._query_node(node_two)
+        remaining = list({"qin0", "qin1", "qin2"} - {inbound_one, inbound_two})[0]
         self.__logger.info(
-            f"[HERALD SWITCH] {node_low} ({inbound_low}) and {node_high} ({inbound_high}) to herald: {self.__herald_ports}"
+            f"""[HERALD] {node_one} ({inbound_one}) & {node_two} ({inbound_two})
+            To herald: {self.__herald_ports}"""
         )
 
         # Construct routing table
         routing_table = {
-            inbound_low: self.__herald_ports[0],
-            inbound_high: self.__herald_ports[1],
+            inbound_one: self.__herald_ports[0],
+            inbound_two: self.__herald_ports[1],
             remaining: self.__outbound_port,
         }
         self.__logger.info(f"[HERALD TABLE] {routing_table}")
         self.__switch(routing_table)
 
     def relay_switch(self, node_in, node_out):
+        """
+        Change the switching configuration to connect node_in to node_out, assuming they
+        have been registered with the node. Remaining paths are connected in no
+        particular order.
+
+        Parameters
+        ----------
+        node_in : str
+            The name of the node from which the photon is inbound.
+        node_out : str
+            The name of the photon's destination node, connected to an output port.
+        """
         # Fetch port names
         inbound_port = self._query_node(node_in)
         outbound_port = self._query_node(node_out)
@@ -317,8 +394,8 @@ class FSOSwitch(Node):
 
     # Switch to the initial saved configuration
     def default_switch(self):
+        """
+        Reset the switch to the initial switching configuration (no deflections)
+        default: {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}
+        """
         self.__switch(self.__routing_table)
-
-    # Get heralding ports and outbound ports
-    def get_outports(self):
-        return self.__herald_ports, self.__outbound_port
