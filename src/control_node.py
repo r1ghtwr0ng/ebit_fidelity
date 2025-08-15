@@ -7,6 +7,55 @@ from netsquid.nodes import Node
 
 
 class ControlNode(Node):
+    """
+    Central controller node for managing quantum network switching.
+
+    The control node is responsible for:
+      * Maintaining a central registry mapping node names to their object instances.
+      * Receiving heralding signals from switches and forwarding correction messages
+        to the relevant quantum nodes.
+      * Sending switching commands to configure the network, with topology-dependent
+        routing logic (ring, tree, or simple).
+      * Assigning a unique UUID to each routing request for correlation between
+        switching commands and heralded corrections.
+
+    Parameters
+    ----------
+    id : int
+        Unique integer identifier for the control node, included in its name as ``CTRL[{id}]``.
+    network_type : str, optional
+        Network topology type that determines which internal switching method is used.
+        Supported values are:
+          * ``"ring"`` – ring topology with intermediate relay configuration.
+          * ``"tree"`` – hierarchical tree topology with a super-switch.
+          * ``"simple"`` – single-switch topology.
+        Any other value defaults to no-op switching.
+
+    Attributes
+    ----------
+    __registry : dict[str, Node]
+        Central mapping of registered node names to their object instances.
+        Used for name → object resolution during switching and correction handling.
+    __uuid_queue : dict[str, tuple[str, str]]
+        Maps request UUIDs to the pair of quantum node names involved in the route.
+    ports : dict[str, Port]
+        Contains the ``switch_herald`` input port for receiving heralding messages.
+    __logger : logging.Logger
+        Logger instance for controller events.
+    __switch_re : re.Pattern
+        Compiled regex for parsing switch names (e.g., ``switch_2``).
+    __qnode_re : re.Pattern
+        Compiled regex for parsing quantum node names (e.g., ``qnode_5``).
+
+    Examples
+    --------
+    >>> ctrl_node = ControlNode(id=0, network_type="ring")
+    >>> ctrl_node.register_nodes([node_a, node_b, switch_0, switch_1])
+    >>> req_id = ctrl_node.request_route("qnode_0", "qnode_3")
+    >>> isinstance(req_id, str)
+    True
+    """
+
     def __init__(self, id, network_type=None):
         # Central registry for all nodes, allows for name -> Object resolution
         self.__registry = {}
@@ -35,6 +84,25 @@ class ControlNode(Node):
             self.__switch_route = self.__noop
 
     def request_route(self, qnode_1_name, qnode_2_name):
+        """
+        Initiate a switching request between two quantum nodes.
+
+        Sends topology-dependent switching commands to configure the network,
+        then generates and stores a request UUID to match future heralding
+        corrections to this route.
+
+        Parameters
+        ----------
+        qnode_1_name : str
+            Name of the first quantum node (e.g., ``"qnode_0"``).
+        qnode_2_name : str
+            Name of the second quantum node.
+
+        Returns
+        -------
+        str
+            UUID string identifying this routing request.
+        """
         # Send switching signals along the route to configure the network
         self.__switch_route(qnode_1_name, qnode_2_name)
 
@@ -45,11 +113,36 @@ class ControlNode(Node):
         return request_uuid
 
     def register_nodes(self, node_list):
+        """
+        Register a set of nodes with the controller.
+
+        Adds node objects to the internal registry so they can be referenced
+        by name during switching and correction handling.
+
+        Parameters
+        ----------
+        node_list : list[netsquid.nodes.Node]
+            List of node objects to register.
+        """
         # Register a list of nodes with the central registry
         for node in node_list:
             self.__registry[node.name] = node
 
     def _query_node(self, name):
+        """
+        Retrieve a node object from the registry by name.
+
+        Parameters
+        ----------
+        name : str
+            Node name to look up.
+
+        Returns
+        -------
+        Node or None
+            The corresponding node object, or ``None`` if not found.
+        """
+
         # For debugging purposes, allows directly querying the central registry
         return self.__registry.get(name)
 
@@ -58,6 +151,19 @@ class ControlNode(Node):
         self.ports["switch_herald"].bind_input_handler(self.__handle_correction)
 
     def __handle_correction(self, msg):
+        """
+        Handle a heralding correction message from a switch.
+
+        Extracts the request UUID from the message header, resolves the
+        associated quantum nodes from the UUID queue, and forwards the
+        correction message to both nodes' ``corrections`` ports.
+
+        Parameters
+        ----------
+        msg : Message
+            Heralding correction message containing a serialized JSON header
+            with the ``request_uuid`` field.
+        """
         dict_headers = json.loads(msg.meta.get("header", "{}"))
         request_uuid = dict_headers.pop("request_uuid", None)
         (qnode_1_name, qnode_2_name) = self.__uuid_queue.get(request_uuid)
@@ -75,6 +181,21 @@ class ControlNode(Node):
         qnode_2.ports["corrections"].tx_input(msg)
 
     def __switch_ring(self, qnode_1_name, qnode_2_name):
+        """
+        Perform switching for a ring network topology.
+
+        Configures the relevant switches between two quantum nodes. If the
+        nodes share the same switch, a direct herald switch is set. Otherwise,
+        intermediate switches are configured in relay mode to connect the
+        path, with the final switch set to herald.
+
+        Parameters
+        ----------
+        qnode_1_name : str
+            Name of the first quantum node.
+        qnode_2_name : str
+            Name of the second quantum node.
+        """
         # Step 1: Parse the ID from the string name
         id_1 = self.__qnode_re.findall(qnode_1_name)[0][1]
         id_2 = self.__qnode_re.findall(qnode_2_name)[0][1]
@@ -122,6 +243,20 @@ class ControlNode(Node):
             final_switch_node.herald_switch(high_qnode, prev_sw_name)
 
     def __switch_tree(self, qnode_1_name, qnode_2_name):
+        """
+        Perform switching for a tree network topology.
+
+        Configures direct herald switching if both nodes share the same switch.
+        Otherwise, connects both to a super-switch and sets the super-switch
+        to herald between them.
+
+        Parameters
+        ----------
+        qnode_1_name : str
+            Name of the first quantum node.
+        qnode_2_name : str
+            Name of the second quantum node.
+        """
         # Step 1: Parse the ID from the string name
         id_1 = self.__qnode_re.findall(qnode_1_name)[0][1]
         id_2 = self.__qnode_re.findall(qnode_2_name)[0][1]
@@ -159,6 +294,19 @@ class ControlNode(Node):
             switch_super_node.herald_switch(low_switch, high_switch)
 
     def __switch_simple(self, qnode_1_name, qnode_2_name):
+        """
+        Perform switching for a single-switch network topology.
+
+        Always sends a herald switch command to ``switch_0`` between the
+        two specified quantum nodes.
+
+        Parameters
+        ----------
+        qnode_1_name : str
+            Name of the first quantum node.
+        qnode_2_name : str
+            Name of the second quantum node.
+        """
         switch_node = self._query_node("switch_0")
         switch_node.herald_switch(qnode_1_name, qnode_2_name)
 

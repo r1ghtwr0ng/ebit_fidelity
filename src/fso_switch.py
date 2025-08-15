@@ -37,7 +37,7 @@ class FSOSwitch(Node):
     ideal : bool
         Specify whether the switch is ideal, i.e. no photon losses and path differences
         in fibre channels.
-    herald_ports : list
+    herald_ports : list[str]
         The entanglement heralding port names which will be connected to the BSM device.
     visibility : float
         The HOM visibility parameter of the BSM detector attached to the herald ports.
@@ -120,7 +120,7 @@ class FSOSwitch(Node):
 
         Parameters
         ----------
-        herald_ports : list
+        herald_ports : list[str]
             The entanglement heralding port names which will be connected to the BSM.
         dampening_parameter : float
             Amplitude dampening parameter for photons passing through the switch.
