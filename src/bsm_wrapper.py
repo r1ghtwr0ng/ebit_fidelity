@@ -1,7 +1,7 @@
 import json
 import logging
 from netsquid.nodes import Node
-from detectors import BSMDetector
+from netsquid.examples.simple_link import BSMDetector
 
 
 class BSMWrapper(Node):
