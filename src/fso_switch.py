@@ -21,12 +21,14 @@ class FSOSwitch(Node):
     The connections to and from the switch should be registered using register() to
     allow for proper switching on a component name basis.
 
-    It uses the "fso_logger" logger object, get it with logging.getLogger("fso_logger")
+    It uses the "fso_logger" logger object, get it with:
+    ``logging.getLogger("fso_logger")``
 
     Parameters
     ----------
     switch_id : int
-        Integer ID of the switch, it's used to create the Node superclass name.
+        Integer ID of the switch, it's used to create the :class:`netsquid.nodes.Node`
+        superclass name.
     ctrl_port : netsquid.components.component.Port
         The port object of the control node, all output commands are sent to it.
     dampening_parameter : float
