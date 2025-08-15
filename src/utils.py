@@ -6,6 +6,14 @@ import netsquid.qubits.qubitapi as qapi
 
 # Flush all messages from a port
 def flush_port(port):
+    """
+    Receive and drop all messages in a port's queue
+
+    Parameters
+    ----------
+    port : netsquid.components.component.Port
+        The port to be flushed
+    """
     while port.input_queue:
         _ = port.rx_input()
 
