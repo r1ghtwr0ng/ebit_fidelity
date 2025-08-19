@@ -330,9 +330,9 @@ def setup_simple_network(
 def single_run(
     switch_routing,
     dampening_parameter,
+    visibility,
     ideal_switch,
     ideal_qpu,
-    visibility,
     max_attempts,
     max_distillations,
     run,
@@ -347,12 +347,12 @@ def single_run(
         Switch configuration (e.g. {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}).
     dampening_parameter : float
         Photon state amplitude dampening parameter applied to FSO channels.
+    visibility : float
+        Photon indistinguishability (HOM visibility) (0–1).
     ideal_switch : bool
         If True, use an ideal switch model (no loss, no noise).
     ideal_qpu : bool
         If True, use ideal QPU nodes.
-    visibility : float
-        Photon indistinguishability (HOM visibility) (0–1).
     max_attempts : int
         Maximum number of entanglement generation attempts.
     max_distillations : int
@@ -680,14 +680,14 @@ def batch_proc(
         print(f"{batch_run_id}/{batch_size}", end="\r")
         gc.collect()
         run_metadata_df, full_events_df = single_run(
-            switch_routing,
-            dampening_parameter,
-            max_attempts,
-            max_distillations,
-            ideal_switch,
-            ideal_qpu,
-            visibility,
-            batch_run_id,
+            switch_routing=switch_routing,
+            dampening_parameter=dampening_parameter,
+            visibility=visibility,
+            max_attempts=max_attempts,
+            max_distillations=max_distillations,
+            ideal_switch=ideal_switch,
+            ideal_qpu=ideal_qpu,
+            run=batch_run_id,
         )
         batch_event_dfs.append(full_events_df)
         batch_metadata_dfs.append(run_metadata_df)
