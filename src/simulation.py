@@ -27,6 +27,50 @@ def setup_tree_network(
     idx_2,
     qpu_count=9,
 ):
+    """
+    Setup a tree topology network of FSO switches and QPUs.
+
+    Parameters
+    ----------
+    dampening_parameter : float
+        Photon state amplitude dampening parameter applied to FSO channels.
+    routing : dict
+        Switch configuration (e.g. {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}).
+    ideal_switch : bool
+        If True, use an ideal switch model (no loss, no noise).
+    ideal_qpu : bool
+        If True, use ideal QPU nodes.
+    visibility : float
+        Photon indistinguishability (HOM visibility) (0–1).
+    idx_1 : int
+        Index of the first QPU to include in the network (memory optimization).
+    idx_2 : int
+        Index of the second QPU to include in the network (memory optimization).
+    qpu_count : int, optional
+        Total number of QPUs (default is 9).
+
+    Returns
+    -------
+    Network
+        The constructed tree network.
+    ControlNode
+        The control node managing the network.
+    list of QPUNode
+        The selected QPU nodes corresponding to idx_1 and idx_2.
+
+    Examples
+    --------
+    >>> network, ctrl_node, [q1, q2] = setup_tree_network(
+    ...     dampening_parameter=0.1,
+    ...     routing={"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"},
+    ...     ideal_switch=False,
+    ...     ideal_qpu=True,
+    ...     visibility=0.9,
+    ...     idx_1=0,
+    ...     idx_2=5,
+    ...     qpu_count=9
+    ... )
+    """
     # Hardcoded vars, maybe we can dynamically determine the fso_count
     fso_count = 4
 
@@ -96,6 +140,50 @@ def setup_ring_network(
     idx_2,
     qpu_count=8,
 ):
+    """
+    Setup a ring topology network of FSO switches and QPUs.
+
+    Parameters
+    ----------
+    dampening_parameter : float
+        Photon state amplitude dampening parameter applied to FSO channels.
+    routing : dict
+        Switch configuration (e.g. {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}).
+    ideal_switch : bool
+        If True, use an ideal switch model (no loss, no noise).
+    ideal_qpu : bool
+        If True, use ideal QPU nodes.
+    visibility : float
+        Photon indistinguishability (HOM visibility) (0–1).
+    idx_1 : int
+        Index of the first QPU to include in the network (memory optimization).
+    idx_2 : int
+        Index of the second QPU to include in the network (memory optimization).
+    qpu_count : int, optional
+        Total number of QPUs (default is 8).
+
+    Returns
+    -------
+    Network
+        The constructed ring network.
+    ControlNode
+        The control node managing the network.
+    list of QPUNode
+        The selected QPU nodes corresponding to idx_1 and idx_2.
+
+    Examples
+    --------
+    >>> network, ctrl_node, [q1, q2] = setup_ring_network(
+    ...     dampening_parameter=0.05,
+    ...     routing={"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"},
+    ...     ideal_switch=True,
+    ...     ideal_qpu=False,
+    ...     visibility=0.85,
+    ...     idx_1=2,
+    ...     idx_2=6,
+    ...     qpu_count=8
+    ... )
+    """
     # Hardcoded vars, maybe we can dynamically determine the fso_count
     fso_count = math.ceil(qpu_count / 2)
 
@@ -168,13 +256,37 @@ def setup_simple_network(
     ideal_qpu,
     visibility,
 ):
-    # Setup control node
+    """
+    Setup a simple 2-node network connected via a single FSO switch.
+
+    Parameters
+    ----------
+    dampening_parameter : float
+        Photon state amplitude dampening parameter applied to FSO channels.
+    routing : dict
+        Switch configuration (e.g. {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}).
+    ideal_switch : bool
+        If True, use an ideal switch model (no loss, no noise).
+    ideal_qpu : bool
+        If True, use ideal QPU nodes.
+    visibility : float
+        Photon indistinguishability (HOM visibility) (0–1).
+
+    Examples
+    --------
+    >>> network, ctrl_node, [qnode_1, qnode_2] = setup_simple_network(
+    ...     dampening_parameter=0.1,
+    ...     routing={"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"},
+    ...     ideal_switch=False,
+    ...     ideal_qpu=False,
+    ...     visibility=0.9
+    ... )
+    """
+
+    # Setup control node and network
     ctrl_node = ControlNode(id=0, network_type="simple")
     ctrl_port = ctrl_node.ports["switch_herald"]
-
-    # TODO setup based on networkx topology
     network = Network("switch_test_network")
-    # Testing detector induced losses
 
     # Determine herald ports depending on switch configuration
     long_paths = routing == {"qin0": "qout2", "qin1": "qout1", "qin2": "qout0"}
@@ -198,6 +310,7 @@ def setup_simple_network(
     # Connect node-level ports
     node_1.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin0"])
     fsoswitch_node.register(node_1.name, "qin0")
+
     if long_paths:
         node_2.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin2"])
         fsoswitch_node.register(node_2.name, "qin2")
@@ -205,46 +318,69 @@ def setup_simple_network(
         node_2.processor.ports["qout_hdr"].connect(fsoswitch_node.ports["qin1"])
         fsoswitch_node.register(node_2.name, "qin1")
 
-    # Add nodes to network
-    network.add_nodes(nodes=[node_1, node_2, fsoswitch_node])
+    # Add nodes to network and register with control node
+    all_nodes = [node_1, node_2, fsoswitch_node]
+    network.add_nodes(nodes=all_nodes)
+    ctrl_node.register_nodes(all_nodes)
 
-    # Setup classical communication channel between nodes for entanglement distillation
-    conn_cchannel = DirectConnection(
-        "CChannelConn_AB",
-        ClassicalChannel(
-            "CChannel_A->B",
-            length=0,
-            models={"delay_model": FibreDelayModel(c=200e3)},
-        ),
-        ClassicalChannel(
-            "CChannel_B->A",
-            length=0,
-            models={"delay_model": FibreDelayModel(c=200e3)},
-        ),
-    )
-
-    # Add connection to network
-    network.add_connection(node_1, node_2, connection=conn_cchannel)
-    # TODO add quantum channel connections instead of direct port forwards
-    # TODO connect all switches to control node
-
-    # Register nodes with the control node's registry for UUID lookups
-    ctrl_node.register_nodes([node_1, node_2, fsoswitch_node])
-
-    # TODO group qnodes and fso switches in two lists
+    # Group QNodes and FSO switches in two lists
     return network, ctrl_node, [node_1, node_2]
 
 
 def single_run(
     switch_routing,
     dampening_parameter,
-    max_attempts,
-    max_distillations,
     ideal_switch,
     ideal_qpu,
     visibility,
+    max_attempts,
+    max_distillations,
     run,
 ):
+    """
+    Run a single simulation of the continuous distillation protocol
+    over all QPU pairs in a given network topology.
+
+    Parameters
+    ----------
+    switch_routing : dict
+        Switch configuration (e.g. {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}).
+    dampening_parameter : float
+        Photon state amplitude dampening parameter applied to FSO channels.
+    ideal_switch : bool
+        If True, use an ideal switch model (no loss, no noise).
+    ideal_qpu : bool
+        If True, use ideal QPU nodes.
+    visibility : float
+        Photon indistinguishability (HOM visibility) (0–1).
+    max_attempts : int
+        Maximum number of entanglement generation attempts.
+    max_distillations : int
+        Maximum number of distillation rounds attempted.
+    run : int
+        Run index identifier.
+
+    Returns
+    -------
+    pd.DataFrame
+        Metadata dataframe summarizing run statistics.
+    pd.DataFrame
+        Event-level dataframe with detailed protocol execution logs.
+
+    Examples
+    --------
+    >>> metadata_df, events_df = single_run(
+    ...     switch_routing={"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"},
+    ...     dampening_parameter=0.1,
+    ...     max_attempts=50,
+    ...     max_distillations=10,
+    ...     ideal_switch=False,
+    ...     ideal_qpu=False,
+    ...     visibility=0.9,
+    ...     run=0
+    ... )
+    """
+
     # Fetch logger
     logger = logging.getLogger("sim_logger")
 
@@ -361,6 +497,48 @@ def batch_run(
     max_attempts,
     max_distillations,
 ):
+    """
+    Run multiple simulations across batches of parameter combinations.
+
+    Parameters
+    ----------
+    switch_routing : dict
+        Switch configuration (e.g. {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}).
+    batch_size : int
+        Number of independent runs per parameter combination.
+    dampening_parameters : list[float]
+        List of photon state amplitude dampening parameter applied to FSO channels.
+    visibilities : list[float]
+        List of photon indistinguishability (HOM visibility) parameters.
+    ideal_switch : bool
+        If True, use an ideal switch model (no loss, no noise).
+    ideal_qpu : bool
+        If True, use ideal QPU nodes.
+    max_attempts : int
+        Maximum number of entanglement generation attempts.
+    max_distillations : int
+        Maximum number of distillation rounds attempted.
+
+    Returns
+    -------
+    pd.DataFrame
+        Combined metadata dataframe across all runs.
+    pd.DataFrame
+        Combined event dataframe across all runs.
+
+    Examples
+    --------
+    >>> metadata_df, events_df = batch_run(
+    ...     switch_routing={"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"},
+    ...     batch_size=3,
+    ...     ideal_switch=False,
+    ...     ideal_qpu=False,
+    ...     dampening_parameters=[0.05, 0.1],
+    ...     visibilities=[0.8, 0.9],
+    ...     max_attempts=100,
+    ...     max_distillations=20
+    ... )
+    """
     total_params = len(dampening_parameters) * len(visibilities)
     print(f"[i] Starting processing of {total_params} parameter combinations")
 
@@ -370,11 +548,11 @@ def batch_run(
             batch_size,
             switch_routing,
             dampening_parameter,
-            max_attempts,
-            max_distillations,
+            visibility,
             ideal_switch,
             ideal_qpu,
-            visibility,
+            max_attempts,
+            max_distillations,
             i * len(visibilities) + j,
         )
         for i, dampening_parameter in enumerate(dampening_parameters)
@@ -436,17 +614,65 @@ def batch_proc(
     batch_size,
     switch_routing,
     dampening_parameter,
+    visibility,
     max_attempts,
     max_distillations,
     ideal_switch,
     ideal_qpu,
-    visibility,
     run_id,
 ):
+    """
+    Worker function for executing a batch of single_run simulations
+    for a given parameter set.
+
+    Parameters
+    ----------
+    batch_size : int
+        Number of independent runs to perform.
+    switch_routing : dict
+        Switch configuration (e.g. {"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"}).
+    dampening_parameter : float
+        Photon state amplitude dampening parameter applied to FSO channels.
+    visibility : float
+        Photon indistinguishability (HOM visibility) parameters.
+    max_attempts : int
+        Maximum number of entanglement generation attempts.
+    max_distillations : int
+        Maximum number of distillation rounds attempted.
+    ideal_switch : bool
+        If True, use an ideal switch model (no loss, no noise).
+    ideal_qpu : bool
+        If True, use ideal QPU nodes.
+    run_id : int
+        Identifier for the parameter set.
+
+    Returns
+    -------
+    list[pd.DataFrame]
+        List of event-level dataframes for all runs in the batch.
+    list[pd.DataFrame]
+        List of metadata dataframes for all runs in the batch.
+
+    Examples
+    --------
+    >>> event_dfs, metadata_dfs = batch_proc(
+    ...     batch_size=2,
+    ...     switch_routing={"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"},
+    ...     dampening_parameter=0.1,
+    ...     max_attempts=50,
+    ...     max_distillations=10,
+    ...     ideal_switch=False,
+    ...     ideal_qpu=True,
+    ...     visibility=0.9,
+    ...     run_id=0
+    ... )
+    """
+
     # Fetch logger
     logger = logging.getLogger("sim_logger")
     logger.info(
-        f"[i] Processing combination {run_id}: dampening={dampening_parameter}, visibility={visibility}"
+        f"""[i] Processing combination {run_id}
+        dampening={dampening_parameter}, visibility={visibility}"""
     )
     batch_event_dfs = []
     batch_metadata_dfs = []

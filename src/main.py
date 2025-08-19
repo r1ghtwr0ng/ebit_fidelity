@@ -73,10 +73,10 @@ def main():
         df_metadata, df_events = batch_run(
             switch_routing=switch_routing,
             batch_size=batch_size,
-            ideal_switch=ideal_switch,
-            ideal_qpu=ideal_qpu,
             dampening_parameters=dampening_parameters,
             visibilities=visibilities,
+            ideal_switch=ideal_switch,
+            ideal_qpu=ideal_qpu,
             max_attempts=max_proto_attempts,
             max_distillations=max_distillations,
         )
