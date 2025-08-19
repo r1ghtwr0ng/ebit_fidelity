@@ -14,15 +14,15 @@ documentation for details.
    :maxdepth: 2
    :caption: Contents:
 
+   bsm_wrapper
+   control_node
+   data_collection
    detectors
-   fidelity_calculator
    fso_switch
    main
-   modules
-   network
-   networking
    plotting
-   qpu_entity
+   protocols
+   qpu_node
    qpu_programs
    simulation
    utils

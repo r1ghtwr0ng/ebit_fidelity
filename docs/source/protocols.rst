@@ -1,7 +1,7 @@
-detectors module
+protocols module
 ================
 
-.. automodule:: detectors
+.. automodule:: protocols
    :members:
    :undoc-members:
    :show-inheritance:
