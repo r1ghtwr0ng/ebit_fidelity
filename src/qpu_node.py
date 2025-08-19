@@ -1,4 +1,3 @@
-import uuid
 import json
 import logging
 import numpy as np
@@ -154,29 +153,27 @@ class QPUNode(Node):
         )
 
     def __debug(self, msg):
+        """Callback for debugging message contents."""
         port = msg.meta.get("rx_port_name", "missing_port_metadata")
         self.__logger.debug(f"Received message on port: {port}, MSG: {msg}")
 
     def __setup_header_wrapper(self, msg):
         """
-        Add metadata headers to outbound messages for routing and identification.
+        Callback to add metadata headers to outbound messages for routing and
+        identification.
 
         Parameters
         ----------
         msg : object
             The message object containing metadata and payload to be transmitted.
-
-        Returns
-        -------
-        None
-            Modifies the message in place by adding a JSON-serialized header.
         """
         port = msg.meta.get("rx_port_name", "missing_port_metadata")
         event_id = msg.meta["put_event"].id
 
         if self.request_uuid is None:
             self.__logger.error(
-                f"[Emission header callback]: {self.name}, request_uuid not set for port {port}, event_id: {event_id}"
+                f"""[Emission header callback]: {self.name}
+                request_uuid not set for port {port}, event_id: {event_id}"""
             )
             # TODO consider throwing an error
         else:
@@ -185,6 +182,13 @@ class QPUNode(Node):
             self.processor.ports[f"{port}_hdr"].tx_output(msg)
             self.request_uuid = None  # Remove old UUID once request is transmitted
 
-    # Set UUID for next message coming out of the emission port
     def set_emit_uuid(self, request_uuid):
+        """
+        Set the UUID for the next message coming out of the photon emission port.
+
+        Parameters
+        ----------
+        request_uuid : str
+            The UUID in question
+        """
         self.request_uuid = request_uuid
