@@ -6,6 +6,28 @@ from netsquid.protocols import Signals
 
 # DataCollection handler
 def collect_fidelity_data(evexpr):
+    """
+    Extract data from an EventExpression object and create a dictionary
+    containing the necessary metrics (fidelity, simulation time, status)
+
+    Parameters
+    ----------
+    evexpr : pydynaa.core.EventExpression
+        Event containing information about the protocol runs.
+
+    Returns
+    -------
+    dict
+        Return the metrics via a dict object.
+
+    Examples
+    --------
+    >>> subprotocols_done = self.await_signal(
+    >>>     self.subprotocol_qnode_1, signal_label=Signals.FINISHED
+    >>> )
+    >>> yield subprotocols_done
+    >>> data_point = collect_fidelity_data(subprotocols_done)
+    """
     # Get logger
     logger = logging.getLogger("data_logger")
 

@@ -6,6 +6,14 @@ import netsquid.qubits.qubitapi as qapi
 
 # Flush all messages from a port
 def flush_port(port):
+    """
+    Receive and drop all messages in a port's queue
+
+    Parameters
+    ----------
+    port : netsquid.components.component.Port
+        The port to be flushed
+    """
     while port.input_queue:
         _ = port.rx_input()
 
@@ -115,6 +123,23 @@ def find_minimum_ebits(fidelity, target_fidelity):
     return np.inf
 
 
-# Calculate the time (in nanoseconds) needed to get the distillation ebits
 def time_to_fidelity(success_probability, time_to_ebit, distillation_ebits):
+    """
+    Calculate the time (in nanoseconds) needed to get the distillation ebit fidelity.
+    This is based on analytical estimations of distillation efficiency.
+
+    Parameters
+    ----------
+    success_probability : float
+        Probability of distillation success, between 0 and 1.
+    time_to_ebit : float
+        Average time (in nanoseconds) needed to establish an entangled bit
+    distillation_ebits : int
+        Number of entangled bits used to perform distillation in parallel
+
+    Returns
+    -------
+    float
+        Time estimation in nanoseconds
+    """
     return (distillation_ebits * time_to_ebit) / success_probability

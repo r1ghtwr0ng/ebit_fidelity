@@ -44,7 +44,7 @@ def main():
     visibilities = [0.85]  # np.linspace(0.8, 0.8, 1)
     dampening_parameters = [0.15]  # np.linspace(0.2, 0.2, 1)
     batch_size = 400
-    max_distillations = 2
+    max_distillations = 3
     max_proto_attempts = 10
     ideal_switch = False
     ideal_qpu = False
@@ -73,10 +73,10 @@ def main():
         df_metadata, df_events = batch_run(
             switch_routing=switch_routing,
             batch_size=batch_size,
-            ideal_switch=ideal_switch,
-            ideal_qpu=ideal_qpu,
             dampening_parameters=dampening_parameters,
             visibilities=visibilities,
+            ideal_switch=ideal_switch,
+            ideal_qpu=ideal_qpu,
             max_attempts=max_proto_attempts,
             max_distillations=max_distillations,
         )
@@ -124,4 +124,7 @@ def main():
 
 if __name__ == "__main__":
     multiprocessing.set_start_method("spawn")
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\r[i] Quitting")

@@ -14,6 +14,17 @@ import pandas as pd
 
 
 def plot_adjacency_heatmap(df, directory):
+    """
+    Plot heatmap of fidelities between all nodes in a quantum network
+    (adjacency matrix plot with fidelities).
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Dataframe with stats of all runs in the network.
+    directory : str
+        Directory to save the plots
+    """
     # Step 1: Filter successful entries
     filtered = df[df["success"]]
 
@@ -67,7 +78,7 @@ def plot_adjacency_heatmap(df, directory):
             square=True,
             cbar=False,  # Show colorbar only on last plot to save space
             cbar_kws={"label": "Fidelity"},
-            vmin=np.min(matrix),
+            vmin=0,
             vmax=1,
             ax=ax,
         )
@@ -85,13 +96,14 @@ def plot_mean_fidelity_heatmap(dfs, directory, config_names):
     """
     Plot mean fidelities as heatmaps in a grid layout for multiple dataframes.
 
-    Parameters:
-    - dfs: List of dataframes, each representing a different switch configuration
-    - config_names: List of configuration names corresponding to the dataframes
-    - figsize: Tuple for figure size (default: (12, 10))
-
-    Returns:
-    - matplotlib.pyplot object
+    Parameters
+    ----------
+    dfs : list[pandas.DataFrame]
+        List of dataframes, each representing a different switch configuration
+    directory : str
+        Directory to save the plots
+    config_names : list[str]
+        List of configuration names corresponding to the dataframes
     """
     figsize = (12, 10)
     num_plots = len(dfs)
@@ -145,12 +157,17 @@ def plot_mean_fidelity_heatmap(dfs, directory, config_names):
 
 def plot_best_fidelity_phase_heatmap(dfs, directory, config_names):
     """
-    Plot heatmaps showing the best phase for each parameter configuration based on fidelity
+    Plot heatmaps showing the best phase for each parameter configuration based on
+    fidelity values.
 
-    Parameters:
-    - dfs: List of dataframes, each representing a different switch configuration
-    - directory: Directory to save the plots
-    - config_names: List of configuration names corresponding to the dataframes
+    Parameters
+    ----------
+    dfs : list[pandas.DataFrame]
+        List of dataframes, each representing a different switch configuration
+    directory : str
+        Directory to save the plots
+    config_names : list[str]
+    List of configuration names corresponding to the dataframes
     """
     # Define phase to numeric mapping
     phase_order = ["initial", "distillation_1", "distillation_2", "distillation_3"]
@@ -237,13 +254,16 @@ def plot_best_fidelity_phase_heatmap(dfs, directory, config_names):
 
 def plot_mean_phase_fidelity_heatmap(df, directory):
     """
-    Plot mean fidelity heatmaps for each phase in a single dataframe
+    Plot mean fidelity heatmaps for each phase in a single dataframe as a heatmap.
 
-    Parameters:
-    - df: Dataframe for a single switch configuration
-    - directory: Directory to save the plots
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Dataframe for a single switch configuration
+    directory : str
+        Directory to save the plots
     """
-    success_df = df  # [df["success"]]
+    success_df = df[df["success"]]
     phases = sorted(success_df["phase"].unique())[:4]
     n_phases = len(phases)
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
@@ -297,6 +317,16 @@ def plot_mean_phase_fidelity_heatmap(df, directory):
 
 # ==== 2D plots ====
 def plot_mean_fidelity_2d(df, directory):
+    """
+    Plot mean fidelity heatmaps for each phase in a single dataframe.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Dataframe for a single switch configuration
+    directory : str
+        Directory to save the plots
+    """
     plt.figure(figsize=(10, 6))
 
     # Get unique phases from the dataframe
@@ -339,6 +369,16 @@ def plot_mean_fidelity_2d(df, directory):
 
 
 def plot_mean_simtime_2d(df, directory):
+    """
+    Plot mean simulation time for each phase in a single dataframe.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Dataframe for a single switch configuration
+    directory : str
+        Directory to save the plots
+    """
     plt.figure(figsize=(10, 6))
 
     # get unique phases from the dataframe
@@ -380,6 +420,16 @@ def plot_mean_simtime_2d(df, directory):
 
 # TODO
 def plot_mean_success_prob_2d(dfs, directory):
+    """
+    Plot mean success probability for each phase in all dataframes.
+
+    Parameters
+    ----------
+    dfs : list[pandas.DataFrame]
+        Dataframe for a single switch configuration
+    directory : str
+        Directory to save the plots
+    """
     df = pd.concat(dfs, ignore_index=True)
     plt.figure(figsize=(10, 6))
 
@@ -407,6 +457,16 @@ def plot_mean_success_prob_2d(dfs, directory):
 
 # TODO
 def plot_mean_operation_count_2d(dfs, directory):
+    """
+    Plot mean quantum operation count for each phase in all dataframes.
+
+    Parameters
+    ----------
+    dfs : list[pandas.DataFrame]
+        Dataframe for a single switch configuration
+    directory : str
+        Directory to save the plots
+    """
     df = pd.concat(dfs, ignore_index=True)
     plt.figure(figsize=(10, 6))
 
@@ -433,6 +493,16 @@ def plot_mean_operation_count_2d(dfs, directory):
 
 # TODO
 def plot_switch_fidelity_2d(dfs, directory):
+    """
+    Plot mean fidelity in all dataframes.
+
+    Parameters
+    ----------
+    dfs : list[pandas.DataFrame]
+        Dataframe for a single switch configuration
+    directory : str
+        Directory to save the plots
+    """
     df = pd.concat(dfs, ignore_index=True)
     plt.figure(figsize=(10, 6))
 

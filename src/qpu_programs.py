@@ -4,6 +4,18 @@ from netsquid.components.qprogram import QuantumProgram
 
 
 class EmitProgram(QuantumProgram):
+    """
+    Quantum program that initializes a qubit and emits an entangled photon.
+
+    This program uses two qubits: one is initialized, and then an
+    emit instruction is applied to create an emitted qubit pair.
+
+    Notes
+    -----
+    - Uses `INSTR_INIT` on the first qubit.
+    - Applies `INSTR_EMIT` on a pair of qubits.
+    """
+
     def program(self):
         logger = logging.getLogger("qprog_logger")
         logger.debug("Entry point for the Emit program")
@@ -16,6 +28,19 @@ class EmitProgram(QuantumProgram):
 
 
 class XCorrection(QuantumProgram):
+    """
+    Quantum program that applies an X (bit-flip) correction.
+
+    Parameters
+    ----------
+    default_num_qubits : int, optional
+        Number of qubits used by the program (default: 1).
+
+    Notes
+    -----
+    - Single-qubit X gate applied to the selected qubit.
+    """
+
     default_num_qubits = 1
 
     def program(self):
@@ -27,6 +52,19 @@ class XCorrection(QuantumProgram):
 
 
 class YCorrection(QuantumProgram):
+    """
+    Quantum program that applies a Y (bit and phase-flip) correction.
+
+    Parameters
+    ----------
+    default_num_qubits : int, optional
+        Number of qubits used by the program (default: 1).
+
+    Notes
+    -----
+    - Single-qubit Y gate applied to the selected qubit.
+    """
+
     default_num_qubits = 1
 
     def program(self):
@@ -38,6 +76,19 @@ class YCorrection(QuantumProgram):
 
 
 class SwapProgram(QuantumProgram):
+    """
+    Quantum program that performs a SWAP operation between two qubits.
+
+    Parameters
+    ----------
+    default_num_qubits : int, optional
+        Number of qubits used by the program (default: 2).
+
+    Notes
+    -----
+    - Applies the `INSTR_SWAP` gate between the two allocated qubits.
+    """
+
     default_num_qubits = 2
 
     def program(self):
@@ -49,6 +100,23 @@ class SwapProgram(QuantumProgram):
 
 
 class EPLDistillationProgram(QuantumProgram):
+    """
+    Quantum program for entanglement purification using EPL.
+
+    This program applies a CNOT gate between two qubits and measures
+    the target qubit to determine whether the distillation step succeeds.
+
+    Parameters
+    ----------
+    default_num_qubits : int, optional
+        Number of qubits used by the program (default: 2).
+
+    Notes
+    -----
+    - Control qubit acts as the source.
+    - Target qubit is measured with result stored in `m_target`.
+    """
+
     default_num_qubits = 2
 
     def program(self):
