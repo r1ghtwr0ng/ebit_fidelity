@@ -48,13 +48,13 @@ class FSOSwitch(Node):
     >>> ctrl_node = ControlNode(id=0, network_type="tree")
     >>> ctrl_port = ctrl_node.ports["switch_herald"]
     >>> fsoswitch_node = FSOSwitch(
-    >>>     switch_id=1,
-    >>>     ctrl_port=ctrl_port,
-    >>>     dampening_parameter=0.15,
-    >>>     ideal=False,
-    >>>     herald_ports=["qout0", "qout1"],
-    >>>     visibility=0.85,
-    >>> )
+    ...     switch_id=1,
+    ...     ctrl_port=ctrl_port,
+    ...     dampening_parameter=0.15,
+    ...     ideal=False,
+    ...     herald_ports=["qout0", "qout1"],
+    ...     visibility=0.85,
+    ... )
     """
 
     def __init__(
