@@ -1,7 +1,7 @@
-qpu\_entity module
+bsm_wrapper module
 ==================
 
-.. automodule:: qpu_entity
+.. automodule:: bsm_wrapper
    :members:
    :undoc-members:
    :show-inheritance:

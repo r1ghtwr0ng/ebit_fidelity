@@ -13,7 +13,7 @@ import sys
 # Add the `src` directory to the Python path
 sys.path.insert(0, os.path.abspath("../../src"))
 
-project = "FSO Switch Sim"
+project = "FSO Switch Simulation"
 copyright = "2024, Victor Virag"
 author = "Victor Virag"
 
