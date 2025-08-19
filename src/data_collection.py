@@ -23,8 +23,8 @@ def collect_fidelity_data(evexpr):
     Examples
     --------
     >>> subprotocols_done = self.await_signal(
-    >>>     self.subprotocol_qnode_1, signal_label=Signals.FINISHED
-    >>> )
+    ...     self.subprotocol_qnode_1, signal_label=Signals.FINISHED
+    ... )
     >>> yield subprotocols_done
     >>> data_point = collect_fidelity_data(subprotocols_done)
     """

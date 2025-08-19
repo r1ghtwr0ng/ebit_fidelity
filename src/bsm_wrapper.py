@@ -5,6 +5,47 @@ from detectors import BSMDetector
 
 
 class BSMWrapper(Node):
+    """
+    A wrapper for a Bell-State Measurement (BSM) detector component.
+
+    This component wraps a :class:`BSMDetector` and provides a simplified external
+    interface for connecting quantum input ports and a single classical output port.
+    It also ensures that a request UUID is tracked between inbound and outbound
+    messages.
+
+    The wrapper receives qubits on ``qin0`` and ``qin1``, forwards them to the
+    internal BSM detector, and outputs classical measurement results via ``cout``.
+    A ``request_uuid`` header is extracted from inbound messages and reinserted into
+    outbound classical messages to preserve request–response correlation.
+
+    It uses the ``bsm_logger`` logger object, retrieved with:
+    ``logging.getLogger("bsm_logger")``.
+
+    Parameters
+    ----------
+    name : str
+        Name of the BSM wrapper node.
+    p_dark : float
+        Dark-count probability per detector, i.e., the probability of a detector click
+        when no photon was present.
+    det_eff : float
+        Detector efficiency, i.e., the probability of detecting an incoming photon.
+    visibility : float
+        HOM visibility parameter of the BSM detector (photon indistinguishability),
+        should be between 0 and 1.
+
+    Examples
+    --------
+    >>> bsm_wrap = BSMWrapper(
+    ...     name="BSM_1",
+    ...     p_dark=0.001,
+    ...     det_eff=0.95,
+    ...     visibility=0.9,
+    ... )
+    >>> bsm_wrap.ports["qin0"].tx_input(qubit_msg_0)
+    >>> bsm_wrap.ports["qin1"].tx_input(qubit_msg_1)
+    """
+
     def __init__(
         self,
         name,
@@ -12,46 +53,6 @@ class BSMWrapper(Node):
         det_eff,
         visibility,
     ):
-        """
-        A wrapper for a Bell-State Measurement (BSM) detector component.
-
-        This component wraps a :class:`BSMDetector` and provides a simplified external
-        interface for connecting quantum input ports and a single classical output port.
-        It also ensures that a request UUID is tracked between inbound and outbound
-        messages.
-
-        The wrapper receives qubits on ``qin0`` and ``qin1``, forwards them to the
-        internal BSM detector, and outputs classical measurement results via ``cout``.
-        A ``request_uuid`` header is extracted from inbound messages and reinserted into
-        outbound classical messages to preserve request–response correlation.
-
-        It uses the ``bsm_logger`` logger object, retrieved with:
-        ``logging.getLogger("bsm_logger")``.
-
-        Parameters
-        ----------
-        name : str
-            Name of the BSM wrapper node.
-        p_dark : float
-            Dark-count probability per detector, i.e., the probability of a detector click
-            when no photon was present.
-        det_eff : float
-            Detector efficiency, i.e., the probability of detecting an incoming photon.
-        visibility : float
-            HOM visibility parameter of the BSM detector (photon indistinguishability),
-            should be between 0 and 1.
-
-        Examples
-        --------
-        >>> bsm_wrap = BSMWrapper(
-        ...     name="BSM_1",
-        ...     p_dark=0.001,
-        ...     det_eff=0.95,
-        ...     visibility=0.9,
-        ... )
-        >>> bsm_wrap.ports["qin0"].tx_input(qubit_msg_0)
-        >>> bsm_wrap.ports["qin1"].tx_input(qubit_msg_1)
-        """
         super().__init__(name=name)
 
         # Last request UUID header

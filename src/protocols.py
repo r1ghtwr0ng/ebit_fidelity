@@ -41,19 +41,19 @@ class EntanglementProtocol(NodeProtocol):
     --------
     >>> from simulation import setup_simple_network
     >>> _, ctrl_node, [qnode_1, qnode_2] = setup_simple_network(
-    >>>     dampening_parameter=0.1,
-    >>>     routing={"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"},
-    >>>     ideal_switch=False,
-    >>>     ideal_qpu=False,
-    >>>     visibility=0.9
-    >>> ) # Setup network
+    ...     dampening_parameter=0.1,
+    ...     routing={"qin0": "qout0", "qin1": "qout1", "qin2": "qout2"},
+    ...     ideal_switch=False,
+    ...     ideal_qpu=False,
+    ...     visibility=0.9
+    ... ) # Setup network
     >>> entanglement_protocol = EntanglementProtocol(
-    >>>     ctrl_node=ctrl_node,
-    >>>     source=qnode_1,
-    >>>     target=qnode_2,
-    >>>     timeout=400,
-    >>>     perform_correction=True,
-    >>> ) # Setup entanglement protocol
+    ...     ctrl_node=ctrl_node,
+    ...     source=qnode_1,
+    ...     target=qnode_2,
+    ...     timeout=400,
+    ...     perform_correction=True,
+    ... ) # Setup entanglement protocol
     >>> entanglement_protocol.start() # Run protocol
     """
 
